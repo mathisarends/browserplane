@@ -27,6 +27,11 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@router.get("/readiness")
+async def readiness() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @router.get("/capacity")
 async def capacity(manager: FromDishka[BrowserManager]) -> Capacity:
     total, available = manager.capacity()
