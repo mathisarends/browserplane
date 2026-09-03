@@ -1,21 +1,24 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
 
-from data_plane.application.exceptions import BrowserNotFoundException
-from data_plane.application.service import BrowserService
-from data_plane.infrastructure.websocket_proxy import proxy_cdp
-from data_plane.presentation.api_errors import api_error_responses
-from data_plane.presentation.browser_errors import (
+from data_plane.features.browsers.application.exceptions import BrowserNotFoundException
+from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
+from data_plane.features.browsers.presentation.errors import (
     BROWSER_CAPACITY_EXHAUSTED,
     BROWSER_NOT_FOUND,
     BROWSER_STARTUP_FAILED,
 )
-from data_plane.presentation.mapper import to_browser_response, to_capacity_response
-from data_plane.presentation.schemas import (
+from data_plane.features.browsers.presentation.mapper import (
+    to_browser_response,
+    to_capacity_response,
+)
+from data_plane.features.browsers.presentation.schemas import (
     BrowserResponse,
     CapacityResponse,
     CreateBrowserRequest,
 )
+from data_plane.presentation.api_errors import api_error_responses
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
 

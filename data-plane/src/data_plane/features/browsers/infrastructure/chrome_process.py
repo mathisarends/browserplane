@@ -5,8 +5,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from data_plane.application.exceptions import BrowserStartupException
-from data_plane.application.ports import BrowserProcess
+from data_plane.features.browsers.application.exceptions import BrowserStartupException
+from data_plane.features.browsers.application.ports import BrowserProcess
 from data_plane.settings import DataPlaneSettings
 
 

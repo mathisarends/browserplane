@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from data_plane.application.models import BrowserState
+from data_plane.features.browsers.application.models import BrowserState
 
 
 class CreateBrowserRequest(BaseModel):
@@ -16,7 +16,3 @@ class BrowserResponse(BaseModel):
 class CapacityResponse(BaseModel):
     total: int
     available: int
-
-
-class StatusResponse(BaseModel):
-    status: str

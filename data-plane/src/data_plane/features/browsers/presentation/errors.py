@@ -2,7 +2,7 @@ from typing import Literal
 
 from fastapi import status
 
-from data_plane.application.exceptions import (
+from data_plane.features.browsers.application.exceptions import (
     BrowserCapacityExhaustedException,
     BrowserNotFoundException,
     BrowserStartupException,

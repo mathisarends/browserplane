@@ -1,8 +1,8 @@
 import pytest
 
-from data_plane.application.models import BrowserState
-from data_plane.application.ports import BrowserProcess
-from data_plane.application.service import BrowserService
+from data_plane.features.browsers.application.models import BrowserState
+from data_plane.features.browsers.application.ports import BrowserProcess
+from data_plane.features.browsers.application.service import BrowserService
 from data_plane.settings import DataPlaneSettings
 
 

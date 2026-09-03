@@ -1,12 +1,16 @@
 import asyncio
 from collections.abc import Callable
 
-from data_plane.application.exceptions import (
+from data_plane.features.browsers.application.exceptions import (
     BrowserCapacityExhaustedException,
     BrowserNotFoundException,
 )
-from data_plane.application.models import Browser, BrowserState, Capacity
-from data_plane.application.ports import BrowserProcess
+from data_plane.features.browsers.application.models import (
+    Browser,
+    BrowserState,
+    Capacity,
+)
+from data_plane.features.browsers.application.ports import BrowserProcess
 from data_plane.settings import DataPlaneSettings
 
 ProcessFactory = Callable[[DataPlaneSettings], BrowserProcess]
