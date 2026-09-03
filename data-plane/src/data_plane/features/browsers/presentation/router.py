@@ -5,6 +5,7 @@ from fastapi import APIRouter, Response, WebSocket, status
 
 from data_plane.features.browsers.application.exceptions import BrowserNotFoundException
 from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browsers.infrastructure.screencast import stream_screencast
 from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
 from data_plane.features.browsers.presentation.errors import (
     BROWSER_ALREADY_RUNNING,
@@ -17,6 +18,7 @@ from data_plane.features.browsers.presentation.schemas import (
     CreateBrowserRequest,
 )
 from data_plane.presentation.api_errors import api_error_responses
+from data_plane.settings import DataPlaneSettings
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
 
@@ -68,3 +70,25 @@ async def browser_cdp(
         await websocket.close(code=1008, reason="Unknown browser")
         return
     await proxy_cdp(websocket, upstream_url)
+
+
+@browser_router.websocket("/browser/{browser_id}/screencast")
+@inject
+async def browser_screencast(
+    browser_id: UUID,
+    websocket: WebSocket,
+    service: FromDishka[BrowserService],
+    settings: FromDishka[DataPlaneSettings],
+) -> None:
+    try:
+        upstream_url = service.upstream_cdp_url(browser_id)
+    except BrowserNotFoundException:
+        await websocket.close(code=1008, reason="Unknown browser")
+        return
+    await stream_screencast(
+        websocket,
+        upstream_url,
+        quality=settings.screencast_quality,
+        width=settings.width,
+        height=settings.height,
+    )
