@@ -61,7 +61,7 @@ services:
       - "8021:8000"
     environment:
       - PORT=8000
-      - BROWSER_CDP_URL=ws://data-plane-1:8000/api/v1/browsers/00000000-0000-0000-0000-000000000001/cdp
+      - BROWSER_CDP_URL=ws://data-plane-1:8000/api/v1/browser/00000000-0000-0000-0000-000000000001/cdp
     depends_on:
       control-plane:
         condition: service_healthy
@@ -72,7 +72,7 @@ services:
       - "8022:8000"
     environment:
       - PORT=8000
-      - BROWSER_CDP_URL=ws://data-plane-2:8000/api/v1/browsers/00000000-0000-0000-0000-000000000002/cdp
+      - BROWSER_CDP_URL=ws://data-plane-2:8000/api/v1/browser/00000000-0000-0000-0000-000000000002/cdp
     depends_on:
       control-plane:
         condition: service_healthy

@@ -7,17 +7,13 @@ from data_plane.features.browsers.application.exceptions import BrowserNotFoundE
 from data_plane.features.browsers.application.service import BrowserService
 from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
 from data_plane.features.browsers.presentation.errors import (
-    BROWSER_CAPACITY_EXHAUSTED,
+    BROWSER_ALREADY_RUNNING,
     BROWSER_NOT_FOUND,
     BROWSER_STARTUP_FAILED,
 )
-from data_plane.features.browsers.presentation.mapper import (
-    to_browser_response,
-    to_capacity_response,
-)
+from data_plane.features.browsers.presentation.mapper import to_browser_response
 from data_plane.features.browsers.presentation.schemas import (
     BrowserResponse,
-    CapacityResponse,
     CreateBrowserRequest,
 )
 from data_plane.presentation.api_errors import api_error_responses
@@ -25,17 +21,11 @@ from data_plane.presentation.api_errors import api_error_responses
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
 
 
-@browser_router.get("/capacity", operation_id="capacity")
-async def capacity(service: FromDishka[BrowserService]) -> CapacityResponse:
-    worker_capacity = service.capacity()
-    return to_capacity_response(worker_capacity)
-
-
 @browser_router.post(
-    "/browsers",
+    "/browser",
     status_code=status.HTTP_201_CREATED,
     operation_id="create_browser",
-    responses=api_error_responses(BROWSER_CAPACITY_EXHAUSTED, BROWSER_STARTUP_FAILED),
+    responses=api_error_responses(BROWSER_ALREADY_RUNNING, BROWSER_STARTUP_FAILED),
 )
 async def create_browser(
     request: CreateBrowserRequest,
@@ -46,32 +36,26 @@ async def create_browser(
 
 
 @browser_router.get(
-    "/browsers/{browser_id}",
+    "/browser",
     operation_id="inspect_browser",
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
-async def inspect_browser(
-    browser_id: UUID,
-    service: FromDishka[BrowserService],
-) -> BrowserResponse:
-    browser = service.get(browser_id)
+async def inspect_browser(service: FromDishka[BrowserService]) -> BrowserResponse:
+    browser = service.get()
     return to_browser_response(browser)
 
 
 @browser_router.delete(
-    "/browsers/{browser_id}",
+    "/browser",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="destroy_browser",
 )
-async def destroy_browser(
-    browser_id: UUID,
-    service: FromDishka[BrowserService],
-) -> Response:
-    await service.destroy(browser_id)
+async def destroy_browser(service: FromDishka[BrowserService]) -> Response:
+    await service.destroy()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@browser_router.websocket("/browsers/{browser_id}/cdp")
+@browser_router.websocket("/browser/{browser_id}/cdp")
 @inject
 async def browser_cdp(
     browser_id: UUID,

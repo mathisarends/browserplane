@@ -10,8 +10,3 @@ class CreateBrowserRequest(BaseModel):
 class BrowserResponse(BaseModel):
     id: UUID
     cdp_url: str
-
-
-class CapacityResponse(BaseModel):
-    total: int
-    available: int

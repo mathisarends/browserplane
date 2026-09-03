@@ -1,21 +1,30 @@
 import asyncio
 from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from data_plane.features.browsers.application.exceptions import (
-    BrowserCapacityExhaustedException,
+    BrowserAlreadyRunningException,
     BrowserNotFoundException,
 )
-from data_plane.features.browsers.application.models import Browser, Capacity
+from data_plane.features.browsers.application.models import Browser
 from data_plane.features.browsers.application.ports import BrowserProcess
-from data_plane.features.browsers.application.store import BrowserStore, ManagedBrowser
 from data_plane.settings import DataPlaneSettings
 
 ProcessFactory = Callable[[DataPlaneSettings], BrowserProcess]
 
 
+@dataclass(frozen=True, slots=True)
+class RunningBrowser:
+    """A browser together with the process and endpoint backing it."""
+
+    browser: Browser
+    process: BrowserProcess
+    upstream_cdp_url: str
+
+
 class BrowserService:
-    """Own the worker's browser processes and their public endpoints."""
+    """Own the worker's single browser process and its public endpoint."""
 
     def __init__(
         self,
@@ -24,58 +33,54 @@ class BrowserService:
     ) -> None:
         self._settings = settings
         self._process_factory = process_factory
-        self._store = BrowserStore()
+        self._running: RunningBrowser | None = None
         self._lock = asyncio.Lock()
 
     async def create(self, browser_id: UUID) -> Browser:
         async with self._lock:
-            existing = self._store.get(browser_id)
-            if existing is not None:
-                return existing.browser
-            if len(self._store) >= self._settings.capacity:
-                raise BrowserCapacityExhaustedException
+            if self._running is not None:
+                if self._running.browser.id != browser_id:
+                    raise BrowserAlreadyRunningException
+                return self._running.browser
             process = self._process_factory(self._settings)
             upstream_cdp_url = await process.start()
             browser = Browser(
                 id=browser_id,
                 cdp_url=self._public_cdp_url(browser_id),
             )
-            self._store.add(
-                browser_id,
-                ManagedBrowser(
-                    browser=browser,
-                    process=process,
-                    upstream_cdp_url=upstream_cdp_url,
-                ),
+            self._running = RunningBrowser(
+                browser=browser,
+                process=process,
+                upstream_cdp_url=upstream_cdp_url,
             )
             return browser
 
-    def get(self, browser_id: UUID) -> Browser:
-        return self._managed(browser_id).browser
+    def get(self) -> Browser:
+        return self._require().browser
 
     def upstream_cdp_url(self, browser_id: UUID) -> str:
-        return self._managed(browser_id).upstream_cdp_url
+        """Resolve the endpoint a CDP client addressed by the browser's id."""
+        running = self._require()
+        if running.browser.id != browser_id:
+            raise BrowserNotFoundException
+        return running.upstream_cdp_url
 
-    async def destroy(self, browser_id: UUID) -> None:
+    async def destroy(self) -> None:
         async with self._lock:
-            managed = self._store.remove(browser_id)
-            if managed is not None:
-                await managed.process.stop()
-
-    def capacity(self) -> Capacity:
-        total = self._settings.capacity
-        return Capacity(total=total, available=total - len(self._store))
+            running = self._running
+            if running is None:
+                return
+            self._running = None
+            await running.process.stop()
 
     async def close(self) -> None:
-        for browser_id in self._store.ids():
-            await self.destroy(browser_id)
+        await self.destroy()
 
-    def _managed(self, browser_id: UUID) -> ManagedBrowser:
-        managed = self._store.get(browser_id)
-        if managed is None:
+    def _require(self) -> RunningBrowser:
+        if self._running is None:
             raise BrowserNotFoundException
-        return managed
+        return self._running
 
     def _public_cdp_url(self, browser_id: UUID) -> str:
         base = self._settings.public_base_url.rstrip("/")
-        return f"{base}/api/v1/browsers/{browser_id}/cdp"
+        return f"{base}/api/v1/browser/{browser_id}/cdp"

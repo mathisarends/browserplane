@@ -1,8 +1,5 @@
-from data_plane.features.browsers.application.models import Browser, Capacity
-from data_plane.features.browsers.presentation.schemas import (
-    BrowserResponse,
-    CapacityResponse,
-)
+from data_plane.features.browsers.application.models import Browser
+from data_plane.features.browsers.presentation.schemas import BrowserResponse
 
 
 def to_browser_response(browser: Browser) -> BrowserResponse:
@@ -10,7 +7,3 @@ def to_browser_response(browser: Browser) -> BrowserResponse:
         id=browser.id,
         cdp_url=browser.cdp_url,
     )
-
-
-def to_capacity_response(capacity: Capacity) -> CapacityResponse:
-    return CapacityResponse(total=capacity.total, available=capacity.available)

@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import status
 
 from data_plane.features.browsers.application.exceptions import (
-    BrowserCapacityExhaustedException,
+    BrowserAlreadyRunningException,
     BrowserNotFoundException,
     BrowserStartupException,
 )
@@ -15,8 +15,8 @@ class BrowserNotFoundError(ApiErrorResponse):
     code: Literal[ApiErrorCode.BROWSER_NOT_FOUND]
 
 
-class BrowserCapacityExhaustedError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_CAPACITY_EXHAUSTED]
+class BrowserAlreadyRunningError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.BROWSER_ALREADY_RUNNING]
 
 
 class BrowserStartupFailedError(ApiErrorResponse):
@@ -30,12 +30,12 @@ BROWSER_NOT_FOUND = ApiErrorSpec(
     response_model=BrowserNotFoundError,
     description="Browser not found",
 )
-BROWSER_CAPACITY_EXHAUSTED = ApiErrorSpec(
-    exceptions=(BrowserCapacityExhaustedException,),
+BROWSER_ALREADY_RUNNING = ApiErrorSpec(
+    exceptions=(BrowserAlreadyRunningException,),
     status_code=status.HTTP_409_CONFLICT,
-    code=ApiErrorCode.BROWSER_CAPACITY_EXHAUSTED,
-    response_model=BrowserCapacityExhaustedError,
-    description="Worker capacity exhausted",
+    code=ApiErrorCode.BROWSER_ALREADY_RUNNING,
+    response_model=BrowserAlreadyRunningError,
+    description="Worker already runs a browser",
 )
 BROWSER_STARTUP_FAILED = ApiErrorSpec(
     exceptions=(BrowserStartupException,),
@@ -47,6 +47,6 @@ BROWSER_STARTUP_FAILED = ApiErrorSpec(
 
 API_ERRORS = (
     BROWSER_NOT_FOUND,
-    BROWSER_CAPACITY_EXHAUSTED,
+    BROWSER_ALREADY_RUNNING,
     BROWSER_STARTUP_FAILED,
 )

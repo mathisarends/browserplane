@@ -19,7 +19,7 @@ class DataPlaneBrowserProvisioner(BrowserProvisioner):
         async with httpx2.AsyncClient() as client:
             for slot in slots:
                 response = await client.post(
-                    f"{slot.data_plane_url}/api/v1/browsers",
+                    f"{slot.data_plane_url}/api/v1/browser",
                     json={"id": str(slot.id)},
                 )
                 response.raise_for_status()
@@ -29,8 +29,6 @@ class DataPlaneBrowserProvisioner(BrowserProvisioner):
     async def deprovision(self) -> None:
         async with httpx2.AsyncClient() as client:
             for slot in reversed(self._provisioned):
-                response = await client.delete(
-                    f"{slot.data_plane_url}/api/v1/browsers/{slot.id}"
-                )
+                response = await client.delete(f"{slot.data_plane_url}/api/v1/browser")
                 response.raise_for_status()
         self._provisioned.clear()

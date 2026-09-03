@@ -12,8 +12,8 @@ Frontend ──HTTP──▶ control-plane
 ```
 
 Die Control Plane kennt Browser-IDs, Worker und öffentliche Tunnel-Adressen. Ein
-Data-Plane-Worker besitzt Browserprozesse und stellt create, inspect, destroy,
-CDP sowie health/capacity bereit. BrowserTunnel ist ein Consumer dieser Data
+Data-Plane-Worker besitzt genau einen Browserprozess und stellt create,
+inspect, destroy, CDP sowie health bereit. BrowserTunnel ist ein Consumer dieser Data
 Plane und übersetzt CDP in das konkrete JSON-RPC-, Input- und
 Screencast-Protokoll des Frontends.
 

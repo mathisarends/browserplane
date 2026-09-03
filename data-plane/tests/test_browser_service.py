@@ -29,10 +29,8 @@ async def test_service_owns_browser_lifecycle() -> None:
 
     browser = await service.create(browser_id)
 
-    assert browser.cdp_url == f"ws://worker:8000/api/v1/browsers/{browser_id}/cdp"
-    assert service.get(browser_id).id == browser_id
-    assert service.capacity().available == 0
+    assert browser.cdp_url == f"ws://worker:8000/api/v1/browser/{browser_id}/cdp"
+    assert service.get().id == browser_id
 
-    await service.destroy(browser_id)
+    await service.destroy()
     assert process.stopped is True
-    assert service.capacity().available == 1
