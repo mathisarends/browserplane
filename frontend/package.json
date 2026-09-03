@@ -7,18 +7,23 @@
   ],
   "scripts": {
     "predev": "npm run generate:rpc",
-    "dev": "vite --config vite.config.ts",
-    "build": "npm run check:client && tsc -p tsconfig.json && vite build --config vite.config.ts",
-    "preview": "vite preview --config vite.config.ts",
+    "dev": "ng serve --proxy-config proxy.conf.json",
+    "build": "npm run check:client && ng build",
+    "preview": "ng serve --configuration production --proxy-config proxy.conf.json",
     "generate:rpc": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
     "check:generated": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
     "check:client": "npm run check --workspace @browsertunnel/browser-rpc-client"
   },
   "dependencies": {
-    "@browsertunnel/browser-rpc-client": "*"
+    "@angular/common": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@browsertunnel/browser-rpc-client": "*",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
-    "vite": "^7.1.3"
+    "@angular/build": "^20.3.0",
+    "@angular/cli": "^20.3.0",
+    "typescript": "~5.9.2"
   }
 }
