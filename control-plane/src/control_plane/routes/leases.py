@@ -23,7 +23,10 @@ class CreateLeaseRequest(BaseModel):
 
 
 @router.post(
-    "/leases", response_model=LeaseDescriptor, status_code=status.HTTP_201_CREATED
+    "/leases",
+    response_model=LeaseDescriptor,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="create_lease",
 )
 async def create_lease(
     request: CreateLeaseRequest, service: FromDishka[LeaseService]
@@ -40,7 +43,9 @@ async def create_lease(
         ) from error
 
 
-@router.get("/leases/{lease_id}", response_model=LeaseDescriptor)
+@router.get(
+    "/leases/{lease_id}", response_model=LeaseDescriptor, operation_id="get_lease"
+)
 async def get_lease(
     lease_id: UUID, service: FromDishka[LeaseService]
 ) -> LeaseDescriptor:
@@ -50,7 +55,11 @@ async def get_lease(
         raise HTTPException(status_code=404, detail="Lease not found") from error
 
 
-@router.delete("/leases/{lease_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/leases/{lease_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="release_lease",
+)
 async def release_lease(lease_id: UUID, service: FromDishka[LeaseService]) -> Response:
     try:
         await service.release(lease_id)

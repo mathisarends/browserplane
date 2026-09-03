@@ -11,7 +11,10 @@ router = APIRouter(route_class=DishkaRoute)
 
 
 @router.post(
-    "/browsers", response_model=BrowserDescriptor, status_code=status.HTTP_201_CREATED
+    "/browsers",
+    response_model=BrowserDescriptor,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="create_browser",
 )
 async def create_browser(
     service: FromDishka[BrowserService],
@@ -24,12 +27,18 @@ async def create_browser(
         ) from error
 
 
-@router.get("/browsers", response_model=list[BrowserDescriptor])
+@router.get(
+    "/browsers", response_model=list[BrowserDescriptor], operation_id="list_browsers"
+)
 async def list_browsers(service: FromDishka[BrowserService]) -> list[BrowserDescriptor]:
     return service.list()
 
 
-@router.get("/browsers/{browser_id}", response_model=BrowserDescriptor)
+@router.get(
+    "/browsers/{browser_id}",
+    response_model=BrowserDescriptor,
+    operation_id="get_browser",
+)
 async def get_browser(
     browser_id: UUID, service: FromDishka[BrowserService]
 ) -> BrowserDescriptor:
@@ -39,7 +48,11 @@ async def get_browser(
         raise HTTPException(status_code=404, detail="Browser not found") from error
 
 
-@router.delete("/browsers/{browser_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/browsers/{browser_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="destroy_browser",
+)
 async def destroy_browser(
     browser_id: UUID, service: FromDishka[BrowserService]
 ) -> Response:
@@ -50,7 +63,11 @@ async def destroy_browser(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/browsers/{browser_id}/reset", response_model=BrowserDescriptor)
+@router.post(
+    "/browsers/{browser_id}/reset",
+    response_model=BrowserDescriptor,
+    operation_id="reset_browser",
+)
 async def reset_browser(
     browser_id: UUID, service: FromDishka[BrowserService]
 ) -> BrowserDescriptor:

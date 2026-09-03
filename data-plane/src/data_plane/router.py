@@ -22,23 +22,23 @@ class Capacity(BaseModel):
     available: int
 
 
-@router.get("/health")
+@router.get("/health", operation_id="health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/readiness")
+@router.get("/readiness", operation_id="readiness")
 async def readiness() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/capacity")
+@router.get("/capacity", operation_id="capacity")
 async def capacity(manager: FromDishka[BrowserManager]) -> Capacity:
     total, available = manager.capacity()
     return Capacity(total=total, available=available)
 
 
-@router.post("/browsers", status_code=201)
+@router.post("/browsers", status_code=201, operation_id="create_browser")
 async def create_browser(
     request: CreateBrowserRequest,
     manager: FromDishka[BrowserManager],
@@ -51,7 +51,7 @@ async def create_browser(
         ) from error
 
 
-@router.get("/browsers/{browser_id}")
+@router.get("/browsers/{browser_id}", operation_id="inspect_browser")
 async def inspect_browser(
     browser_id: str,
     manager: FromDishka[BrowserManager],
@@ -62,7 +62,9 @@ async def inspect_browser(
         raise HTTPException(status_code=404, detail="Browser not found") from error
 
 
-@router.delete("/browsers/{browser_id}", status_code=204)
+@router.delete(
+    "/browsers/{browser_id}", status_code=204, operation_id="destroy_browser"
+)
 async def destroy_browser(
     browser_id: str,
     manager: FromDishka[BrowserManager],
