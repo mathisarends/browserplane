@@ -20,4 +20,4 @@ class BrowserProvider(Provider):
         try:
             yield service
         finally:
-            await service.close()
+            await service.destroy()

@@ -56,30 +56,23 @@ class BrowserService:
             return browser
 
     def get(self) -> Browser:
-        return self._require().browser
+        if self._running is None:
+            raise BrowserNotFoundException
+        return self._running.browser
 
     def upstream_cdp_url(self, browser_id: UUID) -> str:
         """Resolve the endpoint a CDP client addressed by the browser's id."""
-        running = self._require()
-        if running.browser.id != browser_id:
+        running = self._running
+        if running is None or running.browser.id != browser_id:
             raise BrowserNotFoundException
         return running.upstream_cdp_url
 
     async def destroy(self) -> None:
         async with self._lock:
             running = self._running
-            if running is None:
-                return
             self._running = None
-            await running.process.stop()
-
-    async def close(self) -> None:
-        await self.destroy()
-
-    def _require(self) -> RunningBrowser:
-        if self._running is None:
-            raise BrowserNotFoundException
-        return self._running
+            if running is not None:
+                await running.process.stop()
 
     def _public_cdp_url(self, browser_id: UUID) -> str:
         base = self._settings.public_base_url.rstrip("/")
