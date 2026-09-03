@@ -29,9 +29,7 @@ async def proxy_websocket(client: WebSocket, tunnel_url: str) -> None:
         await client.close(code=1011, reason="Browser tunnel unavailable")
 
 
-async def _forward_to_tunnel(
-    client: WebSocket, tunnel: ClientConnection
-) -> None:
+async def _forward_to_tunnel(client: WebSocket, tunnel: ClientConnection) -> None:
     while True:
         message = await client.receive()
         if message["type"] == "websocket.disconnect":
@@ -42,9 +40,7 @@ async def _forward_to_tunnel(
             await tunnel.send(data)
 
 
-async def _forward_to_client(
-    tunnel: ClientConnection, client: WebSocket
-) -> None:
+async def _forward_to_client(tunnel: ClientConnection, client: WebSocket) -> None:
     async for message in tunnel:
         if isinstance(message, str):
             await client.send_text(message)

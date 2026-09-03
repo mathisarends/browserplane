@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from control_plane.lifespan import lifespan
 from control_plane.provider import ControlPlaneProvider
 from control_plane.provisioning import BrowserProvisioner
-from control_plane.router import router
+from control_plane.routes import router
 
 
 def create_app(provisioner: BrowserProvisioner | None = None) -> FastAPI:

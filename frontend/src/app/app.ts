@@ -14,5 +14,8 @@ import { BrowserPanel } from "./browser/browser-panel";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  protected readonly browserIds = ["browser-1", "browser-2"] as const;
+  protected readonly browserIds = [
+    "00000000-0000-0000-0000-000000000001",
+    "00000000-0000-0000-0000-000000000002",
+  ] as const;
 }

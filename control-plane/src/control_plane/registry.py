@@ -1,44 +1,45 @@
 from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
 
-from control_plane.provisioning import BrowserProvisioner
 from control_plane.settings import BrowserSlot
 
 
 @dataclass(frozen=True, slots=True)
 class BrowserDescriptor:
-    id: str
-    status: str
-    websocket_url: str
+    id: UUID
+    state: str
+    cdp_url: str
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class BrowserRecord:
+    slot: BrowserSlot
+    created_at: datetime
+    state: str = "ready"
 
 
 class BrowserRegistry:
-    def __init__(self, provisioner: BrowserProvisioner) -> None:
-        self._provisioner = provisioner
-        self._slots: dict[str, BrowserSlot] = {}
+    """In-memory browser store; lifecycle policy belongs to BrowserService."""
 
-    async def start(self) -> None:
-        slots = await self._provisioner.provision()
-        self._slots = {slot.id: slot for slot in slots}
+    def __init__(self) -> None:
+        self._browsers: dict[str, BrowserRecord] = {}
 
-    async def stop(self) -> None:
-        self._slots.clear()
-        await self._provisioner.deprovision()
+    def add(self, browser: BrowserRecord) -> None:
+        self._browsers[browser.slot.id] = browser
 
-    def list(self) -> list[BrowserDescriptor]:
-        return [
-            BrowserDescriptor(
-                id=slot.id,
-                status="ready",
-                websocket_url=f"/api/v1/browsers/{slot.id}/ws",
-            )
-            for slot in self._slots.values()
-        ]
+    def list(self) -> list[BrowserRecord]:
+        return list(self._browsers.values())
 
-    def get(self, browser_id: str) -> BrowserSlot:
+    def get(self, browser_id: UUID) -> BrowserRecord:
         try:
-            return self._slots[browser_id]
+            return self._browsers[browser_id]
         except KeyError as error:
             raise BrowserNotFoundError(browser_id) from error
+
+    def clear(self) -> None:
+        self._browsers.clear()
 
 
 class BrowserNotFoundError(LookupError):

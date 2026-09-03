@@ -25,7 +25,7 @@ class DataPlaneBrowserProvisioner:
             for slot in slots:
                 response = await client.post(
                     f"{slot.data_plane_url}/api/v1/browsers",
-                    json={"id": slot.id},
+                    json={"id": str(slot.id)},
                 )
                 response.raise_for_status()
                 self._provisioned.append(slot)

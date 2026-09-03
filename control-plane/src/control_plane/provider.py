@@ -1,5 +1,3 @@
-from collections.abc import AsyncIterator
-
 from dishka import Provider, Scope, provide
 
 from control_plane.provisioning import (
@@ -7,6 +5,7 @@ from control_plane.provisioning import (
     DataPlaneBrowserProvisioner,
 )
 from control_plane.registry import BrowserRegistry
+from control_plane.services import BrowserService, LeaseService
 from control_plane.settings import ControlPlaneSettings
 
 
@@ -20,18 +19,19 @@ class ControlPlaneProvider(Provider):
         return ControlPlaneSettings()
 
     @provide(scope=Scope.APP, provides=BrowserProvisioner)
-    def provisioner(
-        self, settings: ControlPlaneSettings
-    ) -> BrowserProvisioner:
+    def provisioner(self, settings: ControlPlaneSettings) -> BrowserProvisioner:
         return self._provisioner or DataPlaneBrowserProvisioner(settings)
 
     @provide(scope=Scope.APP)
-    async def registry(
-        self, provisioner: BrowserProvisioner
-    ) -> AsyncIterator[BrowserRegistry]:
-        registry = BrowserRegistry(provisioner)
-        await registry.start()
-        try:
-            yield registry
-        finally:
-            await registry.stop()
+    def registry(self) -> BrowserRegistry:
+        return BrowserRegistry()
+
+    @provide(scope=Scope.APP)
+    def browser_service(
+        self, provisioner: BrowserProvisioner, registry: BrowserRegistry
+    ) -> BrowserService:
+        return BrowserService(provisioner, registry)
+
+    @provide(scope=Scope.APP)
+    def lease_service(self, registry: BrowserRegistry) -> LeaseService:
+        return LeaseService(registry)

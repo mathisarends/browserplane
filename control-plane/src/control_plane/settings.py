@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 @dataclass(frozen=True, slots=True)
 class BrowserSlot:
-    id: str
+    id: UUID
     data_plane_url: str
     tunnel_url: str
 
@@ -27,12 +28,12 @@ class ControlPlaneSettings(BaseSettings):
     def slots(self) -> tuple[BrowserSlot, BrowserSlot]:
         return (
             BrowserSlot(
-                "browser-1",
+                UUID("00000000-0000-0000-0000-000000000001"),
                 self.browser_1_data_plane_url,
                 self.browser_1_tunnel_url,
             ),
             BrowserSlot(
-                "browser-2",
+                UUID("00000000-0000-0000-0000-000000000002"),
                 self.browser_2_data_plane_url,
                 self.browser_2_tunnel_url,
             ),
