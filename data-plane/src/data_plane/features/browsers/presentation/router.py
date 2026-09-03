@@ -1,11 +1,14 @@
+import logging
+from contextlib import aclosing, suppress
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
+from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from data_plane.features.browsers.application.exceptions import BrowserNotFoundException
 from data_plane.features.browsers.application.service import BrowserService
-from data_plane.features.browsers.infrastructure.screencast import stream_screencast
+from data_plane.features.browsers.infrastructure.screencast import Screencast
 from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
 from data_plane.features.browsers.presentation.errors import (
     BROWSER_ALREADY_RUNNING,
@@ -21,6 +24,7 @@ from data_plane.presentation.api_errors import api_error_responses
 from data_plane.settings import DataPlaneSettings
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
+logger = logging.getLogger(__name__)
 
 
 @browser_router.post(
@@ -85,10 +89,23 @@ async def browser_screencast(
     except BrowserNotFoundException:
         await websocket.close(code=1008, reason="Unknown browser")
         return
-    await stream_screencast(
-        websocket,
+    screencast = Screencast(
         upstream_url,
         quality=settings.screencast_quality,
         width=settings.width,
         height=settings.height,
     )
+    await websocket.accept()
+    try:
+        async with aclosing(screencast.frames()) as frames:
+            async for frame in frames:
+                await websocket.send_bytes(frame)
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        logger.exception("Screencast websocket stopped unexpectedly")
+        if websocket.application_state is not WebSocketState.DISCONNECTED:
+            with suppress(Exception):
+                await websocket.close(
+                    code=1011, reason="Browser screencast unavailable"
+                )
