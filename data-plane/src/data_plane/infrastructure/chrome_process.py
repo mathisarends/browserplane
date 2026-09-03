@@ -5,14 +5,12 @@ import tempfile
 import time
 from pathlib import Path
 
+from data_plane.application.exceptions import BrowserStartupException
+from data_plane.application.ports import BrowserProcess
 from data_plane.settings import DataPlaneSettings
 
 
-class BrowserStartupError(RuntimeError):
-    pass
-
-
-class ChromeProcess:
+class ChromeProcess(BrowserProcess):
     """Own one Chromium process and its temporary profile."""
 
     def __init__(self, settings: DataPlaneSettings) -> None:
@@ -71,13 +69,13 @@ class ChromeProcess:
         deadline = time.monotonic() + self._settings.startup_timeout
         while time.monotonic() < deadline:
             if self._process is None or self._process.returncode is not None:
-                raise BrowserStartupError("Chromium exited during startup")
+                raise BrowserStartupException("Chromium exited during startup")
             if active_port.exists():
                 lines = active_port.read_text(encoding="utf-8").splitlines()
                 if len(lines) >= 2:
                     return f"ws://127.0.0.1:{lines[0]}{lines[1]}"
             await asyncio.sleep(0.05)
-        raise BrowserStartupError("Timed out waiting for Chromium's CDP endpoint")
+        raise BrowserStartupException("Timed out waiting for Chromium's CDP endpoint")
 
     def _find_executable(self) -> str:
         candidates = [
@@ -95,7 +93,7 @@ class ChromeProcess:
         candidates.extend(str(path) for path in windows if path.exists())
         executable = next((candidate for candidate in candidates if candidate), None)
         if executable is None:
-            raise BrowserStartupError(
+            raise BrowserStartupException(
                 "No Chromium browser found; set DATA_PLANE_EXECUTABLE"
             )
         return executable
