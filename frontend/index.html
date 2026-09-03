@@ -6,9 +6,15 @@
     <title>BrowserTunnel</title>
   </head>
   <body>
-    <main class="workspace">
-      <section class="browser-panel" aria-label="Browser-Vorschau">
+    <main id="browser-workspace" class="workspace"></main>
+
+    <template id="browser-panel-template">
+      <section class="browser-panel">
         <header class="browser-chrome">
+          <div class="browser-heading">
+            <span class="browser-identity"></span>
+            <span class="plane-label">Data Plane</span>
+          </div>
           <div class="tab-strip">
             <div class="window-controls" aria-hidden="true">
               <span></span>
@@ -16,23 +22,23 @@
               <span></span>
             </div>
             <div class="tabs">
-              <div id="tab-list" class="tab-list" role="tablist" aria-label="Browser-Tabs"></div>
-              <button id="new-tab" class="new-tab" type="button" aria-label="Neuen Tab öffnen">+</button>
+              <div class="tab-list" role="tablist" aria-label="Browser-Tabs"></div>
+              <button class="new-tab" type="button" aria-label="Neuen Tab öffnen">+</button>
             </div>
           </div>
           <div class="browser-bar">
             <nav class="navigation-controls" aria-label="Seitennavigation">
-              <button id="nav-back" type="button" aria-label="Zurück" disabled>
+              <button class="nav-back" type="button" aria-label="Zurück" disabled>
                 <svg viewBox="0 0 20 20" aria-hidden="true">
                   <path d="m12.5 4.5-5.5 5 5.5 5" />
                 </svg>
               </button>
-              <button id="nav-forward" type="button" aria-label="Vor" disabled>
+              <button class="nav-forward" type="button" aria-label="Vor" disabled>
                 <svg viewBox="0 0 20 20" aria-hidden="true">
                   <path d="m7.5 4.5 5.5 5-5.5 5" />
                 </svg>
               </button>
-              <button id="nav-reload" type="button" aria-label="Neu laden" data-loading="false">
+              <button class="nav-reload" type="button" aria-label="Neu laden" data-loading="false">
                 <svg class="reload-icon" viewBox="0 0 20 20" aria-hidden="true">
                   <path d="M15.3 7.1A6 6 0 1 0 16 10" />
                   <path d="M15.3 3.8v3.7H12" />
@@ -42,10 +48,10 @@
                 </svg>
               </button>
             </nav>
-            <form id="address-form" class="address-form">
-              <label class="visually-hidden" for="address-input">URL</label>
+            <form class="address-form">
+              <label class="visually-hidden">URL</label>
               <input
-                id="address-input"
+                class="address-input"
                 name="url"
                 type="text"
                 inputmode="url"
@@ -59,19 +65,22 @@
         </header>
 
         <canvas
-          id="browser-canvas"
+          class="browser-canvas"
           width="1600"
           height="900"
           aria-label="Browser-Stream"
         ></canvas>
 
         <footer class="stream-status">
-          <span><i class="status-dot"></i><span id="active-tab-status">Tab 1 · Stream wartet</span></span>
-          <span><span id="cursor-status">cursor: default</span> · 1600 × 900</span>
+          <span>
+            <i class="status-dot"></i>
+            <span class="active-tab-status">Stream wartet</span>
+          </span>
+          <span><span class="cursor-status">cursor: default</span> · 1600 × 900</span>
         </footer>
       </section>
+    </template>
 
-    </main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
