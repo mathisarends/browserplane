@@ -20,7 +20,13 @@ class LeaseService:
             await self._expire()
             await self._allocator.reserve(browser_id)
             now = datetime.now(UTC)
-            lease = Lease(uuid4(), browser_id, owner_id, now + ttl, now)
+            lease = Lease(
+                id=uuid4(),
+                browser_id=browser_id,
+                owner_id=owner_id,
+                expires_at=now + ttl,
+                created_at=now,
+            )
             self._store.add(lease)
             return lease
 
