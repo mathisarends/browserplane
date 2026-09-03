@@ -71,6 +71,7 @@ async def browser_cdp(
     try:
         upstream_url = service.upstream_cdp_url(browser_id)
     except BrowserNotFoundException:
+        await websocket.accept()
         await websocket.close(code=1008, reason="Unknown browser")
         return
     await proxy_cdp(websocket, upstream_url)

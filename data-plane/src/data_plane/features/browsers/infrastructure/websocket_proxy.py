@@ -1,32 +1,67 @@
 import asyncio
+import logging
 from contextlib import suppress
 
 from fastapi import WebSocket
-from starlette.websockets import WebSocketDisconnect
+from starlette.websockets import WebSocketDisconnect, WebSocketState
 from websockets.asyncio.client import ClientConnection, connect
-from websockets.exceptions import ConnectionClosed
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
+
+logger = logging.getLogger(__name__)
 
 
 async def proxy_cdp(client: WebSocket, upstream_url: str) -> None:
     await client.accept()
     try:
         async with connect(upstream_url, max_size=None) as upstream:
-            tasks = {
-                asyncio.create_task(_forward_client(client, upstream)),
-                asyncio.create_task(_forward_upstream(upstream, client)),
-            }
-            done, pending = await asyncio.wait(
-                tasks, return_when=asyncio.FIRST_COMPLETED
-            )
-            for task in pending:
-                task.cancel()
-            for task in done | pending:
-                with suppress(
-                    asyncio.CancelledError, ConnectionClosed, WebSocketDisconnect
-                ):
-                    await task
-    except OSError:
-        await client.close(code=1011, reason="Browser CDP unavailable")
+            await _relay(client, upstream)
+        await _close_client(client, code=1000)
+    except WebSocketDisconnect:
+        pass
+    except ConnectionClosedOK:
+        await _close_client(client, code=1000)
+    except (OSError, TimeoutError, ConnectionClosedError) as error:
+        logger.warning(
+            "Browser CDP connection became unavailable (%s)",
+            type(error).__name__,
+        )
+        await _close_client(client, code=1011, reason="Browser CDP unavailable")
+    except Exception as error:
+        # Upstream URLs may contain credentials, so don't log exception messages.
+        logger.error(
+            "CDP websocket proxy stopped unexpectedly (%s)",
+            type(error).__name__,
+        )
+        await _close_client(client, code=1011, reason="Browser CDP unavailable")
+
+
+async def _relay(client: WebSocket, upstream: ClientConnection) -> None:
+    tasks = {
+        asyncio.create_task(_forward_client(client, upstream)),
+        asyncio.create_task(_forward_upstream(upstream, client)),
+    }
+    try:
+        done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for task in done:
+            task.result()
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def _close_client(
+    client: WebSocket,
+    *,
+    code: int,
+    reason: str | None = None,
+) -> None:
+    if (
+        client.client_state is WebSocketState.CONNECTED
+        and client.application_state is WebSocketState.CONNECTED
+    ):
+        with suppress(RuntimeError):
+            await client.close(code=code, reason=reason)
 
 
 async def _forward_client(client: WebSocket, upstream: ClientConnection) -> None:
