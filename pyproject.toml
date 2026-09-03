@@ -4,13 +4,14 @@ version = "0.1.0"
 description = "Workspace root for the browsertunnel Python backends."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["browsertunnel"]
+dependencies = ["browsertunnel", "control-plane"]
 
 [tool.uv.sources]
 browsertunnel = { workspace = true }
+control-plane = { workspace = true }
 
 [tool.uv.workspace]
-members = ["browsertunnel"]
+members = ["browsertunnel", "control-plane"]
 
 [dependency-groups]
 dev = [
@@ -40,12 +41,12 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["browsertunnel"]
+known-first-party = ["browsertunnel", "control_plane"]
 
 [tool.pytest.ini_options]
-testpaths = ["browsertunnel/tests", "frontend/tests"]
+testpaths = ["browsertunnel/tests", "control-plane/tests", "frontend/tests"]
 pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["browsertunnel/src"]
-omit = ["browsertunnel/tests/*", ".venv/*"]
+source = ["browsertunnel/src", "control-plane/src"]
+omit = ["browsertunnel/tests/*", "control-plane/tests/*", ".venv/*"]

@@ -7,7 +7,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 COPY pyproject.toml uv.lock ./
 COPY browsertunnel/pyproject.toml browsertunnel/pyproject.toml
-RUN uv sync --frozen --no-dev --no-install-project
+COPY control-plane/pyproject.toml control-plane/pyproject.toml
+RUN uv sync --frozen --no-dev --package browsertunnel --no-install-project
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends chromium \
@@ -15,7 +16,7 @@ RUN apt-get update \
 
 COPY browsertunnel ./browsertunnel
 
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --package browsertunnel
 
 ENV PATH="/app/.venv/bin:$PATH"
 

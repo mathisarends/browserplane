@@ -1,9 +1,28 @@
+x-browser-tunnel: &browser-tunnel
+  image: browser-provisioner-browsertunnel:local
+  build:
+    context: .
+    dockerfile: browsertunnel/Dockerfile
+  environment:
+    - PORT=8000
+
 services:
-  backend:
+  control-plane:
     build:
       context: .
-      dockerfile: browsertunnel/Dockerfile
+      dockerfile: control-plane/Dockerfile
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
+      - CONTROL_BROWSER_1_TUNNEL_URL=ws://browser-tunnel-1:8000/api/browser/ws
+      - CONTROL_BROWSER_2_TUNNEL_URL=ws://browser-tunnel-2:8000/api/browser/ws
+    depends_on:
+      - browser-tunnel-1
+      - browser-tunnel-2
+
+  browser-tunnel-1:
+    <<: *browser-tunnel
+
+  browser-tunnel-2:
+    <<: *browser-tunnel
