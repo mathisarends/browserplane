@@ -3,16 +3,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from control_plane.services import BrowserService
+from control_plane.features.browsers.application.service import BrowserService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     container = app.state.dishka_container
-    service = await container.get(BrowserService)
-    await service.start()
+    browsers = await container.get(BrowserService)
+    await browsers.start()
     try:
         yield
     finally:
-        await service.stop()
+        await browsers.stop()
         await container.close()

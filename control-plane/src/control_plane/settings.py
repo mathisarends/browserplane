@@ -1,14 +1,8 @@
-from dataclasses import dataclass
 from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
-@dataclass(frozen=True, slots=True)
-class BrowserSlot:
-    id: UUID
-    data_plane_url: str
-    tunnel_url: str
+from control_plane.features.browsers.application.models import BrowserSlot
 
 
 class ControlPlaneSettings(BaseSettings):

@@ -31,12 +31,22 @@ Browser-Session ist über CDP steuerbar):
 ```text
 control-plane/
   src/control_plane/
-    app.py            # FastAPI-Aufbau
-    router.py         # öffentliche HTTP-/WebSocket-Routen
-    provider.py       # Dishka-Verdrahtung
-    provisioning.py  # austauschbarer Provisioner-Port
-    registry.py       # zwei Browser-Slots
-    proxy.py          # bidirektionaler WebSocket-Proxy
+    app.py                     # FastAPI-Aufbau und Fehler-Handler
+    settings.py                # Konfiguration der Browser-Slots
+    presentation/              # API-Fehlerkontrakt und v1-Router
+      api_errors.py            # ApiErrorSpec, Responses, Exception-Handler
+      errors.py                # ApiErrorCode, ApiErrorResponse
+    shared/exceptions.py       # ControlPlaneException als Basis
+    features/
+      browsers/
+        application/           # Modelle, Ports, BrowserService, Exceptions
+        infrastructure/        # Data-Plane-Provisioner, Registry, WS-Proxy
+        presentation/          # Routen, Schemas, Mapper, Fehler-Specs
+      leases/
+        application/           # Lease-Modell, LeaseStore/BrowserAllocator, Service
+        infrastructure/        # In-Memory-Store, Allocator-Adapter
+        presentation/          # Routen, Schemas, Mapper, Fehler-Specs
+      health/presentation/     # health und readiness
 
 browsertunnel/
   src/browsertunnel/  # CDP-Consumer und Frontend-Protokoll

@@ -1,18 +1,13 @@
 from collections.abc import Sequence
-from typing import Protocol
 
 import httpx2
 
-from control_plane.settings import BrowserSlot, ControlPlaneSettings
+from control_plane.features.browsers.application.models import BrowserSlot
+from control_plane.features.browsers.application.ports import BrowserProvisioner
+from control_plane.settings import ControlPlaneSettings
 
 
-class BrowserProvisioner(Protocol):
-    async def provision(self) -> Sequence[BrowserSlot]: ...
-
-    async def deprovision(self) -> None: ...
-
-
-class DataPlaneBrowserProvisioner:
+class DataPlaneBrowserProvisioner(BrowserProvisioner):
     """Create one browser on each configured data-plane worker."""
 
     def __init__(self, settings: ControlPlaneSettings) -> None:

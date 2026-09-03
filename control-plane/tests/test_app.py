@@ -3,10 +3,11 @@ from uuid import UUID
 from fastapi.testclient import TestClient
 
 from control_plane.app import create_app
-from control_plane.settings import BrowserSlot
+from control_plane.features.browsers.application.models import BrowserSlot
+from control_plane.features.browsers.application.ports import BrowserProvisioner
 
 
-class FakeProvisioner:
+class FakeProvisioner(BrowserProvisioner):
     async def provision(self) -> tuple[BrowserSlot, BrowserSlot]:
         return (
             BrowserSlot(UUID(int=1), "http://worker-1", "ws://tunnel-1/ws"),
@@ -26,3 +27,14 @@ def test_lists_two_browser_data_planes() -> None:
         "00000000-0000-0000-0000-000000000001",
         "00000000-0000-0000-0000-000000000002",
     ]
+
+
+def test_unknown_browser_returns_api_error() -> None:
+    with TestClient(create_app(FakeProvisioner())) as client:
+        response = client.get(f"/api/v1/browsers/{UUID(int=9)}")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "code": "browser_not_found",
+        "message": "Browser not found",
+    }
