@@ -86,7 +86,7 @@ class _Imports:
             groups[self._group(module)].setdefault(module, set()).add(name)
         blocks = [
             "\n".join(
-                f"from {module} import {', '.join(_sorted_names(names))}"
+                _render_import(module, _sorted_names(names))
                 for module, names in sorted(group.items(), key=_sort_key)
             )
             for group in groups
@@ -462,6 +462,15 @@ def _ref_name(reference: str) -> str:
     if not reference.startswith(REF_PREFIX):
         raise UnsupportedSchemaError(f"Unsupported reference: {reference!r}")
     return reference.removeprefix(REF_PREFIX)
+
+
+def _render_import(module: str, names: list[str]) -> str:
+    """Render one import, wrapping it when the inline form is too long."""
+    inline = f"from {module} import {', '.join(names)}"
+    if len(inline) <= LINE_LENGTH:
+        return inline
+    wrapped = "\n".join(f"    {name}," for name in names)
+    return f"from {module} import (\n{wrapped}\n)"
 
 
 def _sorted_names(names: Iterable[str]) -> list[str]:
