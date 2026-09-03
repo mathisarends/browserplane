@@ -8,7 +8,6 @@ from data_plane.features.browsers.presentation.schemas import (
 def to_browser_response(browser: Browser) -> BrowserResponse:
     return BrowserResponse(
         id=browser.id,
-        state=browser.state,
         cdp_url=browser.cdp_url,
     )
 

@@ -1,15 +1,14 @@
-from pydantic import BaseModel
+from uuid import UUID
 
-from data_plane.features.browsers.application.models import BrowserState
+from pydantic import BaseModel
 
 
 class CreateBrowserRequest(BaseModel):
-    id: str
+    id: UUID
 
 
 class BrowserResponse(BaseModel):
-    id: str
-    state: BrowserState
+    id: UUID
     cdp_url: str
 
 

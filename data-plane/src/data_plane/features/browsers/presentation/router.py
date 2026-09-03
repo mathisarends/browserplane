@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
 
@@ -49,7 +51,7 @@ async def create_browser(
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
 async def inspect_browser(
-    browser_id: str,
+    browser_id: UUID,
     service: FromDishka[BrowserService],
 ) -> BrowserResponse:
     browser = service.get(browser_id)
@@ -62,7 +64,7 @@ async def inspect_browser(
     operation_id="destroy_browser",
 )
 async def destroy_browser(
-    browser_id: str,
+    browser_id: UUID,
     service: FromDishka[BrowserService],
 ) -> Response:
     await service.destroy(browser_id)
@@ -72,7 +74,7 @@ async def destroy_browser(
 @browser_router.websocket("/browsers/{browser_id}/cdp")
 @inject
 async def browser_cdp(
-    browser_id: str,
+    browser_id: UUID,
     websocket: WebSocket,
     service: FromDishka[BrowserService],
 ) -> None:

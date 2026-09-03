@@ -1,17 +1,12 @@
 from dataclasses import dataclass
-from enum import StrEnum
-
-
-class BrowserState(StrEnum):
-    READY = "ready"
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
 class Browser:
     """A Chromium instance owned by this worker."""
 
-    id: str
-    state: BrowserState
+    id: UUID
     cdp_url: str
 
 

@@ -1,6 +1,7 @@
+from uuid import uuid4
+
 import pytest
 
-from data_plane.features.browsers.application.models import BrowserState
 from data_plane.features.browsers.application.ports import BrowserProcess
 from data_plane.features.browsers.application.service import BrowserService
 from data_plane.settings import DataPlaneSettings
@@ -24,12 +25,14 @@ async def test_service_owns_browser_lifecycle() -> None:
         process_factory=lambda _: process,
     )
 
-    browser = await service.create("browser-1")
+    browser_id = uuid4()
 
-    assert browser.cdp_url == "ws://worker:8000/api/v1/browsers/browser-1/cdp"
-    assert service.get("browser-1").state is BrowserState.READY
+    browser = await service.create(browser_id)
+
+    assert browser.cdp_url == f"ws://worker:8000/api/v1/browsers/{browser_id}/cdp"
+    assert service.get(browser_id).id == browser_id
     assert service.capacity().available == 0
 
-    await service.destroy("browser-1")
+    await service.destroy(browser_id)
     assert process.stopped is True
     assert service.capacity().available == 1
