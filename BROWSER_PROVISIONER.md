@@ -2,24 +2,21 @@
 
 ## Zielbild
 
-Die V1 besteht aus zwei getrennten Python-Services und UV-Workspace-Membern:
+Die V1 trennt drei Verantwortlichkeiten in eigene Python-Packages:
 
 ```text
-                         control-plane
-                    Registry + WebSocket-Proxy
-                       /               \
-              browser-1                 browser-2
-                  |                         |
-          browsertunnel-1           browsertunnel-2
-          (eine Data Plane)          (eine Data Plane)
-                  |                         |
-             Chromium 1                Chromium 2
+Frontend ──HTTP/WS──▶ control-plane ──WS-Routing──▶ browsertunnel
+                           │                            │
+                           │ Browser-Lifecycle          │ rohes CDP
+                           ▼                            ▼
+                    data-plane worker ─────────────▶ Chromium
 ```
 
-Die Control Plane kennt Browser-IDs, Kapazität und die internen Tunnel-Adressen.
-BrowserTunnel bleibt eine Single-Browser-Data-Plane für Navigation, Input,
-Tabs, Clipboard und Screencast. Der Browser selbst ist eine provisionierte
-Ressource und kein weiterer UV-Member.
+Die Control Plane kennt Browser-IDs, Worker und interne Tunnel-Adressen. Ein
+Data-Plane-Worker besitzt Browserprozesse und stellt create, inspect, destroy,
+CDP sowie health/capacity bereit. BrowserTunnel ist ein Consumer dieser Data
+Plane und übersetzt CDP in das konkrete JSON-RPC-, Input- und
+Screencast-Protokoll des Frontends.
 
 Dieses Session-Modell entspricht dem grundlegenden Muster von Browserbase
 (`id`, Status und geheime `connectUrl`) und Browser Use Cloud (eine
@@ -42,14 +39,17 @@ control-plane/
     proxy.py          # bidirektionaler WebSocket-Proxy
 
 browsertunnel/
-  src/browsertunnel/  # bestehende Data Plane, weiterhin ein Browser
+  src/browsertunnel/  # CDP-Consumer und Frontend-Protokoll
+
+data-plane/
+  src/data_plane/     # Chromium-Lifecycle, Registry, CDP-Proxy, Kapazität
 ```
 
-`ComposeBrowserProvisioner` liefert beim Start zwei feste Slots. Compose hält
-dazu zwei getrennte BrowserTunnel-Container; jeder startet momentan seinen
-eigenen lokalen Chromium. Die Control Plane leitet den Client-WebSocket an den
-ausgewählten Container weiter. Interne Tunnel-Adressen werden nicht an das
-Frontend gegeben.
+`DataPlaneBrowserProvisioner` erzeugt beim Start über die interne Worker-API
+zwei feste Browser-Ressourcen. Erst danach starten die BrowserTunnel-Container
+und verbinden sich mit deren CDP-Endpunkten. Die Control Plane leitet den
+Client-WebSocket an den ausgewählten BrowserTunnel weiter. Worker-, CDP- und
+interne Tunnel-Adressen werden nicht an das Frontend gegeben.
 
 Die minimale Provisioner-Schnittstelle lautet:
 
@@ -59,10 +59,9 @@ class BrowserProvisioner(Protocol):
     async def deprovision(self) -> None: ...
 ```
 
-Für Browserbase oder Browser Use wird später nur diese Implementierung ersetzt:
-Cloud-Browser erzeugen, eine BrowserTunnel-Data-Plane mit dessen geheimer
-CDP-URL starten und beim Freigeben beides wieder beenden. `browsertunnel` muss
-dazu nicht wissen, welcher Cloud-Provider verwendet wird.
+Für Browserbase oder Browser Use wird später die Worker- beziehungsweise
+Provisioner-Implementierung ersetzt. `browsertunnel` benötigt weiterhin nur
+einen CDP-Endpunkt und muss den Browser-Provider nicht kennen.
 
 ## Öffentliche Schnittstellen
 
@@ -109,11 +108,13 @@ beiden BrowserTunnel-Container sind nur im internen Compose-Netz sichtbar.
 
 - Genau zwei eager gestartete Browser, keine dynamische Skalierung.
 - Registry nur im Speicher, keine Datenbank oder Queue.
-- Compose besitzt den Container-Lifecycle; die Control Plane bildet ihn ab.
-- Noch kein Health-Check der einzelnen Data Planes.
+- Compose besitzt den Worker- und Tunnel-Container-Lifecycle; die Control Plane
+  besitzt den Browser-Lifecycle auf den Workern.
+- Worker-Health und Kapazität sind vorhanden, werden aber noch nicht für
+  dynamisches Scheduling verwendet.
 - Noch keine exklusive Viewer-Sperre, Authentifizierung oder Wiederherstellung.
 - Cloud-CDP-URLs dürfen später niemals in Logs oder API-Antworten erscheinen.
 
-Der nächste Schritt wäre ein echter Cloud-Provisioner, der Browser-Session und
-BrowserTunnel-Workload gemeinsam erzeugt und zerstört. Die öffentliche API und
-die Data Plane können dabei unverändert bleiben.
+Der nächste Schritt wäre eine echte Session-API, die Worker nach Kapazität
+auswählt und BrowserTunnel-Workloads dynamisch zuordnet. Der aktuelle Schnitt
+zeigt dafür bereits die getrennten Lifecycles.

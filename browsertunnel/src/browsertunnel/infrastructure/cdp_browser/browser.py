@@ -18,7 +18,6 @@ from browsertunnel.infrastructure.cdp_browser.clipboard import CdpClipboard
 from browsertunnel.infrastructure.cdp_browser.input import CdpInput
 from browsertunnel.infrastructure.cdp_browser.navigation import CdpNavigation
 from browsertunnel.infrastructure.cdp_browser.tabs import CdpTabs, select_any_page
-from browsertunnel.infrastructure.chrome_process import ChromeProcess
 from browsertunnel.infrastructure.cursor_event_bridge import CursorEventBridge
 from browsertunnel.infrastructure.events import BrowserEventForwarder, EventBus
 from browsertunnel.infrastructure.listener_event_bridge import ListenerEventBridge
@@ -33,7 +32,6 @@ class CdpBrowser(Browser):
 
     def __init__(self, settings: BrowserSettings) -> None:
         self._settings = settings
-        self._chrome_process = ChromeProcess(settings)
         self._target = ActiveTarget()
         self._event_bus = EventBus()
         self._event_bridge = ListenerEventBridge(self._event_bus)
@@ -70,10 +68,7 @@ class CdpBrowser(Browser):
 
     async def start(self) -> None:
         try:
-            cdp_url = self._settings.cdp_url
-            if cdp_url is None:
-                cdp_url = await self._chrome_process.start()
-            client = Client(cdp_url)
+            client = Client(self._settings.cdp_url)
             self._target.attach(client)
             await client.connect()
             await self._event_bridge.start(client)
@@ -94,7 +89,6 @@ class CdpBrowser(Browser):
         client = self._target.detach()
         if client is not None:
             await client.disconnect()
-        await self._chrome_process.stop()
 
     async def events(self) -> AsyncIterator[BrowserEvent]:
         queue = self._browser_event_forwarder.subscribe()

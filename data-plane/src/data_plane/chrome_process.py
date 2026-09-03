@@ -5,7 +5,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from browsertunnel.settings import BrowserSettings
+from data_plane.settings import DataPlaneSettings
 
 
 class BrowserStartupError(RuntimeError):
@@ -13,9 +13,9 @@ class BrowserStartupError(RuntimeError):
 
 
 class ChromeProcess:
-    """Manage a local Chromium process and its temporary profile."""
+    """Own one Chromium process and its temporary profile."""
 
-    def __init__(self, settings: BrowserSettings) -> None:
+    def __init__(self, settings: DataPlaneSettings) -> None:
         self._settings = settings
         self._process: asyncio.subprocess.Process | None = None
         self._profile: tempfile.TemporaryDirectory[str] | None = None
@@ -23,7 +23,7 @@ class ChromeProcess:
     async def start(self) -> str:
         executable = self._find_executable()
         self._profile = tempfile.TemporaryDirectory(
-            prefix="browsertunnel-", ignore_cleanup_errors=True
+            prefix="data-plane-", ignore_cleanup_errors=True
         )
         profile_path = Path(self._profile.name)
         args = [
@@ -96,6 +96,6 @@ class ChromeProcess:
         executable = next((candidate for candidate in candidates if candidate), None)
         if executable is None:
             raise BrowserStartupError(
-                "No Chromium browser found; set BROWSER_EXECUTABLE or BROWSER_CDP_URL"
+                "No Chromium browser found; set DATA_PLANE_EXECUTABLE"
             )
         return executable

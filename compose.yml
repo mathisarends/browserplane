@@ -1,12 +1,34 @@
+x-data-plane: &data-plane
+  image: browser-provisioner-data-plane:local
+  environment:
+    - PORT=8000
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+    interval: 2s
+    timeout: 2s
+    retries: 20
+
 x-browser-tunnel: &browser-tunnel
   image: browser-provisioner-browsertunnel:local
-  build:
-    context: .
-    dockerfile: browsertunnel/Dockerfile
   environment:
     - PORT=8000
 
 services:
+  data-plane-1:
+    <<: *data-plane
+    build:
+      context: .
+      dockerfile: data-plane/Dockerfile
+    environment:
+      - PORT=8000
+      - DATA_PLANE_PUBLIC_BASE_URL=ws://data-plane-1:8000
+
+  data-plane-2:
+    <<: *data-plane
+    environment:
+      - PORT=8000
+      - DATA_PLANE_PUBLIC_BASE_URL=ws://data-plane-2:8000
+
   control-plane:
     build:
       context: .
@@ -15,14 +37,38 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - CONTROL_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
       - CONTROL_BROWSER_1_TUNNEL_URL=ws://browser-tunnel-1:8000/api/browser/ws
+      - CONTROL_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
       - CONTROL_BROWSER_2_TUNNEL_URL=ws://browser-tunnel-2:8000/api/browser/ws
     depends_on:
-      - browser-tunnel-1
-      - browser-tunnel-2
+      data-plane-1:
+        condition: service_healthy
+      data-plane-2:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
 
   browser-tunnel-1:
     <<: *browser-tunnel
+    build:
+      context: .
+      dockerfile: browsertunnel/Dockerfile
+    environment:
+      - PORT=8000
+      - BROWSER_CDP_URL=ws://data-plane-1:8000/api/browsers/browser-1/cdp
+    depends_on:
+      control-plane:
+        condition: service_healthy
 
   browser-tunnel-2:
     <<: *browser-tunnel
+    environment:
+      - PORT=8000
+      - BROWSER_CDP_URL=ws://data-plane-2:8000/api/browsers/browser-2/cdp
+    depends_on:
+      control-plane:
+        condition: service_healthy

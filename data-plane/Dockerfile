@@ -9,14 +9,17 @@ COPY pyproject.toml uv.lock ./
 COPY browsertunnel/pyproject.toml browsertunnel/pyproject.toml
 COPY control-plane/pyproject.toml control-plane/pyproject.toml
 COPY data-plane/pyproject.toml data-plane/pyproject.toml
-RUN uv sync --frozen --no-dev --package browsertunnel --no-install-project
+RUN uv sync --frozen --no-dev --package data-plane --no-install-project
 
-COPY browsertunnel ./browsertunnel
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends chromium \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN uv sync --frozen --no-dev --package browsertunnel
+COPY data-plane ./data-plane
+RUN uv sync --frozen --no-dev --package data-plane
 
 ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-CMD ["python", "-m", "browsertunnel.main"]
+CMD ["python", "-m", "data_plane.main"]

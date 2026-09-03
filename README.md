@@ -24,18 +24,17 @@ not part of the video stream.
 
 ```
 ┌──────────────────────┐   single WebSocket, JSON-RPC 2.0    ┌───────────────────────────┐
-│       Frontend        │ ──────────────────────────────────▶ │          Backend           │
+│       Frontend        │ ──────────────────────────────────▶ │       BrowserTunnel       │
 │  (TypeScript, Vite)   │  requests: navigate, mouse, key...  │  BrowserSession             │
 │                        │ ◀────────────────────────────────  │  Browser (nav · input ·    │
 │  <canvas> viewport     │  frames, tab/nav/cursor state       │  clipboard · tabs)         │
 └────────────────────────┘                                    └─────────────┬──────────────┘
                                                                               │
-                                                                       Chrome DevTools
-                                                                          Protocol
+                                                                    internal raw CDP
                                                                               │
                                                                     ┌─────────▼─────────┐
-                                                                    │ Chromium / Chrome  │
-                                                                    │ (headless or not)  │
+                                                                    │ Data-plane worker  │
+                                                                    │ owns Chromium      │
                                                                     └────────────────────┘
 ```
 
@@ -126,10 +125,11 @@ Server-pushed events arrive as `browser.event`; `params.type` tells frames
 apart from tab/navigation state and crashed/detached targets. Frames are
 JPEG, base64-encoded for the JSON transport.
 
-Configure the browser via `BROWSER_EXECUTABLE`, `BROWSER_CDP_URL`,
-`BROWSER_HEADLESS`, `BROWSER_WIDTH`, `BROWSER_HEIGHT`,
-`BROWSER_SCREENCAST_QUALITY`, `BROWSER_STARTUP_TIMEOUT`. Without
-`BROWSER_CDP_URL` the backend launches Chrome/Chromium/Edge itself.
+BrowserTunnel requires `BROWSER_CDP_URL` and configures its view through
+`BROWSER_WIDTH`, `BROWSER_HEIGHT`, and `BROWSER_SCREENCAST_QUALITY`. Chromium
+lifecycle settings such as `DATA_PLANE_EXECUTABLE`, `DATA_PLANE_HEADLESS`,
+`DATA_PLANE_CAPACITY`, and `DATA_PLANE_STARTUP_TIMEOUT` belong to the
+data-plane worker.
 
 Smoke test against a real browser:
 `uv run python browsertunnel/tests/manual_smoke.py`.

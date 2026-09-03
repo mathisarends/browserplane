@@ -1,6 +1,8 @@
 from collections.abc import Sequence
 from typing import Protocol
 
+import httpx2
+
 from control_plane.settings import BrowserSlot, ControlPlaneSettings
 
 
@@ -10,15 +12,30 @@ class BrowserProvisioner(Protocol):
     async def deprovision(self) -> None: ...
 
 
-class ComposeBrowserProvisioner:
-    """Expose the two browser tunnels eagerly created by Compose."""
+class DataPlaneBrowserProvisioner:
+    """Create one browser on each configured data-plane worker."""
 
     def __init__(self, settings: ControlPlaneSettings) -> None:
         self._settings = settings
+        self._provisioned: list[BrowserSlot] = []
 
     async def provision(self) -> Sequence[BrowserSlot]:
-        return self._settings.slots()
+        slots = self._settings.slots()
+        async with httpx2.AsyncClient() as client:
+            for slot in slots:
+                response = await client.post(
+                    f"{slot.data_plane_url}/api/browsers",
+                    json={"id": slot.id},
+                )
+                response.raise_for_status()
+                self._provisioned.append(slot)
+        return slots
 
     async def deprovision(self) -> None:
-        # Compose owns the container lifecycle in this first implementation.
-        return None
+        async with httpx2.AsyncClient() as client:
+            for slot in reversed(self._provisioned):
+                response = await client.delete(
+                    f"{slot.data_plane_url}/api/browsers/{slot.id}"
+                )
+                response.raise_for_status()
+        self._provisioned.clear()
