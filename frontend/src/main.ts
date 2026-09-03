@@ -2,14 +2,9 @@ import "./style.css";
 import {
   BrowserTunnelClient,
   WebSocketRpcTransport,
-  type RpcTransport,
 } from "@browsertunnel/browser-rpc-client";
-import { BrowserInput, MOUSE_METHOD } from "./browser-input";
-import {
-  BrowserView,
-  type BrowserViewElements,
-  type EventPayload,
-} from "./browser-view";
+import { BrowserInput } from "./browser-input";
+import { BrowserView, type BrowserViewElements } from "./browser-view";
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -23,49 +18,24 @@ const elements: BrowserViewElements = {
   tabList: requiredElement("#tab-list"),
   activeTabStatus: requiredElement("#active-tab-status"),
   cursorStatus: requiredElement("#cursor-status"),
-  eventLog: requiredElement("#event-log"),
-  emptyLog: requiredElement("#empty-log"),
   backButton: requiredElement("#nav-back"),
   forwardButton: requiredElement("#nav-forward"),
   reloadButton: requiredElement("#nav-reload"),
 };
 const addressForm = requiredElement<HTMLFormElement>("#address-form");
 const newTabButton = requiredElement<HTMLButtonElement>("#new-tab");
-const clearLogsButton = requiredElement<HTMLButtonElement>("#clear-logs");
 
 let view: BrowserView;
 
 function reportError(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   elements.activeTabStatus.textContent = `Fehler · ${message}`;
-  view.log("incoming", "client.error", { message });
-}
-
-class LoggingRpcTransport implements RpcTransport {
-  constructor(private readonly transport: RpcTransport) {}
-
-  request<TResult>(method: string, params?: object): Promise<TResult> {
-    if (method !== MOUSE_METHOD) {
-      view.log("outgoing", method, (params ?? {}) as EventPayload);
-    }
-    return this.transport.request<TResult>(method, params);
-  }
-
-  notifications(): AsyncIterable<unknown> {
-    return this.transport.notifications();
-  }
-
-  close(): Promise<void> {
-    return this.transport.close();
-  }
 }
 
 const socketUrl = new URL("/api/browser/ws", window.location.href);
 socketUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 const socketTransport = new WebSocketRpcTransport(socketUrl);
-const client = new BrowserTunnelClient(
-  new LoggingRpcTransport(socketTransport),
-);
+const client = new BrowserTunnelClient(socketTransport);
 
 view = new BrowserView(elements, {
   activateTab: async (tabId) =>
@@ -74,14 +44,7 @@ view = new BrowserView(elements, {
   reportError,
 });
 
-new BrowserInput(
-  elements.canvas,
-  client,
-  reportError,
-  (payload) => view.log("outgoing", MOUSE_METHOD, payload),
-  (characters) =>
-    view.log("incoming", "browser.clipboard.copy", { characters }),
-).attach();
+new BrowserInput(elements.canvas, client, reportError).attach();
 
 addressForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -118,7 +81,6 @@ elements.reloadButton.addEventListener("click", () => {
   void request.catch(reportError);
 });
 
-clearLogsButton.addEventListener("click", () => view.clearLog());
 void connect();
 
 async function connect(): Promise<void> {

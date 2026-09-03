@@ -3,22 +3,15 @@ import type {
   MouseParams,
 } from "@browsertunnel/browser-rpc-client";
 
-export const MOUSE_METHOD = "browser.input.mouse";
-
 type MousePoint = Pick<MouseParams, "x" | "y">;
 type ReportError = (error: unknown) => void;
 
-const MOUSE_LOG_IDLE_MS = 250;
 const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
 
 export class BrowserInput {
   private latestMove?: MouseParams;
   private animationFrame?: number;
   private inputQueue: Promise<void> = Promise.resolve();
-  private logTimer?: ReturnType<typeof setTimeout>;
-  private logStart?: MousePoint;
-  private logEnd?: MousePoint;
-  private logMoves = 0;
   private lastPoint?: MousePoint;
   private readonly pressedButtons = new Map<number, MouseParams["button"]>();
 
@@ -26,10 +19,6 @@ export class BrowserInput {
     private readonly canvas: HTMLCanvasElement,
     private readonly client: BrowserTunnelClient,
     private readonly reportError: ReportError,
-    private readonly logMovement: (
-      payload: { from: MousePoint; to: MousePoint; moves: number },
-    ) => void,
-    private readonly logClipboardCopy: (characters: number) => void,
   ) {}
 
   attach(): void {
@@ -156,7 +145,7 @@ export class BrowserInput {
       modifiers: modifiers(event),
       clickCount: 0,
     };
-    this.documentMove(move);
+    this.lastPoint = { x: move.x, y: move.y };
     this.latestMove = move;
     this.animationFrame ??= requestAnimationFrame(this.flushMove);
   }
@@ -173,27 +162,6 @@ export class BrowserInput {
     this.inputQueue = this.inputQueue
       .then(() => this.client.browser.input.mouse(params))
       .catch(this.reportError);
-  }
-
-  private documentMove(params: MouseParams): void {
-    const point = { x: params.x, y: params.y };
-    this.logStart ??= this.lastPoint ?? point;
-    this.logEnd = point;
-    this.logMoves += 1;
-    this.lastPoint = point;
-    if (this.logTimer !== undefined) clearTimeout(this.logTimer);
-    this.logTimer = setTimeout(() => {
-      this.logTimer = undefined;
-      if (!this.logStart || !this.logEnd) return;
-      this.logMovement({
-        from: this.logStart,
-        to: this.logEnd,
-        moves: this.logMoves,
-      });
-      this.logStart = undefined;
-      this.logEnd = undefined;
-      this.logMoves = 0;
-    }, MOUSE_LOG_IDLE_MS);
   }
 
   private sendKey(
@@ -224,7 +192,6 @@ export class BrowserInput {
     const { text } = await this.client.browser.clipboard.copy();
     if (!text) return;
     await navigator.clipboard.writeText(text);
-    this.logClipboardCopy(text.length);
   }
 }
 
