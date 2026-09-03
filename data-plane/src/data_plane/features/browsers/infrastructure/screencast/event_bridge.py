@@ -19,7 +19,11 @@ from cdpify.domains.target.events import (
 )
 
 from data_plane.features.browsers.infrastructure.screencast.models import (
+    ActiveTabChanged,
+    ActiveTabFrame,
     Frame,
+    PageUpdate,
+    ScreencastOptions,
     StreamEvent,
     TargetAdded,
     TargetDetached,
@@ -34,34 +38,42 @@ from data_plane.features.browsers.infrastructure.screencast.tasks import (
 logger = logging.getLogger(__name__)
 
 
-class ScreencastEventBridge:
-    """Translate CDP target and page events into frames from the visible page."""
+class ActiveTabBridge:
+    """Track which page Chromium shows and stream that page's frames.
 
-    def __init__(
-        self,
-        client: Client,
-        *,
-        quality: int,
-        width: int,
-        height: int,
-    ) -> None:
+    CDP only reports page visibility while a screencast runs on the page, so
+    every page target is screencast and the visible one decides what is
+    published. Both the live screencast and the recorder consume these updates.
+    """
+
+    def __init__(self, client: Client, options: ScreencastOptions) -> None:
         self._client = client
-        self._quality = quality
-        self._width = width
-        self._height = height
+        self._options = options
         self._events: asyncio.Queue[StreamEvent] = asyncio.Queue()
         self._page_tasks: dict[str, asyncio.Task[None]] = {}
         self._visible_target = VisibleTarget()
+        self._announced: str | None = None
 
-    async def frames(self) -> AsyncGenerator[bytes]:
+    async def updates(self) -> AsyncGenerator[PageUpdate]:
         target_listeners = self._start_target_listeners()
         try:
             await self._discover_existing_pages()
             while True:
-                if (frame := await self._handle_next_event()) is not None:
-                    yield frame
+                frame = await self._handle_next_event()
+                if (changed := self._active_tab_change()) is not None:
+                    yield changed
+                if frame is not None:
+                    yield ActiveTabFrame(self._visible_target.active or "", frame)
         finally:
             await cancel_and_wait(*target_listeners, *self._page_tasks.values())
+
+    def _active_tab_change(self) -> ActiveTabChanged | None:
+        """Announce a new active tab, ignoring the gap between two tabs."""
+        active = self._visible_target.active
+        if active is None or active == self._announced:
+            return None
+        self._announced = active
+        return ActiveTabChanged(active)
 
     def _start_target_listeners(self) -> tuple[asyncio.Task[None], ...]:
         return (
@@ -134,9 +146,9 @@ class ScreencastEventBridge:
             await asyncio.sleep(0)
             await session.page.start_screencast(
                 format="jpeg",
-                quality=self._quality,
-                max_width=self._width,
-                max_height=self._height,
+                quality=self._options.quality,
+                max_width=self._options.width,
+                max_height=self._options.height,
             )
             await asyncio.gather(*listeners)
         except asyncio.CancelledError:

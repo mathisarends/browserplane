@@ -1,5 +1,5 @@
 import logging
-from contextlib import aclosing, suppress
+from contextlib import suppress
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
@@ -8,7 +8,10 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from data_plane.features.browsers.application.exceptions import BrowserNotFoundException
 from data_plane.features.browsers.application.service import BrowserService
-from data_plane.features.browsers.infrastructure.screencast import Screencast
+from data_plane.features.browsers.infrastructure.screencast import (
+    ActiveTabFrame,
+    ActiveTabStreams,
+)
 from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
 from data_plane.features.browsers.presentation.errors import (
     BROWSER_ALREADY_RUNNING,
@@ -21,7 +24,6 @@ from data_plane.features.browsers.presentation.schemas import (
     CreateBrowserRequest,
 )
 from data_plane.presentation.api_errors import api_error_responses
-from data_plane.settings import DataPlaneSettings
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
 logger = logging.getLogger(__name__)
@@ -83,24 +85,19 @@ async def browser_screencast(
     browser_id: UUID,
     websocket: WebSocket,
     service: FromDishka[BrowserService],
-    settings: FromDishka[DataPlaneSettings],
+    streams: FromDishka[ActiveTabStreams],
 ) -> None:
     try:
         upstream_url = service.upstream_cdp_url(browser_id)
     except BrowserNotFoundException:
         await websocket.close(code=1008, reason="Unknown browser")
         return
-    screencast = Screencast(
-        upstream_url,
-        quality=settings.screencast_quality,
-        width=settings.width,
-        height=settings.height,
-    )
     await websocket.accept()
     try:
-        async with aclosing(screencast.frames()) as frames:
-            async for frame in frames:
-                await websocket.send_bytes(frame)
+        async with streams.for_browser(upstream_url).subscribe() as subscription:
+            async for update in subscription.updates:
+                if isinstance(update, ActiveTabFrame):
+                    await websocket.send_bytes(update.data)
     except WebSocketDisconnect:
         pass
     except Exception:

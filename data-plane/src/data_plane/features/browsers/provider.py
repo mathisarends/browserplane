@@ -4,6 +4,10 @@ from dishka import Provider, Scope, provide
 
 from data_plane.features.browsers.application.service import BrowserService
 from data_plane.features.browsers.infrastructure.chrome_process import ChromeProcess
+from data_plane.features.browsers.infrastructure.screencast import (
+    ActiveTabStreams,
+    ScreencastOptions,
+)
 from data_plane.settings import DataPlaneSettings
 
 
@@ -21,3 +25,13 @@ class BrowserProvider(Provider):
             yield service
         finally:
             await service.destroy()
+
+    @provide(scope=Scope.APP)
+    def active_tab_streams(self, settings: DataPlaneSettings) -> ActiveTabStreams:
+        return ActiveTabStreams(
+            ScreencastOptions(
+                quality=settings.screencast_quality,
+                width=settings.width,
+                height=settings.height,
+            )
+        )

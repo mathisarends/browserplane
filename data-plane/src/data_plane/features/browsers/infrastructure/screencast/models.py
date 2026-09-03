@@ -2,6 +2,15 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
+class ScreencastOptions:
+    """How the per-page screencasts that drive tab tracking are configured."""
+
+    quality: int
+    width: int
+    height: int
+
+
+@dataclass(frozen=True, slots=True)
 class Frame:
     target_id: str
     data: bytes
@@ -33,12 +42,34 @@ type StreamEvent = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class ActiveTabChanged:
+    """Chromium started showing a different page target."""
+
+    target_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class ActiveTabFrame:
+    """A screencast frame captured from the tab that is currently shown."""
+
+    target_id: str
+    data: bytes
+
+
+type PageUpdate = ActiveTabChanged | ActiveTabFrame
+
+
 class VisibleTarget:
     """Select frames from the page currently reported as visible by CDP."""
 
     def __init__(self) -> None:
         self._target_id: str | None = None
         self._hidden: set[str] = set()
+
+    @property
+    def active(self) -> str | None:
+        return self._target_id
 
     def remove(self, target_id: str) -> None:
         self._hidden.discard(target_id)
