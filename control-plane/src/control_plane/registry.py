@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
 from uuid import UUID
 
 from control_plane.settings import BrowserSlot
@@ -20,11 +21,23 @@ class BrowserRecord:
     state: str = "ready"
 
 
-class BrowserRegistry:
-    """In-memory browser store; lifecycle policy belongs to BrowserService."""
+class BrowserRegistry(Protocol):
+    """Storage port for browser records."""
+
+    def add(self, browser: BrowserRecord) -> None: ...
+
+    def list(self) -> list[BrowserRecord]: ...
+
+    def get(self, browser_id: UUID) -> BrowserRecord: ...
+
+    def clear(self) -> None: ...
+
+
+class InMemoryBrowserRegistry:
+    """Process-local BrowserRegistry implementation for the current MVP."""
 
     def __init__(self) -> None:
-        self._browsers: dict[str, BrowserRecord] = {}
+        self._browsers: dict[UUID, BrowserRecord] = {}
 
     def add(self, browser: BrowserRecord) -> None:
         self._browsers[browser.slot.id] = browser
