@@ -1,4 +1,4 @@
-from control_plane.shared.exceptions import ControlPlaneException
+from control_plane.exceptions import ControlPlaneException
 
 
 class BrowserNotFoundException(ControlPlaneException):

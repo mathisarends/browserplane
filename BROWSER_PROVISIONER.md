@@ -31,21 +31,21 @@ Browser-Session ist über CDP steuerbar):
 ```text
 control-plane/
   src/control_plane/
-    app.py                     # FastAPI-Aufbau und Fehler-Handler
+    app.py                     # Router-Komposition und Fehler-Handler
     settings.py                # Konfiguration der Browser-Slots
-    presentation/              # API-Fehlerkontrakt und v1-Router
+    exceptions.py              # ControlPlaneException als Basis
+    presentation/              # API-Fehlerkontrakt
       api_errors.py            # ApiErrorSpec, Responses, Exception-Handler
       errors.py                # ApiErrorCode, ApiErrorResponse
-    shared/exceptions.py       # ControlPlaneException als Basis
     features/
       browsers/
         application/           # Modelle, Ports, BrowserService, Exceptions
         infrastructure/        # Data-Plane-Provisioner, Registry, WS-Proxy
-        presentation/          # Routen, Schemas, Mapper, Fehler-Specs
+        presentation/          # Router, Schemas, Mapper, Fehler-Specs
       leases/
         application/           # Lease-Modell, LeaseStore/BrowserAllocator, Service
         infrastructure/        # In-Memory-Store, Allocator-Adapter
-        presentation/          # Routen, Schemas, Mapper, Fehler-Specs
+        presentation/          # Router, Schemas, Mapper, Fehler-Specs
       health/presentation/     # health und readiness
 
 browsertunnel/
