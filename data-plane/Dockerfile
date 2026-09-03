@@ -9,6 +9,7 @@ COPY pyproject.toml uv.lock ./
 COPY browsertunnel/pyproject.toml browsertunnel/pyproject.toml
 COPY control-plane/pyproject.toml control-plane/pyproject.toml
 COPY data-plane/pyproject.toml data-plane/pyproject.toml
+COPY generated/pyproject.toml generated/pyproject.toml
 RUN uv sync --frozen --no-dev --package data-plane --no-install-project
 
 RUN apt-get update \

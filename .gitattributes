@@ -1,0 +1,5 @@
+# Generated clients: collapsed in diffs and excluded from language statistics.
+generated/src/generated/*/client.py linguist-generated=true
+generated/src/generated/*/models.py linguist-generated=true
+generated/src/generated/*/__init__.py linguist-generated=true
+frontend/generated/src/generated/** linguist-generated=true

@@ -1,10 +1,11 @@
 from collections.abc import Sequence
 
-import httpx2
+from httpx2 import AsyncClient
 
 from control_plane.features.browsers.application.models import BrowserSlot
 from control_plane.features.browsers.application.ports import BrowserProvisioner
 from control_plane.settings import ControlPlaneSettings
+from generated.data_plane import CreateBrowserRequest, DataPlaneClient
 
 
 class DataPlaneBrowserProvisioner(BrowserProvisioner):
@@ -16,19 +17,16 @@ class DataPlaneBrowserProvisioner(BrowserProvisioner):
 
     async def provision(self) -> Sequence[BrowserSlot]:
         slots = self._settings.slots()
-        async with httpx2.AsyncClient() as client:
+        async with AsyncClient() as http:
             for slot in slots:
-                response = await client.post(
-                    f"{slot.data_plane_url}/api/v1/browser",
-                    json={"id": str(slot.id)},
-                )
-                response.raise_for_status()
+                client = DataPlaneClient(slot.data_plane_url, client=http)
+                await client.create_browser(CreateBrowserRequest(id=slot.id))
                 self._provisioned.append(slot)
         return slots
 
     async def deprovision(self) -> None:
-        async with httpx2.AsyncClient() as client:
+        async with AsyncClient() as http:
             for slot in reversed(self._provisioned):
-                response = await client.delete(f"{slot.data_plane_url}/api/v1/browser")
-                response.raise_for_status()
+                client = DataPlaneClient(slot.data_plane_url, client=http)
+                await client.destroy_browser()
         self._provisioned.clear()
