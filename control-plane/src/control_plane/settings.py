@@ -20,9 +20,9 @@ class ControlPlaneSettings(BaseSettings):
     )
 
     browser_1_data_plane_url: str = "http://127.0.0.1:8011"
-    browser_1_tunnel_url: str = "ws://127.0.0.1:8021/api/browser/ws"
+    browser_1_tunnel_url: str = "ws://127.0.0.1:8021/api/v1/browser/ws"
     browser_2_data_plane_url: str = "http://127.0.0.1:8012"
-    browser_2_tunnel_url: str = "ws://127.0.0.1:8022/api/browser/ws"
+    browser_2_tunnel_url: str = "ws://127.0.0.1:8022/api/v1/browser/ws"
 
     def slots(self) -> tuple[BrowserSlot, BrowserSlot]:
         return (

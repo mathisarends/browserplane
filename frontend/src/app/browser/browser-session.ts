@@ -56,7 +56,7 @@ export class BrowserSession {
   async connect(browserId: string): Promise<void> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
-    const url = new URL(`/api/browsers/${browserId}/ws`, window.location.href);
+    const url = new URL(`/api/v1/browsers/${browserId}/ws`, window.location.href);
     url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     this.transport = new WebSocketRpcTransport(url);
     this.client = new BrowserTunnelClient(this.transport);

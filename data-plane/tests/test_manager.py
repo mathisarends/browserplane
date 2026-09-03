@@ -24,7 +24,7 @@ async def test_manager_owns_browser_lifecycle() -> None:
 
     browser = await manager.create("browser-1")
 
-    assert browser.cdp_url == "ws://worker:8000/api/browsers/browser-1/cdp"
+    assert browser.cdp_url == "ws://worker:8000/api/v1/browsers/browser-1/cdp"
     assert manager.inspect("browser-1").state == "ready"
     assert manager.capacity() == (1, 0)
 

@@ -17,18 +17,18 @@ class FakeProvisioner:
 
 def test_lists_two_browser_data_planes() -> None:
     with TestClient(create_app(FakeProvisioner())) as client:
-        response = client.get("/api/browsers")
+        response = client.get("/api/v1/browsers")
 
     assert response.status_code == 200
     assert response.json() == [
         {
             "id": "browser-1",
             "status": "ready",
-            "websocket_url": "/api/browsers/browser-1/ws",
+            "websocket_url": "/api/v1/browsers/browser-1/ws",
         },
         {
             "id": "browser-2",
             "status": "ready",
-            "websocket_url": "/api/browsers/browser-2/ws",
+            "websocket_url": "/api/v1/browsers/browser-2/ws",
         },
     ]

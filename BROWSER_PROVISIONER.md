@@ -68,7 +68,7 @@ einen CDP-Endpunkt und muss den Browser-Provider nicht kennen.
 Browser auflisten:
 
 ```http
-GET /api/browsers
+GET /api/v1/browsers
 ```
 
 ```json
@@ -76,12 +76,12 @@ GET /api/browsers
   {
     "id": "browser-1",
     "status": "ready",
-    "websocket_url": "/api/browsers/browser-1/ws"
+    "websocket_url": "/api/v1/browsers/browser-1/ws"
   },
   {
     "id": "browser-2",
     "status": "ready",
-    "websocket_url": "/api/browsers/browser-2/ws"
+    "websocket_url": "/api/v1/browsers/browser-2/ws"
   }
 ]
 ```
@@ -89,11 +89,11 @@ GET /api/browsers
 Mit einem Browser verbinden:
 
 ```text
-WS /api/browsers/{browser_id}/ws
+WS /api/v1/browsers/{browser_id}/ws
 ```
 
-Der bestehende Frontend-Endpunkt `WS /api/browser/ws` bleibt vorerst als Alias
-auf `browser-1` erhalten. Die JSON-RPC-Nachrichten selbst ändern sich nicht.
+Die Browser-Verbindung erfolgt über den browser-spezifischen Endpunkt. Die
+JSON-RPC-Nachrichten selbst ändern sich nicht.
 
 ## Lokal starten
 

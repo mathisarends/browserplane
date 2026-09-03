@@ -7,7 +7,7 @@ from browsertunnel.presentation.schemas import (
 )
 from browsertunnel.presentation.session import BrowserSessionFactory
 
-router = APIRouter(prefix="/api/browser", tags=["browser-tunnel"])
+router = APIRouter(prefix="/api/v1/browser", tags=["browser-tunnel"])
 
 
 @router.get("/schema.json", include_in_schema=False)

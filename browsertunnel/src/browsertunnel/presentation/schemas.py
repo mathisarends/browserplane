@@ -7,7 +7,7 @@ def browser_json_schema() -> dict:
     return render_json_schema(
         BROWSER_PROTOCOL,
         title="BrowserTunnel JSON-RPC Protocol",
-        schema_id="/api/browser/schema.json",
+        schema_id="/api/v1/browser/schema.json",
     )
 
 
@@ -15,5 +15,5 @@ def browser_openrpc_schema() -> dict:
     return render_openrpc(
         BROWSER_PROTOCOL,
         title="BrowserTunnel",
-        servers=({"name": "browser-tunnel", "url": "/api/browser/ws"},),
+        servers=({"name": "browser-tunnel", "url": "/api/v1/browser/ws"},),
     )

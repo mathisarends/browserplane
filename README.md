@@ -108,9 +108,9 @@ generated client lives in the workspace package `frontend/generated`;
 
 One WebSocket, JSON-RPC 2.0:
 
-- `ws://127.0.0.1:8000/api/browser/ws`
-- JSON Schema: `/api/browser/schema.json`
-- OpenRPC: `/api/browser/openrpc.json`
+- `ws://127.0.0.1:8000/api/v1/browser/ws`
+- JSON Schema: `/api/v1/browser/schema.json`
+- OpenRPC: `/api/v1/browser/openrpc.json`
 
 ```json
 {

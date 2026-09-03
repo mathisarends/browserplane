@@ -29,7 +29,7 @@ class BrowserRegistry:
             BrowserDescriptor(
                 id=slot.id,
                 status="ready",
-                websocket_url=f"/api/browsers/{slot.id}/ws",
+                websocket_url=f"/api/v1/browsers/{slot.id}/ws",
             )
             for slot in self._slots.values()
         ]

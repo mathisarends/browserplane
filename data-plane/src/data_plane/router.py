@@ -10,7 +10,7 @@ from data_plane.manager import (
 )
 from data_plane.proxy import proxy_cdp
 
-router = APIRouter(route_class=DishkaRoute)
+router = APIRouter(prefix="/api/v1", route_class=DishkaRoute)
 
 
 class CreateBrowserRequest(BaseModel):
@@ -33,7 +33,7 @@ async def capacity(manager: FromDishka[BrowserManager]) -> Capacity:
     return Capacity(total=total, available=available)
 
 
-@router.post("/api/browsers", status_code=201)
+@router.post("/browsers", status_code=201)
 async def create_browser(
     request: CreateBrowserRequest,
     manager: FromDishka[BrowserManager],
@@ -46,7 +46,7 @@ async def create_browser(
         ) from error
 
 
-@router.get("/api/browsers/{browser_id}")
+@router.get("/browsers/{browser_id}")
 async def inspect_browser(
     browser_id: str,
     manager: FromDishka[BrowserManager],
@@ -57,7 +57,7 @@ async def inspect_browser(
         raise HTTPException(status_code=404, detail="Browser not found") from error
 
 
-@router.delete("/api/browsers/{browser_id}", status_code=204)
+@router.delete("/browsers/{browser_id}", status_code=204)
 async def destroy_browser(
     browser_id: str,
     manager: FromDishka[BrowserManager],
@@ -66,7 +66,7 @@ async def destroy_browser(
     return Response(status_code=204)
 
 
-@router.websocket("/api/browsers/{browser_id}/cdp")
+@router.websocket("/browsers/{browser_id}/cdp")
 @inject
 async def browser_cdp(
     browser_id: str,

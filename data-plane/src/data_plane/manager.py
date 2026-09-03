@@ -53,7 +53,7 @@ class BrowserManager:
                 state="ready",
                 cdp_url=(
                     f"{self._settings.public_base_url.rstrip('/')}"
-                    f"/api/browsers/{browser_id}/cdp"
+                    f"/api/v1/browsers/{browser_id}/cdp"
                 ),
             )
             self._browsers[browser_id] = _ManagedBrowser(

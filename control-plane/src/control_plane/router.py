@@ -1,4 +1,4 @@
-from dishka.integrations.fastapi import FromDishka, inject
+from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket
 
 from control_plane.proxy import proxy_websocket
@@ -8,7 +8,7 @@ from control_plane.registry import (
     BrowserRegistry,
 )
 
-router = APIRouter()
+router = APIRouter(prefix="/api/v1", route_class=DishkaRoute)
 
 
 @router.get("/health")
@@ -16,8 +16,7 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/api/browsers")
-@inject
+@router.get("/browsers")
 async def list_browsers(
     registry: FromDishka[BrowserRegistry],
 ) -> list[BrowserDescriptor]:
@@ -35,7 +34,7 @@ async def _serve_browser(
     await proxy_websocket(websocket, slot.tunnel_url)
 
 
-@router.websocket("/api/browsers/{browser_id}/ws")
+@router.websocket("/browsers/{browser_id}/ws")
 @inject
 async def browser_socket(
     browser_id: str,
@@ -43,13 +42,3 @@ async def browser_socket(
     registry: FromDishka[BrowserRegistry],
 ) -> None:
     await _serve_browser(browser_id, websocket, registry)
-
-
-@router.websocket("/api/browser/ws")
-@inject
-async def default_browser_socket(
-    websocket: WebSocket,
-    registry: FromDishka[BrowserRegistry],
-) -> None:
-    """Keep the current frontend working by routing it to browser-1."""
-    await _serve_browser("browser-1", websocket, registry)
