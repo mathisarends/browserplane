@@ -19,6 +19,7 @@ type ConnectionState = "connecting" | "connected" | "disconnected";
 
 interface BrowserResponse {
   readonly websocket_url: string;
+  readonly screencast_url: string;
 }
 
 /** Signal-based UI facade around the generated RPC client. */
@@ -26,11 +27,12 @@ interface BrowserResponse {
 export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BrowserTunnelClient;
+  private screencast?: WebSocket;
   private readonly tabsState = signal<readonly TabResult[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
   private readonly errorState = signal<string | undefined>(undefined);
-  private readonly frameState = signal<string | undefined>(undefined);
+  private readonly frameState = signal<Blob | undefined>(undefined);
   private readonly cursorState = signal("default");
 
   readonly tabs = this.tabsState.asReadonly();
@@ -72,20 +74,27 @@ export class BrowserSession {
       this.transport = new WebSocketRpcTransport(url);
       this.client = new BrowserTunnelClient(this.transport);
       await this.transport.connect();
+      await this.connectScreencast(
+        new URL(browser.screencast_url, window.location.href),
+      );
       this.connectionState.set("connected");
       void this.receiveNotifications();
       this.tabsState.set((await this.client.browser.tab.list()).tabs);
     } catch (error) {
+      await this.disconnect();
       this.reportError(error);
-      this.connectionState.set("disconnected");
     }
   }
 
   async disconnect(): Promise<void> {
     this.connectionState.set("disconnected");
     const client = this.client;
+    const screencast = this.screencast;
     this.client = undefined;
     this.transport = undefined;
+    this.screencast = undefined;
+    this.frameState.set(undefined);
+    screencast?.close();
     await client?.close().catch(() => undefined);
   }
 
@@ -187,9 +196,6 @@ export class BrowserSession {
 
   private receive(event: BrowserEvent): void {
     switch (event.type) {
-      case "browser.frame":
-        this.frameState.set(event.data);
-        break;
       case "browser.cursor":
         this.cursorState.set(event.cursor);
         break;
@@ -217,5 +223,33 @@ export class BrowserSession {
       case "browser.targetDetached":
         break;
     }
+  }
+
+  private async connectScreencast(url: URL): Promise<void> {
+    const socket = new WebSocket(url);
+    this.screencast = socket;
+    await new Promise<void>((resolve, reject) => {
+      socket.addEventListener("open", () => resolve(), { once: true });
+      socket.addEventListener(
+        "error",
+        () => reject(new Error("Screencast-Verbindung fehlgeschlagen")),
+        { once: true },
+      );
+      socket.addEventListener(
+        "close",
+        () => reject(new Error("Screencast-Verbindung wurde getrennt")),
+        { once: true },
+      );
+    });
+    socket.addEventListener("message", (event) => {
+      if (socket === this.screencast && event.data instanceof Blob) {
+        this.frameState.set(event.data);
+      }
+    });
+    socket.addEventListener("close", () => {
+      if (socket === this.screencast) {
+        this.reportError("Screencast-Verbindung wurde getrennt");
+      }
+    });
   }
 }

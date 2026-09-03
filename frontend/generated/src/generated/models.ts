@@ -28,11 +28,6 @@ export type BrowserCursorEvent = {
   cursor: CursorStyle;
 };
 
-export type BrowserFrameEvent = {
-  type: "browser.frame";
-  data: string;
-};
-
 export type BrowserNavigationEvent = {
   type: "browser.navigation";
   tabId: string;
@@ -191,4 +186,4 @@ export type BrowserEventNotification = {
   params: BrowserEvent;
 };
 
-export type BrowserEvent = BrowserFrameEvent | BrowserTabsEvent | BrowserNavigationEvent | BrowserCursorEvent | BrowserTargetCrashedEvent | BrowserTargetDetachedEvent;
+export type BrowserEvent = BrowserTabsEvent | BrowserNavigationEvent | BrowserCursorEvent | BrowserTargetCrashedEvent | BrowserTargetDetachedEvent;

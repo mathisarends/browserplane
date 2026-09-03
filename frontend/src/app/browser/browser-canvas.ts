@@ -64,7 +64,7 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
 export class BrowserCanvas implements OnDestroy {
   protected readonly session = inject(BrowserSession);
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>("canvas");
-  private latestFrame?: string;
+  private latestFrame?: Blob;
   private rendering = false;
   private latestMove?: MouseParams;
   private animationFrame?: number;
@@ -239,11 +239,9 @@ export class BrowserCanvas implements OnDestroy {
     this.rendering = true;
     try {
       while (this.latestFrame) {
-        const encoded = this.latestFrame;
+        const frame = this.latestFrame;
         this.latestFrame = undefined;
-        const binary = atob(encoded);
-        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-        const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/jpeg" }));
+        const bitmap = await createImageBitmap(frame);
         if (canvas.width !== bitmap.width || canvas.height !== bitmap.height) {
           canvas.width = bitmap.width;
           canvas.height = bitmap.height;

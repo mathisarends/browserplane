@@ -15,4 +15,3 @@ class BrowserSettings(BaseSettings):
     cdp_url: str
     width: int = Field(default=1600, gt=0)
     height: int = Field(default=900, gt=0)
-    screencast_quality: int = Field(default=80, ge=0, le=100)

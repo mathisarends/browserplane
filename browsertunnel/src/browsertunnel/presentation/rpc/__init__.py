@@ -3,7 +3,6 @@ import pyrpckit as rpc
 from browsertunnel.presentation.rpc.events import (
     BROWSER_EVENT_METHOD,
     browser_event,
-    frame_event,
 )
 from browsertunnel.presentation.rpc.methods import (
     BROWSER_RPC_METHODS,
@@ -12,7 +11,6 @@ from browsertunnel.presentation.rpc.methods import (
 from browsertunnel.presentation.rpc.models import (
     BrowserCursorEvent,
     BrowserEvent,
-    BrowserFrameEvent,
     BrowserNavigationEvent,
     BrowserTabsEvent,
     BrowserTargetCrashedEvent,
@@ -28,7 +26,7 @@ BROWSER_PROTOCOL = rpc.RpcProtocol(
             rpc.notification(
                 BROWSER_EVENT_METHOD,
                 BrowserEvent,
-                summary="Stream browser frames and tab state to the frontend.",
+                summary="Stream browser state to the frontend.",
             ),
         ),
     ),
@@ -41,12 +39,10 @@ __all__ = [
     "browser_event",
     "BrowserCursorEvent",
     "BrowserEvent",
-    "BrowserFrameEvent",
     "BrowserNavigationEvent",
     "browser_rpc_methods",
     "BrowserTabsEvent",
     "BrowserTargetCrashedEvent",
     "BrowserTargetDetachedEvent",
-    "frame_event",
     "tabs_result",
 ]

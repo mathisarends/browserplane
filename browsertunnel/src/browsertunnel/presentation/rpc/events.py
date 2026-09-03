@@ -1,4 +1,3 @@
-import base64
 from typing import assert_never
 
 from browsertunnel.application import (
@@ -7,7 +6,6 @@ from browsertunnel.application import (
 from browsertunnel.application import (
     CursorChanged,
     NavigationChanged,
-    ScreencastFrame,
     TabsChanged,
     TargetCrashed,
     TargetDetached,
@@ -15,7 +13,6 @@ from browsertunnel.application import (
 from browsertunnel.presentation.rpc.models import (
     BrowserCursorEvent,
     BrowserEvent,
-    BrowserFrameEvent,
     BrowserNavigationEvent,
     BrowserTabsEvent,
     BrowserTargetCrashedEvent,
@@ -53,8 +50,3 @@ def browser_event(event: DomainEvent) -> BrowserEvent:
             return BrowserTargetDetachedEvent(tabId=event.tab_id)
         case _:
             assert_never(event)
-
-
-def frame_event(frame: ScreencastFrame) -> BrowserFrameEvent:
-    """Translate a screencast frame into its wire representation."""
-    return BrowserFrameEvent(data=base64.b64encode(frame.data).decode("ascii"))

@@ -14,12 +14,11 @@ from browsertunnel.presentation.rpc import (
     BrowserEvent,
     browser_event,
     browser_rpc_methods,
-    frame_event,
 )
 
 
 class BrowserSession:
-    """Serve one viewer: RPC requests in, browser events and frames out."""
+    """Serve one viewer: RPC requests in and browser state events out."""
 
     def __init__(self, websocket: WebSocket, browser: Browser) -> None:
         self._websocket = websocket
@@ -50,10 +49,7 @@ class BrowserSession:
 
     @asynccontextmanager
     async def _streaming(self) -> AsyncGenerator[None]:
-        tasks = (
-            asyncio.create_task(self._stream_events()),
-            asyncio.create_task(self._stream_screencast()),
-        )
+        tasks = (asyncio.create_task(self._stream_events()),)
         try:
             yield
         finally:
@@ -65,10 +61,6 @@ class BrowserSession:
     async def _stream_events(self) -> None:
         async for event in self._browser.events():
             await self._notify(browser_event(event))
-
-    async def _stream_screencast(self) -> None:
-        async for frame in self._browser.screencast_frames():
-            await self._notify(frame_event(frame))
 
     async def _notify(self, params: BrowserEvent) -> None:
         await self._send(

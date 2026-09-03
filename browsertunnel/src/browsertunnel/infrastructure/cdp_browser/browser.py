@@ -9,7 +9,6 @@ from browsertunnel.application import (
     Browser,
     BrowserEvent,
     BrowserTabNotFoundError,
-    ScreencastFrame,
     TabsChanged,
     TargetDetached,
 )
@@ -21,7 +20,6 @@ from browsertunnel.infrastructure.cdp_browser.tabs import CdpTabs, select_any_pa
 from browsertunnel.infrastructure.cursor_event_bridge import CursorEventBridge
 from browsertunnel.infrastructure.events import BrowserEventForwarder, EventBus
 from browsertunnel.infrastructure.listener_event_bridge import ListenerEventBridge
-from browsertunnel.infrastructure.screencast_event_bridge import ScreencastEventBridge
 from browsertunnel.settings import BrowserSettings
 
 logger = logging.getLogger(__name__)
@@ -36,12 +34,6 @@ class CdpBrowser(Browser):
         self._event_bus = EventBus()
         self._event_bridge = ListenerEventBridge(self._event_bus)
         self._browser_event_forwarder = BrowserEventForwarder(self._event_bus)
-        self._screencast_bridge = ScreencastEventBridge(
-            self._event_bus,
-            quality=settings.screencast_quality,
-            width=settings.width,
-            height=settings.height,
-        )
         self._cursor_bridge = CursorEventBridge(self._event_bus)
         self._clipboard = CdpClipboard(self._target)
         self._navigation = CdpNavigation(self._target)
@@ -102,14 +94,6 @@ class CdpBrowser(Browser):
         finally:
             self._browser_event_forwarder.unsubscribe(queue)
 
-    async def screencast_frames(self) -> AsyncIterator[ScreencastFrame]:
-        queue = self._screencast_bridge.subscribe()
-        try:
-            while True:
-                yield await queue.get()
-        finally:
-            self._screencast_bridge.unsubscribe(queue)
-
     async def _select_target(self, target_id: str) -> None:
         client = self._target.client()
         pages = await self._target.page_targets()
@@ -128,7 +112,6 @@ class CdpBrowser(Browser):
             await self._apply_viewport(session)
             await self._event_bridge.set_active_page(session, target_id)
             await self._cursor_bridge.start(session, target_id)
-            await self._screencast_bridge.start(session)
 
     async def _apply_viewport(self, session: CDPSession) -> None:
         """Pin the page viewport so screencast frames match the configured size.
@@ -146,7 +129,6 @@ class CdpBrowser(Browser):
     async def _stop_active_listeners(self) -> None:
         await self._event_bridge.clear_active_page()
         await self._cursor_bridge.stop()
-        await self._screencast_bridge.stop()
 
     async def _recover_active_target(self, event: TargetDetached) -> None:
         if event.tab_id != self._target.target_id:

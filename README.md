@@ -1,9 +1,8 @@
 # BrowserTunnel
 
-Mirrors a real Chromium tab into a web page. The backend drives the tab over
-the Chrome DevTools Protocol, streams its frames to a `<canvas>`, and replays
-the viewer's input back onto it. No video codec, just JSON-RPC over a
-WebSocket.
+Mirrors a real Chromium tab into a web page. BrowserTunnel drives the tab over
+the Chrome DevTools Protocol and replays viewer input, while the data plane
+streams JPEG frames over a separate binary WebSocket to a `<canvas>`.
 
 Learning project, not a hardened product: no auth, no rate limiting. It's a
 reference for the core idea, not something to deploy as is.
@@ -22,20 +21,10 @@ not part of the video stream.
 
 ## Architecture
 
-```
-┌──────────────────────┐   single WebSocket, JSON-RPC 2.0    ┌───────────────────────────┐
-│       Frontend        │ ──────────────────────────────────▶ │       BrowserTunnel       │
-│  (TypeScript, Vite)   │  requests: navigate, mouse, key...  │  BrowserSession             │
-│                        │ ◀────────────────────────────────  │  Browser (nav · input ·    │
-│  <canvas> viewport     │  frames, tab/nav/cursor state       │  clipboard · tabs)         │
-└────────────────────────┘                                    └─────────────┬──────────────┘
-                                                                              │
-                                                                    internal raw CDP
-                                                                              │
-                                                                    ┌─────────▼─────────┐
-                                                                    │ Data-plane worker  │
-                                                                    │ owns Chromium      │
-                                                                    └────────────────────┘
+```text
+Frontend ── JSON-RPC commands/state ──▶ BrowserTunnel ── raw CDP ──▶ Data Plane
+    │                                                                      │
+    └──────────── binary JPEG screencast WebSocket ◀───────────────────────┘
 ```
 
 - The tab's screencast comes in frame by frame and gets drawn straight onto
@@ -47,8 +36,8 @@ not part of the video stream.
   `browsertunnel/src/browsertunnel/infrastructure/cdp_browser` implements that over CDP,
   `browsertunnel/src/browsertunnel/presentation` exposes it as JSON-RPC.
   Each layer can be swapped without touching the others.
-- One socket, both directions running at once: requests go one way, a
-  notification stream (frames, tab/nav/cursor state) goes the other.
+- BrowserTunnel carries JSON-RPC commands and tab/navigation/cursor state. A
+  separate data-plane WebSocket carries binary JPEG screencast frames.
 
 ## Tunneled events
 
@@ -66,9 +55,9 @@ paste.
 **Tabs:** list, create, activate, close. Every tab command replies with the
 full tab list.
 
-**Pushed to the client:** screencast frames, tab list changes, navigation
-state (title, URL, loading, can-go-back/forward, error), cursor style, and
-target crashed/detached.
+**Pushed by BrowserTunnel:** tab list changes, navigation state (title, URL,
+loading, can-go-back/forward, error), cursor style, and target
+crashed/detached.
 
 ## Setup
 
@@ -113,11 +102,14 @@ rendered from their OpenAPI documents into the uv workspace package
 
 ## Backend protocol
 
-One WebSocket, JSON-RPC 2.0:
+The BrowserTunnel WebSocket uses JSON-RPC 2.0:
 
 - `ws://127.0.0.1:8000/api/v1/browser/ws`
 - JSON Schema: `/api/v1/browser/schema.json`
 - OpenRPC: `/api/v1/browser/openrpc.json`
+
+The data plane exposes JPEG frames as binary messages on
+`/api/v1/browser/{browser_id}/screencast`.
 
 ```json
 {

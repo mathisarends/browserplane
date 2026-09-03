@@ -7,6 +7,7 @@ def to_browser_response(browser: Browser) -> BrowserResponse:
         id=browser.id,
         state=browser.state,
         websocket_url=browser.slot.tunnel_url,
+        screencast_url=browser.slot.screencast_url,
         created_at=browser.created_at,
     )
 

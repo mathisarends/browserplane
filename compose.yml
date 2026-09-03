@@ -19,15 +19,19 @@ services:
     build:
       context: .
       dockerfile: data-plane/Dockerfile
+    ports:
+      - "8011:8000"
     environment:
       - PORT=8000
-      - DATA_PLANE_PUBLIC_BASE_URL=ws://data-plane-1:8000
+      - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8011
 
   data-plane-2:
     <<: *data-plane
+    ports:
+      - "8012:8000"
     environment:
       - PORT=8000
-      - DATA_PLANE_PUBLIC_BASE_URL=ws://data-plane-2:8000
+      - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8012
 
   control-plane:
     build:
@@ -39,8 +43,10 @@ services:
       - PORT=8000
       - CONTROL_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
       - CONTROL_BROWSER_1_TUNNEL_URL=ws://localhost:8021/api/v1/browser/ws
+      - CONTROL_BROWSER_1_SCREENCAST_URL=ws://localhost:8011/api/v1/browser/00000000-0000-0000-0000-000000000001/screencast
       - CONTROL_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
       - CONTROL_BROWSER_2_TUNNEL_URL=ws://localhost:8022/api/v1/browser/ws
+      - CONTROL_BROWSER_2_SCREENCAST_URL=ws://localhost:8012/api/v1/browser/00000000-0000-0000-0000-000000000002/screencast
     depends_on:
       data-plane-1:
         condition: service_healthy

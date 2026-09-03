@@ -17,7 +17,6 @@ class RpcModel(BaseModel):
 
 
 class BrowserEventType(StrEnum):
-    FRAME = "browser.frame"
     TABS = "browser.tabs"
     NAVIGATION = "browser.navigation"
     CURSOR = "browser.cursor"
@@ -95,12 +94,6 @@ class ClipboardResult(RpcModel):
 
 
 @rpc.event
-class BrowserFrameEvent(RpcModel):
-    type: Literal[BrowserEventType.FRAME] = BrowserEventType.FRAME
-    data: str
-
-
-@rpc.event
 class BrowserTabsEvent(RpcModel):
     type: Literal[BrowserEventType.TABS] = BrowserEventType.TABS
     tabs: list[TabResult]
@@ -140,8 +133,7 @@ class BrowserTargetDetachedEvent(RpcModel):
 
 
 type BrowserEvent = (
-    BrowserFrameEvent
-    | BrowserTabsEvent
+    BrowserTabsEvent
     | BrowserNavigationEvent
     | BrowserCursorEvent
     | BrowserTargetCrashedEvent

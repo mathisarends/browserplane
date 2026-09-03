@@ -30,6 +30,7 @@ class BrowserResponse(BaseModel):
     id: UUID
     state: BrowserState
     websocket_url: str
+    screencast_url: str
     created_at: datetime
 
 

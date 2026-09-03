@@ -21,8 +21,18 @@ from control_plane.features.leases.infrastructure.in_memory_store import (
 class FakeProvisioner(BrowserProvisioner):
     async def provision(self) -> tuple[BrowserSlot, BrowserSlot]:
         return (
-            BrowserSlot(UUID(int=1), "http://worker-1", "ws://tunnel-1/ws"),
-            BrowserSlot(UUID(int=2), "http://worker-2", "ws://tunnel-2/ws"),
+            BrowserSlot(
+                UUID(int=1),
+                "http://worker-1",
+                "ws://tunnel-1/ws",
+                "ws://worker-1/screencast",
+            ),
+            BrowserSlot(
+                UUID(int=2),
+                "http://worker-2",
+                "ws://tunnel-2/ws",
+                "ws://worker-2/screencast",
+            ),
         )
 
     async def deprovision(self) -> None:

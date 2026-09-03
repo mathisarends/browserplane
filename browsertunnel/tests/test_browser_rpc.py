@@ -4,7 +4,7 @@ import pytest
 from pyrpckit import RpcServer
 from pyrpckit.schema import render_json_schema, render_openrpc
 
-from browsertunnel.application import BrowserEvent, BrowserTab, ScreencastFrame
+from browsertunnel.application import BrowserEvent, BrowserTab
 from browsertunnel.presentation.rpc import BROWSER_PROTOCOL, browser_rpc_methods
 
 
@@ -97,10 +97,6 @@ class FakeBrowser:
         pass
 
     async def events(self) -> AsyncIterator[BrowserEvent]:
-        if False:
-            yield
-
-    async def screencast_frames(self) -> AsyncIterator[ScreencastFrame]:
         if False:
             yield
 
@@ -347,7 +343,6 @@ def test_protocol_contract_contains_methods_and_events() -> None:
     }
     assert {event["name"] for event in schema["x-rpc-events"]} == {
         "browser.cursor",
-        "browser.frame",
         "browser.navigation",
         "browser.tabs",
         "browser.targetCrashed",

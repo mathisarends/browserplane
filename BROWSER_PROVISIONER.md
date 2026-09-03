@@ -8,14 +8,15 @@ Die V1 trennt drei Verantwortlichkeiten in eigene Python-Packages:
 Frontend ──HTTP──▶ control-plane
     │                  │ Browser-Lifecycle
     │ JSON-RPC/WS      ▼
-    └────────────▶ browsertunnel ──rohes CDP──▶ data-plane worker ──▶ Chromium
+    ├────────────▶ browsertunnel ──rohes CDP──▶ data-plane worker ──▶ Chromium
+    └──────────── binärer Screencast-WS ──────▶       │
 ```
 
 Die Control Plane kennt Browser-IDs, Worker und öffentliche Tunnel-Adressen. Ein
 Data-Plane-Worker besitzt genau einen Browserprozess und stellt create,
-inspect, destroy, CDP sowie health bereit. BrowserTunnel ist ein Consumer dieser Data
-Plane und übersetzt CDP in das konkrete JSON-RPC-, Input- und
-Screencast-Protokoll des Frontends.
+inspect, destroy, CDP, Screencast sowie health bereit. BrowserTunnel ist ein
+Consumer dieser Data Plane und übersetzt CDP in das JSON-RPC-, Input- und
+Status-Protokoll des Frontends.
 
 Dieses Session-Modell entspricht dem grundlegenden Muster von Browserbase
 (`id`, Status und geheime `connectUrl`) und Browser Use Cloud (eine
@@ -57,9 +58,9 @@ data-plane/
 `DataPlaneBrowserProvisioner` erzeugt beim Start über die interne Worker-API
 zwei feste Browser-Ressourcen. Erst danach starten die BrowserTunnel-Container
 und verbinden sich mit deren CDP-Endpunkten. Die Control Plane liefert dem
-Frontend den öffentlichen WebSocket-Endpunkt des ausgewählten BrowserTunnel;
-der WebSocket-Datenverkehr umgeht die Control Plane. Worker- und rohe
-CDP-Adressen bleiben intern.
+Frontend den öffentlichen WebSocket-Endpunkt des ausgewählten BrowserTunnel
+und den separaten Screencast-Endpunkt der Data Plane. Beide WebSocket-Ströme
+umgehen die Control Plane; rohe CDP-Adressen bleiben intern.
 
 Die minimale Provisioner-Schnittstelle lautet:
 
@@ -86,21 +87,25 @@ GET /api/v1/browsers
   {
     "id": "browser-1",
     "status": "ready",
-    "websocket_url": "ws://localhost:8021/api/v1/browser/ws"
+    "websocket_url": "ws://localhost:8021/api/v1/browser/ws",
+    "screencast_url": "ws://localhost:8011/api/v1/browser/browser-1/screencast"
   },
   {
     "id": "browser-2",
     "status": "ready",
-    "websocket_url": "ws://localhost:8022/api/v1/browser/ws"
+    "websocket_url": "ws://localhost:8022/api/v1/browser/ws",
+    "screencast_url": "ws://localhost:8012/api/v1/browser/browser-2/screencast"
   }
 ]
 ```
 
-Mit einem Browser verbinden: Das Frontend verwendet `websocket_url` aus der
-HTTP-Antwort und öffnet den Socket direkt zum BrowserTunnel.
+Mit einem Browser verbinden: Das Frontend verwendet `websocket_url` für die
+Steuerung über BrowserTunnel und `screencast_url` für binäre JPEG-Frames von
+der Data Plane.
 
 ```text
 WS ws://localhost:8021/api/v1/browser/ws
+WS ws://localhost:8011/api/v1/browser/browser-1/screencast
 ```
 
 Die Browser-Verbindung erfolgt über den browser-spezifischen Endpunkt. Die
@@ -113,8 +118,8 @@ docker compose up --build
 ```
 
 Danach ist die Control Plane unter `http://localhost:8000` erreichbar. Die
-beiden BrowserTunnel sind für direkte Client-Verbindungen auf den Ports 8021
-und 8022 erreichbar.
+beiden Data Planes sind auf 8011 und 8012 und die BrowserTunnel auf 8021 und
+8022 für direkte Client-Verbindungen erreichbar.
 
 ## Bewusste Grenzen
 

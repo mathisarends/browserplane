@@ -74,11 +74,6 @@ class BrowserTab:
 
 
 @dataclass(frozen=True, slots=True)
-class ScreencastFrame:
-    data: bytes
-
-
-@dataclass(frozen=True, slots=True)
 class TabsChanged:
     tabs: list[BrowserTab]
 
@@ -203,7 +198,7 @@ class BrowserTabs(Protocol):
 
 
 class Browser(Protocol):
-    """Application-owned port for a controllable, screencast-capable browser.
+    """Application-owned port for a controllable browser.
 
     Commands are grouped by what they act on, so a caller depends on the one
     namespace it drives instead of on every command the tunnel offers.
@@ -226,5 +221,3 @@ class Browser(Protocol):
     async def stop(self) -> None: ...
 
     def events(self) -> AsyncIterator[BrowserEvent]: ...
-
-    def screencast_frames(self) -> AsyncIterator[ScreencastFrame]: ...

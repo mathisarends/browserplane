@@ -21,21 +21,14 @@ async def main() -> None:
     try:
         tabs = await browser.tabs.list()
         print(f"CDP connected with {len(tabs)} tab(s)")
-        async with (
-            aclosing(browser.events()) as events,
-            aclosing(browser.screencast_frames()) as frames,
-        ):
+        async with aclosing(browser.events()) as events:
             navigation_task = asyncio.create_task(next_navigation(events))
-            frame_task = asyncio.create_task(anext(frames))
             await asyncio.sleep(0)
             await browser.navigation.navigate(
                 "data:text/html,<title>BrowserTunnel</title>"
             )
-            navigation, frame = await asyncio.wait_for(
-                asyncio.gather(navigation_task, frame_task), timeout=5
-            )
+            navigation = await asyncio.wait_for(navigation_task, timeout=5)
             print(f"Navigation state received ({navigation.url})")
-            print(f"Screencast received ({len(frame.data)} JPEG bytes)")
     finally:
         await browser.stop()
 

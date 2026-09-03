@@ -14,11 +14,12 @@ class BrowserState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class BrowserSlot:
-    """Worker address plus the client-facing tunnel endpoint for a browser."""
+    """Worker address plus client-facing endpoints for a browser."""
 
     id: UUID
     data_plane_url: str
     tunnel_url: str
+    screencast_url: str
 
 
 @dataclass(slots=True)
