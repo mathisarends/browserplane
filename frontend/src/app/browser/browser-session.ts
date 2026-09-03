@@ -17,6 +17,10 @@ interface NavigationState {
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
 
+interface BrowserResponse {
+  readonly websocket_url: string;
+}
+
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
 export class BrowserSession {
@@ -56,11 +60,17 @@ export class BrowserSession {
   async connect(browserId: string): Promise<void> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
-    const url = new URL(`/api/v1/browsers/${browserId}/ws`, window.location.href);
-    url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    this.transport = new WebSocketRpcTransport(url);
-    this.client = new BrowserTunnelClient(this.transport);
     try {
+      const response = await fetch(`/api/v1/browsers/${browserId}`);
+      if (!response.ok) {
+        throw new Error(
+          `Browser-Metadaten konnten nicht geladen werden (${response.status})`,
+        );
+      }
+      const browser = (await response.json()) as BrowserResponse;
+      const url = new URL(browser.websocket_url, window.location.href);
+      this.transport = new WebSocketRpcTransport(url);
+      this.client = new BrowserTunnelClient(this.transport);
       await this.transport.connect();
       this.connectionState.set("connected");
       void this.receiveNotifications();
@@ -93,14 +103,18 @@ export class BrowserSession {
   }
 
   reloadOrStop(): Promise<void> {
-    return this.run((client) => this.navigation()?.loading
-      ? client.browser.nav.stop()
-      : client.browser.nav.reload());
+    return this.run((client) =>
+      this.navigation()?.loading
+        ? client.browser.nav.stop()
+        : client.browser.nav.reload(),
+    );
   }
 
   createTab(): Promise<void> {
     return this.run(async (client) => {
-      this.tabsState.set((await client.browser.tab.create({ url: "about:blank" })).tabs);
+      this.tabsState.set(
+        (await client.browser.tab.create({ url: "about:blank" })).tabs,
+      );
     });
   }
 
@@ -143,7 +157,9 @@ export class BrowserSession {
     this.errorState.set(error instanceof Error ? error.message : String(error));
   }
 
-  private async run(action: (client: BrowserTunnelClient) => Promise<void>): Promise<void> {
+  private async run(
+    action: (client: BrowserTunnelClient) => Promise<void>,
+  ): Promise<void> {
     if (!this.client) {
       this.reportError("RPC-Verbindung ist nicht verfügbar");
       return;
@@ -186,9 +202,13 @@ export class BrowserSession {
           next.set(event.tabId, event);
           return next;
         });
-        this.tabsState.update((tabs) => tabs.map((tab) => tab.id === event.tabId
-          ? { ...tab, title: event.title, url: event.url }
-          : tab));
+        this.tabsState.update((tabs) =>
+          tabs.map((tab) =>
+            tab.id === event.tabId
+              ? { ...tab, title: event.title, url: event.url }
+              : tab,
+          ),
+        );
         if (event.error) this.errorState.set(event.error);
         break;
       case "browser.targetCrashed":

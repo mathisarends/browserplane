@@ -14,7 +14,7 @@ class BrowserState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class BrowserSlot:
-    """Internal addressing of one provisioned browser. Never leaves the backend."""
+    """Worker address plus the client-facing tunnel endpoint for a browser."""
 
     id: UUID
     data_plane_url: str

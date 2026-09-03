@@ -1,7 +1,7 @@
 [project]
 name = "control-plane"
 version = "0.1.0"
-description = "Control plane for browser sessions and tunnel routing."
+description = "Control plane for browser session provisioning."
 requires-python = ">=3.14"
 dependencies = [
     "dishka>=1.10.1",
@@ -9,7 +9,6 @@ dependencies = [
     "httpx2>=2.12.0",
     "pydantic-settings>=2.15.0",
     "uvicorn[standard]>=0.35.0",
-    "websockets>=15.0.0",
 ]
 
 [build-system]

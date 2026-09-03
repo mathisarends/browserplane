@@ -27,6 +27,10 @@ def test_lists_two_browser_data_planes() -> None:
         "00000000-0000-0000-0000-000000000001",
         "00000000-0000-0000-0000-000000000002",
     ]
+    assert [browser["websocket_url"] for browser in response.json()] == [
+        "ws://tunnel-1/ws",
+        "ws://tunnel-2/ws",
+    ]
 
 
 def test_unknown_browser_returns_api_error() -> None:

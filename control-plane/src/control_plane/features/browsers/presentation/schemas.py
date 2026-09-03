@@ -9,5 +9,5 @@ from control_plane.features.browsers.application.models import BrowserState
 class BrowserResponse(BaseModel):
     id: UUID
     state: BrowserState
-    cdp_url: str
+    websocket_url: str
     created_at: datetime

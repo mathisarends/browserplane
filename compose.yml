@@ -38,9 +38,9 @@ services:
     environment:
       - PORT=8000
       - CONTROL_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
-      - CONTROL_BROWSER_1_TUNNEL_URL=ws://browser-tunnel-1:8000/api/v1/browser/ws
+      - CONTROL_BROWSER_1_TUNNEL_URL=ws://localhost:8021/api/v1/browser/ws
       - CONTROL_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
-      - CONTROL_BROWSER_2_TUNNEL_URL=ws://browser-tunnel-2:8000/api/v1/browser/ws
+      - CONTROL_BROWSER_2_TUNNEL_URL=ws://localhost:8022/api/v1/browser/ws
     depends_on:
       data-plane-1:
         condition: service_healthy
@@ -57,6 +57,8 @@ services:
     build:
       context: .
       dockerfile: browsertunnel/Dockerfile
+    ports:
+      - "8021:8000"
     environment:
       - PORT=8000
       - BROWSER_CDP_URL=ws://data-plane-1:8000/api/v1/browsers/00000000-0000-0000-0000-000000000001/cdp
@@ -66,6 +68,8 @@ services:
 
   browser-tunnel-2:
     <<: *browser-tunnel
+    ports:
+      - "8022:8000"
     environment:
       - PORT=8000
       - BROWSER_CDP_URL=ws://data-plane-2:8000/api/v1/browsers/00000000-0000-0000-0000-000000000002/cdp

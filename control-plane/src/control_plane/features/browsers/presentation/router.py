@@ -1,15 +1,9 @@
 from uuid import UUID
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, WebSocket, status
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from fastapi import APIRouter, status
 
-from control_plane.features.browsers.application.exceptions import (
-    BrowserNotFoundException,
-)
 from control_plane.features.browsers.application.service import BrowserService
-from control_plane.features.browsers.infrastructure.websocket_proxy import (
-    proxy_websocket,
-)
 from control_plane.features.browsers.presentation.errors import (
     BROWSER_CAPACITY_EXHAUSTED,
     BROWSER_NOT_FOUND,
@@ -82,35 +76,3 @@ async def reset_browser(
 ) -> BrowserResponse:
     browser = await service.reset(browser_id)
     return to_browser_response(browser)
-
-
-@browser_router.websocket("/browsers/{browser_id}/cdp")
-@inject
-async def browser_cdp(
-    browser_id: UUID,
-    websocket: WebSocket,
-    service: FromDishka[BrowserService],
-) -> None:
-    await _serve_browser(browser_id, websocket, service)
-
-
-@browser_router.websocket("/browsers/{browser_id}/ws")
-@inject
-async def browser_socket(
-    browser_id: UUID,
-    websocket: WebSocket,
-    service: FromDishka[BrowserService],
-) -> None:
-    """Compatibility alias for clients using the original tunnel route."""
-    await _serve_browser(browser_id, websocket, service)
-
-
-async def _serve_browser(
-    browser_id: UUID, websocket: WebSocket, service: BrowserService
-) -> None:
-    try:
-        slot = service.slot(browser_id)
-    except BrowserNotFoundException:
-        await websocket.close(code=1008, reason="Unknown browser")
-        return
-    await proxy_websocket(websocket, slot.tunnel_url)

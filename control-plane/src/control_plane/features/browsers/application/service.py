@@ -9,7 +9,6 @@ from control_plane.features.browsers.application.exceptions import (
 )
 from control_plane.features.browsers.application.models import (
     Browser,
-    BrowserSlot,
     BrowserState,
 )
 from control_plane.features.browsers.application.ports import (
@@ -48,12 +47,6 @@ class BrowserService:
         if browser is None:
             raise BrowserNotFoundException()
         return browser
-
-    def slot(self, browser_id: UUID) -> BrowserSlot:
-        browser = self.get(browser_id)
-        if browser.state is BrowserState.FAILED:
-            raise BrowserNotFoundException()
-        return browser.slot
 
     async def destroy(self, browser_id: UUID) -> None:
         async with self._lock:

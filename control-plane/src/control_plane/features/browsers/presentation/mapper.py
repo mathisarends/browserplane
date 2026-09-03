@@ -6,7 +6,7 @@ def to_browser_response(browser: Browser) -> BrowserResponse:
     return BrowserResponse(
         id=browser.id,
         state=browser.state,
-        cdp_url=f"/api/v1/browsers/{browser.id}/cdp",
+        websocket_url=browser.slot.tunnel_url,
         created_at=browser.created_at,
     )
 

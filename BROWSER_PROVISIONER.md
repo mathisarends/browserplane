@@ -5,14 +5,13 @@
 Die V1 trennt drei Verantwortlichkeiten in eigene Python-Packages:
 
 ```text
-Frontend ──HTTP/WS──▶ control-plane ──WS-Routing──▶ browsertunnel
-                           │                            │
-                           │ Browser-Lifecycle          │ rohes CDP
-                           ▼                            ▼
-                    data-plane worker ─────────────▶ Chromium
+Frontend ──HTTP──▶ control-plane
+    │                  │ Browser-Lifecycle
+    │ JSON-RPC/WS      ▼
+    └────────────▶ browsertunnel ──rohes CDP──▶ data-plane worker ──▶ Chromium
 ```
 
-Die Control Plane kennt Browser-IDs, Worker und interne Tunnel-Adressen. Ein
+Die Control Plane kennt Browser-IDs, Worker und öffentliche Tunnel-Adressen. Ein
 Data-Plane-Worker besitzt Browserprozesse und stellt create, inspect, destroy,
 CDP sowie health/capacity bereit. BrowserTunnel ist ein Consumer dieser Data
 Plane und übersetzt CDP in das konkrete JSON-RPC-, Input- und
@@ -40,7 +39,7 @@ control-plane/
     features/
       browsers/
         application/           # Modelle, Ports, BrowserService, Exceptions
-        infrastructure/        # Data-Plane-Provisioner, Registry, WS-Proxy
+        infrastructure/        # Data-Plane-Provisioner und Registry
         presentation/          # Router, Schemas, Mapper, Fehler-Specs
       leases/
         application/           # Lease-Modell, LeaseStore/BrowserAllocator, Service
@@ -57,9 +56,10 @@ data-plane/
 
 `DataPlaneBrowserProvisioner` erzeugt beim Start über die interne Worker-API
 zwei feste Browser-Ressourcen. Erst danach starten die BrowserTunnel-Container
-und verbinden sich mit deren CDP-Endpunkten. Die Control Plane leitet den
-Client-WebSocket an den ausgewählten BrowserTunnel weiter. Worker-, CDP- und
-interne Tunnel-Adressen werden nicht an das Frontend gegeben.
+und verbinden sich mit deren CDP-Endpunkten. Die Control Plane liefert dem
+Frontend den öffentlichen WebSocket-Endpunkt des ausgewählten BrowserTunnel;
+der WebSocket-Datenverkehr umgeht die Control Plane. Worker- und rohe
+CDP-Adressen bleiben intern.
 
 Die minimale Provisioner-Schnittstelle lautet:
 
@@ -86,20 +86,21 @@ GET /api/v1/browsers
   {
     "id": "browser-1",
     "status": "ready",
-    "websocket_url": "/api/v1/browsers/browser-1/ws"
+    "websocket_url": "ws://localhost:8021/api/v1/browser/ws"
   },
   {
     "id": "browser-2",
     "status": "ready",
-    "websocket_url": "/api/v1/browsers/browser-2/ws"
+    "websocket_url": "ws://localhost:8022/api/v1/browser/ws"
   }
 ]
 ```
 
-Mit einem Browser verbinden:
+Mit einem Browser verbinden: Das Frontend verwendet `websocket_url` aus der
+HTTP-Antwort und öffnet den Socket direkt zum BrowserTunnel.
 
 ```text
-WS /api/v1/browsers/{browser_id}/ws
+WS ws://localhost:8021/api/v1/browser/ws
 ```
 
 Die Browser-Verbindung erfolgt über den browser-spezifischen Endpunkt. Die
@@ -112,7 +113,8 @@ docker compose up --build
 ```
 
 Danach ist die Control Plane unter `http://localhost:8000` erreichbar. Die
-beiden BrowserTunnel-Container sind nur im internen Compose-Netz sichtbar.
+beiden BrowserTunnel sind für direkte Client-Verbindungen auf den Ports 8021
+und 8022 erreichbar.
 
 ## Bewusste Grenzen
 
