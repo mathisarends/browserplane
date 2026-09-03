@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from scripts.typescript_codegen import (
+from frontend.scripts.typescript_codegen import (
     TypeScriptClientOptions,
     render_typescript_client,
     write_typescript_client,

@@ -3,14 +3,14 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from scripts.typescript_codegen import (
+from typescript_codegen import (
     TypeScriptClientOptions,
     write_typescript_client,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCHEMA = PROJECT_ROOT / "schemas" / "openrpc.json"
-DEFAULT_OUTPUT = PROJECT_ROOT / "packages" / "browser-rpc-client" / "src" / "generated"
+DEFAULT_OUTPUT = PROJECT_ROOT / "frontend" / "generated" / "src" / "generated"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

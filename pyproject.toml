@@ -43,7 +43,7 @@ select = [
 known-first-party = ["browsertunnel"]
 
 [tool.pytest.ini_options]
-testpaths = ["browsertunnel/tests"]
+testpaths = ["browsertunnel/tests", "frontend/tests"]
 pythonpath = ["."]
 
 [tool.coverage.run]

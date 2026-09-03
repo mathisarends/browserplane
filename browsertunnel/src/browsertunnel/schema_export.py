@@ -1,12 +1,12 @@
 import json
 from pathlib import Path
 
-from browsertunnel.presentation.schemas import (
+from .presentation.schemas import (
     browser_json_schema,
     browser_openrpc_schema,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCHEMA_DIR = PROJECT_ROOT / "schemas"
 
 

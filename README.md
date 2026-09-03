@@ -75,7 +75,7 @@ target crashed/detached.
 
 ```bash
 uv sync
-npm install
+(cd frontend && npm install)
 uv run pre-commit install
 ```
 
@@ -86,23 +86,24 @@ uv run pre-commit install
 sh scripts/start-backend.sh
 
 # Start the frontend (installs missing packages automatically)
-sh scripts/start-frontend.sh
+sh frontend/scripts/start.sh
 
 # Then open in a browser: http://localhost:5173
 
-sh scripts/generate-schemas.sh # write JSON Schema and OpenRPC into schemas/
-npm run generate:rpc # regenerate schemas and the TypeScript RPC client
+uv run python -m browsertunnel.schema_export # write JSON Schema and OpenRPC into schemas/
+(cd frontend && npm run generate:rpc) # regenerate schemas and the TypeScript RPC client
 uv run pytest        # tests
 uv run ruff check .  # lint
 uv run ruff format . # format
-npm run build        # type-check and build the frontend
+(cd frontend && npm run build)        # type-check and build the frontend
 ```
 
-The frontend can also just be started with `npm run dev` after `npm install`.
+The frontend can also just be started with `npm run dev` from `frontend/` after
+`npm install`.
 `predev` regenerates schemas and the RPC client first. Vite hot-reloads on
 HTML/CSS/TS changes and proxies `/api` to the backend on port 8000. The
-generated client lives in the workspace package `packages/browser-rpc-client`;
-`npm run check:generated` flags a stale one.
+generated client lives in the workspace package `frontend/generated`;
+`npm run check:generated` (from `frontend/`) flags a stale one.
 
 ## Backend protocol
 
@@ -130,4 +131,5 @@ Configure the browser via `BROWSER_EXECUTABLE`, `BROWSER_CDP_URL`,
 `BROWSER_SCREENCAST_QUALITY`, `BROWSER_STARTUP_TIMEOUT`. Without
 `BROWSER_CDP_URL` the backend launches Chrome/Chromium/Edge itself.
 
-Smoke test against a real browser: `uv run python -m scripts.smoke_backend`.
+Smoke test against a real browser:
+`uv run python browsertunnel/tests/manual_smoke.py`.
