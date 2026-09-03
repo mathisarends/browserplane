@@ -8,7 +8,7 @@ from control_plane.registry import (
     BrowserDescriptor,
     BrowserNotFoundError,
     BrowserRecord,
-    BrowserRegistry,
+    BrowserStore,
 )
 from control_plane.settings import BrowserSlot
 
@@ -24,7 +24,7 @@ class LeaseDescriptor:
 
 class BrowserService:
     def __init__(
-        self, provisioner: BrowserProvisioner, registry: BrowserRegistry
+        self, provisioner: BrowserProvisioner, registry: BrowserStore
     ) -> None:
         self._provisioner = provisioner
         self._registry = registry
@@ -77,7 +77,7 @@ class BrowserService:
 
 
 class LeaseService:
-    def __init__(self, registry: BrowserRegistry) -> None:
+    def __init__(self, registry: BrowserStore) -> None:
         self._registry = registry
         self._leases: dict[UUID, LeaseDescriptor] = {}
         self._lock = asyncio.Lock()

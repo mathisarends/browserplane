@@ -3,7 +3,7 @@ from uuid import UUID
 
 import pytest
 
-from control_plane.registry import InMemoryBrowserRegistry
+from control_plane.registry import InMemoryBrowserStore
 from control_plane.services import BrowserService, LeaseService
 from control_plane.settings import BrowserSlot
 
@@ -21,7 +21,7 @@ class FakeProvisioner:
 
 @pytest.mark.asyncio
 async def test_browser_service_provisions_and_leases_a_browser() -> None:
-    registry = InMemoryBrowserRegistry()
+    registry = InMemoryBrowserStore()
     browsers = BrowserService(FakeProvisioner(), registry)
     leases = LeaseService(registry)
     await browsers.start()

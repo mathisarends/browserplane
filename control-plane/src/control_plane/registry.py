@@ -21,7 +21,7 @@ class BrowserRecord:
     state: str = "ready"
 
 
-class BrowserRegistry(Protocol):
+class BrowserStore(Protocol):
     """Storage port for browser records."""
 
     def add(self, browser: BrowserRecord) -> None: ...
@@ -33,8 +33,8 @@ class BrowserRegistry(Protocol):
     def clear(self) -> None: ...
 
 
-class InMemoryBrowserRegistry:
-    """Process-local BrowserRegistry implementation for the current MVP."""
+class InMemoryBrowserStore:
+    """Process-local BrowserStore implementation for the current MVP."""
 
     def __init__(self) -> None:
         self._browsers: dict[UUID, BrowserRecord] = {}
