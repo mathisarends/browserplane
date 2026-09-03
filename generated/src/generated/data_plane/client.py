@@ -1,10 +1,17 @@
 # Generated from data_plane-openapi.json. Do not edit manually.
 
+from uuid import UUID
+
 from httpx2 import AsyncClient
 
 from generated.transport import HttpTransport
 
-from .models import BrowserResponse, CreateBrowserRequest, HealthResponse
+from .models import (
+    BrowserResponse,
+    CreateBrowserRequest,
+    HealthResponse,
+    RecordingResponse,
+)
 
 
 class DataPlaneClient:
@@ -66,4 +73,55 @@ class DataPlaneClient:
         await self._transport.request(
             "DELETE",
             "/api/v1/browser",
+        )
+
+    async def start_recording(self, browser_id: UUID) -> RecordingResponse:
+        """Start Recording."""
+        response = await self._transport.request(
+            "POST",
+            f"/api/v1/browser/{browser_id}/recordings",
+        )
+        return RecordingResponse.model_validate(response.json())
+
+    async def stop_recording(
+        self,
+        browser_id: UUID,
+        recording_id: UUID,
+    ) -> RecordingResponse:
+        """Stop Recording."""
+        response = await self._transport.request(
+            "POST",
+            f"/api/v1/browser/{browser_id}/recordings/{recording_id}/stop",
+        )
+        return RecordingResponse.model_validate(response.json())
+
+    async def inspect_recording(
+        self,
+        browser_id: UUID,
+        recording_id: UUID,
+    ) -> RecordingResponse:
+        """Inspect Recording."""
+        response = await self._transport.request(
+            "GET",
+            f"/api/v1/browser/{browser_id}/recordings/{recording_id}",
+        )
+        return RecordingResponse.model_validate(response.json())
+
+    async def download_recording(self, browser_id: UUID, recording_id: UUID) -> None:
+        """Download Recording."""
+        await self._transport.request(
+            "GET",
+            f"/api/v1/browser/{browser_id}/recordings/{recording_id}/file",
+        )
+
+    async def download_recording_segment(
+        self,
+        browser_id: UUID,
+        recording_id: UUID,
+        index: int,
+    ) -> None:
+        """Download Recording Segment."""
+        await self._transport.request(
+            "GET",
+            f"/api/v1/browser/{browser_id}/recordings/{recording_id}/segments/{index}/file",
         )

@@ -14,7 +14,7 @@ Frontend ──HTTP──▶ control-plane
 
 Die Control Plane kennt Browser-IDs, Worker und öffentliche Tunnel-Adressen. Ein
 Data-Plane-Worker besitzt genau einen Browserprozess und stellt create,
-inspect, destroy, CDP, Screencast sowie health bereit. BrowserTunnel ist ein
+inspect, destroy, CDP, Screencast, Video-Recordings sowie health bereit. BrowserTunnel ist ein
 Consumer dieser Data Plane und übersetzt CDP in das JSON-RPC-, Input- und
 Status-Protokoll des Frontends.
 
@@ -110,6 +110,37 @@ WS ws://localhost:8011/api/v1/browser/browser-1/screencast
 
 Die Browser-Verbindung erfolgt über den browser-spezifischen Endpunkt. Die
 JSON-RPC-Nachrichten selbst ändern sich nicht.
+
+## Video-Recording
+
+Die Data Plane nimmt über `Page.startScreenRecording` auf und folgt dabei dem
+aktiven Tab. Welcher Tab aktiv ist, weiß der `ActiveTabStream`: Er hält pro
+Browser genau eine CDP-Verbindung, screencastet jedes Page-Target — nur während
+eines Screencasts meldet CDP Sichtbarkeit — und verteilt die Updates an alle
+Konsumenten. Live-Viewer lesen daraus die Frames, der Recorder die
+Tab-Wechsel; die Verbindung besteht, solange mindestens ein Konsument
+subscribed ist. Wer später dazukommt, bekommt den aktuellen aktiven Tab
+nachgereicht, weil das Zustand ist und kein Event.
+
+`Page.startScreenRecording` hängt an genau einem Target und folgt einem
+Tab-Wechsel nicht. Eine Aufnahme besteht deshalb aus einem Segment pro Tab: Bei
+jedem Wechsel wird die laufende Aufnahme gestoppt, der IO-Stream in eine Datei
+gedrained und auf dem neuen Tab neu gestartet. Chromium liefert derzeit MP4;
+der Container wird aus dem Datei-Header erkannt. Die Dateien liegen bis zum
+Shutdown des Workers in einem temporären Verzeichnis.
+
+```text
+POST /api/v1/browser/{browser_id}/recordings                     # startet
+POST /api/v1/browser/{browser_id}/recordings/{recording_id}/stop # beendet
+GET  /api/v1/browser/{browser_id}/recordings/{recording_id}      # Status + Segmente
+GET  /api/v1/browser/{browser_id}/recordings/{recording_id}/file # Video, einsegmentig
+GET  .../recordings/{recording_id}/segments/{index}/file         # Video eines Tabs
+```
+
+Der `file`-Endpunkt liefert das Video, solange die Aufnahme auf einem Tab
+geblieben ist, und antwortet sonst mit `recording_has_segments`; die Segmente
+stehen mit Index, Target und Zeitraum im Status und einzeln unter
+`segments/{index}/file`.
 
 ## Lokal starten
 

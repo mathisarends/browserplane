@@ -1,5 +1,6 @@
 # Generated from data_plane-openapi.json. Do not edit manually.
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
@@ -49,3 +50,63 @@ class HealthStatus(StrEnum):
 
 class HealthResponse(BaseModel):
     status: HealthStatus
+
+
+class RecordingAlreadyRunningError(BaseModel):
+    code: Literal["recording_already_running"]
+    message: str
+
+
+class RecordingFailedError(BaseModel):
+    code: Literal["recording_failed"]
+    message: str
+
+
+class RecordingFormat(StrEnum):
+    WEBM = "webm"
+    MP4 = "mp4"
+
+
+class RecordingHasSegmentsError(BaseModel):
+    code: Literal["recording_has_segments"]
+    message: str
+
+
+class RecordingNotCompletedError(BaseModel):
+    code: Literal["recording_not_completed"]
+    message: str
+
+
+class RecordingNotFoundError(BaseModel):
+    code: Literal["recording_not_found"]
+    message: str
+
+
+class RecordingNotRunningError(BaseModel):
+    code: Literal["recording_not_running"]
+    message: str
+
+
+class RecordingSegmentResponse(BaseModel):
+    index: int
+    target_id: str
+    size_bytes: int
+    format: RecordingFormat
+    started_at: datetime
+    stopped_at: datetime
+
+
+class RecordingState(StrEnum):
+    RECORDING = "recording"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class RecordingResponse(BaseModel):
+    id: UUID
+    browser_id: UUID
+    state: RecordingState
+    started_at: datetime
+    stopped_at: datetime | None = None
+    size_bytes: int | None = None
+    segments: list[RecordingSegmentResponse] = []
