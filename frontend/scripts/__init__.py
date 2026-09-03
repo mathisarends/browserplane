@@ -1,1 +1,0 @@
-"""Frontend generation helpers."""

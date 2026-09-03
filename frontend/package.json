@@ -10,8 +10,8 @@
     "dev": "vite --config vite.config.ts",
     "build": "npm run check:client && tsc -p tsconfig.json && vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
-    "generate:rpc": "uv run python -m browsertunnel.schema_export && uv run python scripts/generate_rpc_client.py",
-    "check:generated": "uv run python -m browsertunnel.schema_export && uv run python scripts/generate_rpc_client.py --check",
+    "generate:rpc": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
+    "check:generated": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
     "check:client": "npm run check --workspace @browsertunnel/browser-rpc-client"
   },
   "dependencies": {

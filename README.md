@@ -85,8 +85,8 @@ uv run pre-commit install
 # Start the backend (sets up dependencies and .env on demand)
 sh scripts/start-backend.sh
 
-# Start the frontend (installs missing packages automatically)
-sh frontend/scripts/start.sh
+# Start the frontend
+(cd frontend && npm run dev)
 
 # Then open in a browser: http://localhost:5173
 
