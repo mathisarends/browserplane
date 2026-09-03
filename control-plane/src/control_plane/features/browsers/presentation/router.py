@@ -32,7 +32,8 @@ browser_router = APIRouter(route_class=DishkaRoute, tags=["browsers"])
     responses=api_error_responses(BROWSER_CAPACITY_EXHAUSTED),
 )
 async def create_browser(service: FromDishka[BrowserService]) -> BrowserResponse:
-    return to_browser_response(await service.create())
+    browser = await service.create()
+    return to_browser_response(browser)
 
 
 @browser_router.get(
@@ -41,7 +42,8 @@ async def create_browser(service: FromDishka[BrowserService]) -> BrowserResponse
     operation_id="list_browsers",
 )
 async def list_browsers(service: FromDishka[BrowserService]) -> list[BrowserResponse]:
-    return to_browser_list_response(service.list())
+    browsers = service.list()
+    return to_browser_list_response(browsers)
 
 
 @browser_router.get(
@@ -53,7 +55,8 @@ async def list_browsers(service: FromDishka[BrowserService]) -> list[BrowserResp
 async def get_browser(
     browser_id: UUID, service: FromDishka[BrowserService]
 ) -> BrowserResponse:
-    return to_browser_response(service.get(browser_id))
+    browser = service.get(browser_id)
+    return to_browser_response(browser)
 
 
 @browser_router.delete(
@@ -77,7 +80,8 @@ async def destroy_browser(
 async def reset_browser(
     browser_id: UUID, service: FromDishka[BrowserService]
 ) -> BrowserResponse:
-    return to_browser_response(await service.reset(browser_id))
+    browser = await service.reset(browser_id)
+    return to_browser_response(browser)
 
 
 @browser_router.websocket("/browsers/{browser_id}/cdp")

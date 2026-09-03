@@ -45,7 +45,8 @@ async def create_lease(
     responses=api_error_responses(LEASE_NOT_FOUND),
 )
 async def get_lease(lease_id: UUID, service: FromDishka[LeaseService]) -> LeaseResponse:
-    return to_lease_response(await service.get(lease_id))
+    lease = await service.get(lease_id)
+    return to_lease_response(lease)
 
 
 @lease_router.delete(
