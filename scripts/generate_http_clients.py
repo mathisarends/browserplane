@@ -1,4 +1,4 @@
-"""Export the FastAPI OpenAPI documents and render the Python clients."""
+"""Export the FastAPI OpenAPI documents and render the Python clients with httpxgen."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any
 
-from python_codegen import PythonClientOptions, write_python_client
+from httpxgen import GenerationError, load_openapi, write_client
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = PROJECT_ROOT / "schemas"
@@ -17,28 +17,23 @@ OUTPUT_DIR = PROJECT_ROOT / "generated" / "src" / "generated"
 
 @dataclass(frozen=True, slots=True)
 class ClientTarget:
-    """One FastAPI application rendered into one generated subpackage."""
+    """One FastAPI application rendered into one httpxgen client package."""
 
     package: str
     app: str
-    client_name: str
 
     @property
     def schema_name(self) -> str:
         return f"{self.package}-openapi.json"
 
+    @property
+    def package_name(self) -> str:
+        return f"generated.{self.package}"
+
 
 TARGETS = (
-    ClientTarget(
-        package="data_plane",
-        app="data_plane.app",
-        client_name="DataPlaneClient",
-    ),
-    ClientTarget(
-        package="control_plane",
-        app="control_plane.app",
-        client_name="ControlPlaneClient",
-    ),
+    ClientTarget(package="data_plane", app="data_plane.app"),
+    ClientTarget(package="control_plane", app="control_plane.app"),
 )
 
 
@@ -52,28 +47,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
 
     changed: list[Path] = []
-    for target in TARGETS:
-        document = _openapi_document(target)
-        if not arguments.check:
-            _write_schema(arguments.schemas / target.schema_name, document)
-        changed.extend(
-            write_python_client(
-                document,
-                arguments.output / target.package,
-                PythonClientOptions(
-                    client_name=target.client_name,
-                    source=target.schema_name,
-                ),
-                check=arguments.check,
+    try:
+        for target in TARGETS:
+            schema_path = arguments.schemas / target.schema_name
+            if not arguments.check:
+                _write_schema(schema_path, _openapi_document(target))
+            spec = load_openapi(schema_path)
+            changed.extend(
+                write_client(
+                    spec=spec,
+                    package_dir=arguments.output / target.package,
+                    package_name=target.package_name,
+                    check=arguments.check,
+                )
             )
-        )
+    except GenerationError as error:
+        parser.exit(1, f"error: {error}\n")
 
     for path in changed:
-        label = "Out of date" if arguments.check else "Wrote"
-        print(f"{label}: {path.relative_to(PROJECT_ROOT)}")
+        print(f"Wrote: {path.relative_to(PROJECT_ROOT)}")
     if not changed:
         print("Python HTTP clients are up to date")
-    return int(arguments.check and bool(changed))
+    return 0
 
 
 def _openapi_document(target: ClientTarget) -> dict[str, Any]:

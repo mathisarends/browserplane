@@ -1,5 +1,9 @@
-"""Typed HTTP clients rendered from the internal OpenAPI documents."""
+"""Typed HTTP clients rendered from the internal OpenAPI documents by httpxgen."""
 
-from .transport import HttpTransport
+from httpx2 import alias_httpx
 
-__all__ = ["HttpTransport"]
+# The generated clients import plain `httpx`; alias it to httpx2 before any of
+# them do so, since only httpx2 is installed in this workspace.
+alias_httpx()
+
+__all__: list[str] = []
