@@ -6,6 +6,7 @@
  */
 
 export * from './authenticationStateSchema';
+export * from './authenticationStateSnapshotResponse';
 export * from './browserCookieSchema';
 export * from './browserLeaseSummary';
 export * from './browserNotFoundError';
@@ -16,6 +17,7 @@ export * from './browserStateSchema';
 export * from './browserStateSnapshotResponse';
 export * from './browserStateTransferFailedError';
 export * from './browserTabStateSchema';
+export * from './captureAuthenticationStateSnapshotRequest';
 export * from './captureBrowserStateSnapshotRequest';
 export * from './health200';
 export * from './hTTPValidationError';

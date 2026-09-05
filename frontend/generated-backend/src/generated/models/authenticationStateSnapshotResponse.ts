@@ -4,12 +4,12 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { BrowserStateSchema } from './browserStateSchema';
+import type { AuthenticationStateSchema } from './authenticationStateSchema';
 
-export interface BrowserStateSnapshotResponse {
+export interface AuthenticationStateSnapshotResponse {
   id: string;
   name: string;
   source_browser: string;
   created_at: string;
-  browser_state: BrowserStateSchema;
+  authentication_state: AuthenticationStateSchema;
 }

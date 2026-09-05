@@ -6,11 +6,13 @@
  */
 import type {
   AuthenticationStateSchema,
+  AuthenticationStateSnapshotResponse,
   BrowserNotFoundError,
   BrowserProvisioningFailedError,
   BrowserStateSchema,
   BrowserStateSnapshotResponse,
   BrowserStateTransferFailedError,
+  CaptureAuthenticationStateSnapshotRequest,
   CaptureBrowserStateSnapshotRequest,
   HTTPValidationError,
   Health200,
@@ -669,6 +671,121 @@ const res = await fetch(getCaptureBrowserStateSnapshotUrl(sessionId),
 
   const data: captureBrowserStateSnapshotResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as captureBrowserStateSnapshotResponse
+}
+
+
+
+export type listAuthenticationStateSnapshotsResponse200 = {
+  data: AuthenticationStateSnapshotResponse[]
+  status: 200
+}
+
+export type listAuthenticationStateSnapshotsResponseSuccess = (listAuthenticationStateSnapshotsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listAuthenticationStateSnapshotsResponse = (listAuthenticationStateSnapshotsResponseSuccess)
+
+export const getListAuthenticationStateSnapshotsUrl = () => {
+
+
+
+
+  return `/api/v1/authentication-state-snapshots`
+}
+
+/**
+ * @summary List Authentication State Snapshots
+ */
+export const listAuthenticationStateSnapshots = async ( options?: RequestInit): Promise<listAuthenticationStateSnapshotsResponse> => {
+
+  const res = await fetch(getListAuthenticationStateSnapshotsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listAuthenticationStateSnapshotsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listAuthenticationStateSnapshotsResponse
+}
+
+
+
+export type captureAuthenticationStateSnapshotResponse201 = {
+  data: AuthenticationStateSnapshotResponse
+  status: 201
+}
+
+export type captureAuthenticationStateSnapshotResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError
+  status: 404
+}
+
+export type captureAuthenticationStateSnapshotResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type captureAuthenticationStateSnapshotResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type captureAuthenticationStateSnapshotResponse503 = {
+  data: BrowserStateTransferFailedError
+  status: 503
+}
+
+export type captureAuthenticationStateSnapshotResponseSuccess = (captureAuthenticationStateSnapshotResponse201) & {
+  headers: Headers;
+};
+export type captureAuthenticationStateSnapshotResponseError = (captureAuthenticationStateSnapshotResponse404 | captureAuthenticationStateSnapshotResponse409 | captureAuthenticationStateSnapshotResponse422 | captureAuthenticationStateSnapshotResponse503) & {
+  headers: Headers;
+};
+
+export type captureAuthenticationStateSnapshotResponse = (captureAuthenticationStateSnapshotResponseSuccess | captureAuthenticationStateSnapshotResponseError)
+
+export const getCaptureAuthenticationStateSnapshotUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-state-snapshots`
+}
+
+/**
+ * @summary Capture Authentication State Snapshot
+ */
+export const captureAuthenticationStateSnapshot = async (sessionId: string,
+    captureAuthenticationStateSnapshotRequest: CaptureAuthenticationStateSnapshotRequest, options?: RequestInit): Promise<captureAuthenticationStateSnapshotResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getCaptureAuthenticationStateSnapshotUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(captureAuthenticationStateSnapshotRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: captureAuthenticationStateSnapshotResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as captureAuthenticationStateSnapshotResponse
 }
 
 
