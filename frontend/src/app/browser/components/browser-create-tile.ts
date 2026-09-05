@@ -19,7 +19,8 @@ import { ChangeDetectionStrategy, Component, output } from "@angular/core";
     :host {
       display: grid;
       min-width: 0;
-      aspect-ratio: 4 / 3;
+      aspect-ratio: 16 / 9;
+      min-height: 260px;
     }
     section {
       display: grid;

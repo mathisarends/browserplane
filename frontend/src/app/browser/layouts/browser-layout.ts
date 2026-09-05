@@ -46,15 +46,21 @@ import { BrowserViewSwitcher, type BrowserViewMode } from "../components/browser
       display: block;
     }
     .app-shell {
-      width: min(100%, 1640px);
-      margin-inline: auto;
-      padding: 6px clamp(10px, 2vw, 32px) clamp(16px, 2vw, 32px);
+      width: 100%;
+      padding: 6px clamp(10px, 1.4vw, 26px) clamp(16px, 2vw, 32px);
     }
     .browser-stage,
     .browser-gallery,
     .gallery-viewport,
     .browser-track {
       min-width: 0;
+    }
+    .browser-stage {
+      width: min(100%, 1640px);
+      margin-inline: auto;
+    }
+    .browser-stage[data-view="grid"] {
+      width: min(100%, 2560px);
     }
     .browser-gallery {
       position: relative;
