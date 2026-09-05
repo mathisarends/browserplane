@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,3 +25,4 @@ class DataPlaneSettings(BaseSettings):
     browser_state_max_tabs: int = Field(default=20, gt=0)
     startup_timeout: float = Field(default=15, gt=0)
     public_base_url: str = "ws://127.0.0.1:8000"
+    workspace_path: Path = Path("workspace")

@@ -9,6 +9,7 @@ class ApiErrorCode(StrEnum):
     BROWSER_STARTUP_FAILED = "browser_startup_failed"
     BROWSER_STATE_INVALID = "browser_state_invalid"
     BROWSER_STATE_FAILED = "browser_state_failed"
+    DOWNLOAD_NOT_FOUND = "download_not_found"
     RECORDING_NOT_FOUND = "recording_not_found"
     RECORDING_ALREADY_RUNNING = "recording_already_running"
     RECORDING_NOT_RUNNING = "recording_not_running"

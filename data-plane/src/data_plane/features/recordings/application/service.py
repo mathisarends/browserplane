@@ -1,5 +1,5 @@
 import asyncio
-import tempfile
+import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -49,7 +49,7 @@ class RecordingService:
         self._recorder_factory = recorder_factory
         self._stored: dict[UUID, StoredRecording] = {}
         self._active: UUID | None = None
-        self._storage: tempfile.TemporaryDirectory[str] | None = None
+        self._storage: Path | None = None
         self._lock = asyncio.Lock()
 
     async def start(self, browser_id: UUID) -> Recording:
@@ -127,8 +127,8 @@ class RecordingService:
             self._active = None
             for entry in stored:
                 await entry.recorder.close()
+                shutil.rmtree(entry.directory, ignore_errors=True)
             if self._storage is not None:
-                self._storage.cleanup()
                 self._storage = None
 
     def _completed_segments(
@@ -149,10 +149,9 @@ class RecordingService:
 
     def _storage_path(self) -> Path:
         if self._storage is None:
-            self._storage = tempfile.TemporaryDirectory(
-                prefix="data-plane-recordings-", ignore_cleanup_errors=True
-            )
-        return Path(self._storage.name)
+            self._storage = self._settings.workspace_path.resolve() / "recordings"
+            self._storage.mkdir(parents=True, exist_ok=True)
+        return self._storage
 
 
 def _to_file(recording_id: UUID, segment: RecordedSegment) -> RecordingFile:

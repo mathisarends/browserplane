@@ -15,6 +15,11 @@ from data_plane.features.browsers.presentation.errors import (
 )
 from data_plane.features.browsers.presentation.router import browser_router
 from data_plane.features.browsers.provider import BrowserProvider
+from data_plane.features.downloads.presentation.errors import (
+    API_ERRORS as DOWNLOAD_API_ERRORS,
+)
+from data_plane.features.downloads.presentation.router import download_router
+from data_plane.features.downloads.provider import DownloadProvider
 from data_plane.features.health.presentation.router import health_router
 from data_plane.features.health.provider import HealthProvider
 from data_plane.features.recordings.presentation.errors import (
@@ -28,8 +33,19 @@ from data_plane.provider import SettingsProvider
 from data_plane.request_logging import install_request_logging
 
 API_PREFIX = "/api/v1"
-ROUTERS = (health_router, browser_router, browser_state_router, recording_router)
-API_ERRORS = (*BROWSER_API_ERRORS, *BROWSER_STATE_API_ERRORS, *RECORDING_API_ERRORS)
+ROUTERS = (
+    health_router,
+    browser_router,
+    browser_state_router,
+    download_router,
+    recording_router,
+)
+API_ERRORS = (
+    *BROWSER_API_ERRORS,
+    *BROWSER_STATE_API_ERRORS,
+    *DOWNLOAD_API_ERRORS,
+    *RECORDING_API_ERRORS,
+)
 
 
 def create_app(service: BrowserService | None = None) -> FastAPI:
@@ -41,6 +57,7 @@ def create_app(service: BrowserService | None = None) -> FastAPI:
     container = make_async_container(
         SettingsProvider(),
         BrowserProvider(service),
+        DownloadProvider(),
         BrowserStateProvider(),
         RecordingProvider(),
         HealthProvider(),

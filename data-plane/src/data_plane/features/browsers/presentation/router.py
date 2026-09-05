@@ -24,6 +24,7 @@ from data_plane.features.browsers.presentation.schemas import (
     BrowserResponse,
     CreateBrowserRequest,
 )
+from data_plane.features.downloads.application.service import DownloadService
 from data_plane.presentation.api_errors import api_error_responses
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
@@ -39,8 +40,10 @@ logger = logging.getLogger(__name__)
 async def create_browser(
     request: CreateBrowserRequest,
     service: FromDishka[BrowserService],
+    downloads: FromDishka[DownloadService],
 ) -> BrowserResponse:
     browser = await service.create(request.id)
+    await downloads.start(browser.id)
     return to_browser_response(browser)
 
 
@@ -59,7 +62,11 @@ async def inspect_browser(service: FromDishka[BrowserService]) -> BrowserRespons
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="destroy_browser",
 )
-async def destroy_browser(service: FromDishka[BrowserService]) -> Response:
+async def destroy_browser(
+    service: FromDishka[BrowserService],
+    downloads: FromDishka[DownloadService],
+) -> Response:
+    await downloads.stop()
     await service.destroy()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
