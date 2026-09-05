@@ -2,9 +2,10 @@ from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
-from backend.browser_tunnel.presentation import browser_rpc_router
 from backend.features.admin.infrastructure import AdminProvider
 from backend.features.admin.presentation.router import admin_router
+from backend.features.browser_tunnel.infrastructure import BrowserTunnelProvider
+from backend.features.browser_tunnel.presentation import browser_rpc_router
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
@@ -64,6 +65,7 @@ def create_app(
     container = make_async_container(
         BucketProvider(),
         DatabaseProvider(),
+        BrowserTunnelProvider(),
         BrowserProvider(provisioner, repository),
         RecordingProvider(),
         LeaseProvider(),

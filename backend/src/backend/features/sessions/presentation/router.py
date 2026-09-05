@@ -10,7 +10,7 @@ from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
 
-from backend.browser_tunnel.presentation.session import BrowserTunnel
+from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.leases.application.exceptions import LeaseNotFoundException

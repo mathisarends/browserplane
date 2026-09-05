@@ -3,7 +3,6 @@ from datetime import timedelta
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.ports import (
@@ -61,13 +60,6 @@ class SessionProvider(Provider):
         return (
             self._authentication_snapshots
             or SqlAuthenticationStateSnapshotRepository(session)
-        )
-
-    @provide(scope=Scope.APP)
-    def browser_tunnel(self, settings: SessionSettings) -> BrowserTunnel:
-        return BrowserTunnel(
-            width=settings.browser_width,
-            height=settings.browser_height,
         )
 
     @provide(scope=Scope.REQUEST)

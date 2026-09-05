@@ -108,7 +108,7 @@ docker compose up --build
 # Frontend on http://localhost:5173
 (cd frontend && npm run dev)
 
-uv run python -m backend.browser_tunnel.schema_export # JSON Schema and OpenRPC
+uv run python -m backend.features.browser_tunnel.schema_export # JSON Schema and OpenRPC
 (cd frontend && npm run generate) # schemas and both TypeScript clients
 ./scripts/generate_http_clients.sh # Python HTTP clients
 (cd backend && uv run alembic revision --autogenerate -m "...")
