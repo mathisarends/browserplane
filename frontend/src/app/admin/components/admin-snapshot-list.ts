@@ -1,62 +1,40 @@
-import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, inject } from "@angular/core";
 import type { BrowserStateSnapshotResponse } from "@browsertunnel/backend-client";
-import { AdminConsole, short } from "../services/admin-console";
-import { relativeTime } from "../services/time";
+import { AdminConsole } from "../services/admin-console";
+import { AdminSection } from "./admin-section";
+import { relativeTime } from "../services/format";
 
+type SnapshotRow = {
+  readonly id: string;
+  readonly name: string;
+  readonly source: string;
+  readonly tabs: string;
+  readonly age: string;
+};
+
+/** Snapshots carry no actions yet, so they stay a list rather than cards. */
 @Component({
   selector: "app-admin-snapshot-list",
+  imports: [AdminSection],
   template: `
-    <section aria-labelledby="admin-snapshots-heading">
-      <header>
-        <h2 id="admin-snapshots-heading">Saved browser states</h2>
-        <small>{{ console.snapshots().length }} snapshots</small>
-      </header>
-
+    <app-admin-section heading="Saved browser states" [meta]="meta()">
       <ul>
-        @for (snapshot of console.snapshots(); track snapshot.id) {
+        @for (row of rows(); track row.id) {
           <li>
-            <span class="name">{{ snapshot.name }}</span>
-            <span class="source" [title]="snapshot.source_browser">
-              {{ snapshot.source_browser }}
-            </span>
-            <span class="tabs">{{ tabCount(snapshot) }} tabs</span>
-            <span class="age">{{ since(snapshot.created_at) }}</span>
+            <span class="name">{{ row.name }}</span>
+            <span class="source" [title]="row.source">{{ row.source }}</span>
+            <span class="tabs">{{ row.tabs }}</span>
+            <span class="age">{{ row.age }}</span>
           </li>
         } @empty {
           <li class="empty">Nothing has been captured yet.</li>
         }
       </ul>
-    </section>
+    </app-admin-section>
   `,
   styles: `
     :host {
       display: block;
-    }
-    section {
-      overflow: hidden;
-      background: #0e1117;
-      border: 1px solid #222932;
-      border-radius: 14px;
-    }
-    header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 13px 16px;
-      border-bottom: 1px solid #1e242d;
-    }
-    h2 {
-      margin: 0;
-      color: #e4e8ee;
-      font-size: 0.82rem;
-      font-weight: 650;
-      letter-spacing: -0.01em;
-    }
-    header small {
-      color: #626873;
-      font-family: var(--font-mono);
-      font-size: 0.66rem;
     }
     ul {
       max-height: 268px;
@@ -64,22 +42,25 @@ import { relativeTime } from "../services/time";
       margin: 0;
       overflow-y: auto;
       list-style: none;
+      background: var(--admin-surface);
+      border: 1px solid var(--admin-line);
+      border-radius: var(--admin-radius);
     }
     li {
       display: grid;
       grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto auto;
       gap: 12px;
       align-items: center;
-      padding: 10px 16px;
+      padding: 10px 14px;
       font-size: 0.72rem;
-      border-top: 1px solid #1b212a;
+      border-top: 1px solid var(--admin-line);
     }
     li:first-child {
       border-top: 0;
     }
     .name {
       overflow: hidden;
-      color: #d6dae1;
+      color: var(--admin-text-soft);
       font-weight: 600;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -87,9 +68,9 @@ import { relativeTime } from "../services/time";
     .source,
     .tabs,
     .age {
-      color: #6c727d;
+      color: var(--admin-text-dim);
       font-family: var(--font-mono);
-      font-size: 0.66rem;
+      font-size: 0.65rem;
     }
     .source {
       overflow: hidden;
@@ -103,7 +84,7 @@ import { relativeTime } from "../services/time";
     .empty {
       display: block;
       padding: 26px 16px;
-      color: #626873;
+      color: var(--admin-text-dim);
       text-align: center;
     }
     @media (max-width: 640px) {
@@ -118,17 +99,20 @@ import { relativeTime } from "../services/time";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminSnapshotList {
-  protected readonly console = inject(AdminConsole);
+  private readonly console = inject(AdminConsole);
 
-  protected shortId(id: string): string {
-    return short(id);
-  }
+  protected readonly meta = computed(() => `${this.console.snapshots().length} snapshots`);
+  protected readonly rows = computed<readonly SnapshotRow[]>(() =>
+    this.console.snapshots().map((snapshot) => ({
+      id: snapshot.id,
+      name: snapshot.name,
+      source: snapshot.source_browser,
+      tabs: `${tabCount(snapshot)} tabs`,
+      age: relativeTime(snapshot.created_at),
+    })),
+  );
+}
 
-  protected tabCount(snapshot: BrowserStateSnapshotResponse): number {
-    return snapshot.browser_state.tabs?.length ?? 0;
-  }
-
-  protected since(timestamp: string): string {
-    return relativeTime(timestamp);
-  }
+function tabCount(snapshot: BrowserStateSnapshotResponse): number {
+  return snapshot.browser_state.tabs?.length ?? 0;
 }

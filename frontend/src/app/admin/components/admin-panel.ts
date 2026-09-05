@@ -1,96 +1,113 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
-  OnDestroy,
+  untracked,
 } from "@angular/core";
-import { AdminBrowserTable } from "./admin-browser-table";
+import { AdminAction } from "./admin-action";
+import { AdminBrowserGrid } from "./admin-browser-grid";
 import { AdminConsole } from "../services/admin-console";
-import { AdminSessionTable } from "./admin-session-table";
+import { AdminNotice } from "./admin-notice";
+import { AdminSessionGrid } from "./admin-session-grid";
 import { AdminSnapshotList } from "./admin-snapshot-list";
 import { AdminStatStrip } from "./admin-stat-strip";
-import { clockTime } from "../services/time";
+import { clockTime } from "../services/format";
 
 /** The pool moves without us, so a visible panel keeps pulling. */
 const POLL_INTERVAL_MS = 5000;
 
 @Component({
   selector: "app-admin-panel",
-  imports: [AdminBrowserTable, AdminSessionTable, AdminSnapshotList, AdminStatStrip],
+  imports: [
+    AdminAction,
+    AdminBrowserGrid,
+    AdminNotice,
+    AdminSessionGrid,
+    AdminSnapshotList,
+    AdminStatStrip,
+  ],
   template: `
-    <section class="admin" aria-label="Browser pool administration">
-      <header class="admin-header">
-        <span class="title">
-          <strong>Browser infrastructure</strong>
-          <small>
-            Every provisioned browser and the sessions on it — no live picture, just the state.
-          </small>
-        </span>
+    <div class="admin">
+      <header>
+        <hgroup>
+          <h1>Browser infrastructure</h1>
+          <p>Every provisioned browser and the sessions on it — the state, not a live picture.</p>
+        </hgroup>
 
-        <span class="controls">
-          @if (console.refreshedAt(); as refreshed) {
-            <small class="stamp">Updated {{ time(refreshed) }}</small>
+        <div class="controls">
+          @if (updatedAt(); as stamp) {
+            <small>Updated {{ stamp }}</small>
           }
-          <button type="button" [disabled]="console.loading()" (click)="console.refresh()">
+          <button appAdminAction [disabled]="console.loading()" (click)="console.refresh()">
             @if (console.loading()) {
               <i class="spinner" aria-hidden="true"></i>
             }
             Refresh
           </button>
-        </span>
+        </div>
       </header>
 
-      @if (console.notice(); as notice) {
-        <div class="notice" [attr.data-tone]="notice.tone" role="status">
-          <i aria-hidden="true"></i>
-          <span>{{ notice.text }}</span>
-          <button type="button" aria-label="Dismiss" (click)="console.dismissNotice()">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="m4.5 4.5 7 7M11.5 4.5l-7 7" />
-            </svg>
-          </button>
-        </div>
-      }
-
+      <app-admin-notice />
       <app-admin-stat-strip />
-      <app-admin-browser-table [loaded]="loaded()" />
-      <app-admin-session-table [loaded]="loaded()" />
+      <app-admin-browser-grid />
+      <app-admin-session-grid />
       <app-admin-snapshot-list />
-    </section>
+    </div>
   `,
   styles: `
     :host {
+      /* One palette for the whole panel; every child inherits these. */
+      --admin-surface: #0e1117;
+      --admin-raised: #171b22;
+      --admin-hover: #1f242c;
+      --admin-line: #1e242d;
+      --admin-line-strong: #2b323c;
+      --admin-line-bright: #3c434f;
+      --admin-text: #e6eaf1;
+      --admin-text-soft: #b3bac5;
+      --admin-text-dim: #6e757f;
+      --admin-text-faint: #565c65;
+      --admin-free: #77bb8a;
+      --admin-busy: #d3a95f;
+      --admin-bad: #d5837a;
+      --admin-focus: #79a4ff;
+      --admin-radius: 12px;
+
       display: block;
     }
     .admin {
       display: grid;
-      gap: clamp(12px, 1.4vw, 18px);
-      width: min(100%, 1280px);
+      gap: clamp(16px, 1.8vw, 24px);
+      width: min(100%, 1180px);
       margin-inline: auto;
     }
-    .admin-header {
+    header {
       display: flex;
-      align-items: flex-end;
+      align-items: center;
       justify-content: space-between;
       gap: 16px;
       flex-wrap: wrap;
     }
-    .title {
+    hgroup {
       display: grid;
-      gap: 5px;
+      gap: 4px;
       min-width: 0;
+      margin: 0;
     }
-    .title strong {
-      color: #e9edf3;
-      font-size: 0.98rem;
+    h1 {
+      margin: 0;
+      color: var(--admin-text);
+      font-size: 1rem;
       font-weight: 650;
-      letter-spacing: -0.015em;
+      letter-spacing: -0.02em;
     }
-    .title small {
-      color: #6c727d;
-      font-size: 0.72rem;
+    hgroup p {
+      margin: 0;
+      color: var(--admin-text-dim);
+      font-size: 0.73rem;
       line-height: 1.5;
     }
     .controls {
@@ -98,92 +115,11 @@ const POLL_INTERVAL_MS = 5000;
       align-items: center;
       gap: 10px;
     }
-    .stamp {
-      color: #5e646e;
+    .controls small {
+      color: var(--admin-text-faint);
       font-family: var(--font-mono);
-      font-size: 0.66rem;
-    }
-    .controls button {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      min-height: 30px;
-      padding: 0 13px;
-      color: #c8ccd3;
-      font-size: 0.72rem;
-      font-weight: 600;
-      background: #1b1e24;
-      border: 1px solid #2e323a;
-      border-radius: 8px;
-      cursor: pointer;
-      transition:
-        color 130ms ease,
-        background-color 130ms ease,
-        border-color 130ms ease;
-    }
-    .controls button:hover:not(:disabled) {
-      color: #f1f2f4;
-      background: #252931;
-      border-color: #3d424b;
-    }
-    .controls button:disabled {
-      color: #5b616a;
-      cursor: default;
-    }
-    button:focus-visible {
-      outline: 2px solid #79a4ff;
-      outline-offset: 1px;
-    }
-    .notice {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 9px 10px 9px 13px;
-      color: #7fb98f;
-      font-size: 0.73rem;
-      background: rgb(88 168 110 / 8%);
-      border: 1px solid rgb(88 168 110 / 24%);
-      border-radius: 10px;
-    }
-    .notice[data-tone="error"] {
-      color: #d5837a;
-      background: rgb(203 105 98 / 8%);
-      border-color: rgb(203 105 98 / 26%);
-    }
-    .notice > i {
-      flex: none;
-      width: 6px;
-      height: 6px;
-      background: currentcolor;
-      border-radius: 50%;
-    }
-    .notice span {
-      flex: 1;
-      min-width: 0;
-    }
-    .notice button {
-      display: grid;
-      place-items: center;
-      flex: none;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      color: inherit;
-      background: transparent;
-      border: 0;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .notice button:hover {
-      background: rgb(255 255 255 / 7%);
-    }
-    .notice svg {
-      width: 12px;
-      height: 12px;
-      fill: none;
-      stroke: currentcolor;
-      stroke-linecap: round;
-      stroke-width: 1.6;
+      font-size: 0.65rem;
+      white-space: nowrap;
     }
     .spinner {
       width: 10px;
@@ -199,9 +135,6 @@ const POLL_INTERVAL_MS = 5000;
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .controls button {
-        transition: none;
-      }
       .spinner {
         animation-duration: 1.6s;
       }
@@ -209,36 +142,23 @@ const POLL_INTERVAL_MS = 5000;
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminPanel implements OnDestroy {
+export class AdminPanel {
   /** The panel stays mounted behind the other tabs; only a visible one polls. */
   readonly active = input(false);
+
   protected readonly console = inject(AdminConsole);
-  private timer?: ReturnType<typeof setInterval>;
+  protected readonly updatedAt = computed(() => {
+    const refreshed = this.console.refreshedAt();
+    return refreshed && clockTime(refreshed);
+  });
 
   constructor() {
-    effect(() => (this.active() ? this.startPolling() : this.stopPolling()));
-  }
-
-  ngOnDestroy(): void {
-    this.stopPolling();
-  }
-
-  protected loaded(): boolean {
-    return this.console.refreshedAt() !== undefined;
-  }
-
-  protected time(date: Date): string {
-    return clockTime(date);
-  }
-
-  private startPolling(): void {
-    if (this.timer) return;
-    void this.console.refresh();
-    this.timer = setInterval(() => void this.console.refresh(), POLL_INTERVAL_MS);
-  }
-
-  private stopPolling(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = undefined;
+    effect((onCleanup) => {
+      if (!this.active()) return;
+      const poll = () => untracked(() => this.console.refresh());
+      void poll();
+      const timer = setInterval(poll, POLL_INTERVAL_MS);
+      onCleanup(() => clearInterval(timer));
+    });
   }
 }

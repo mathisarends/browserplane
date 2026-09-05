@@ -14,6 +14,7 @@ import type {
   PooledBrowserResponse,
   SessionResponse,
 } from "@browsertunnel/backend-client";
+import { shortId } from "./format";
 
 /** How long a session resumed from the admin panel may hold its browser. */
 const RESUME_TTL_SECONDS = 600;
@@ -44,6 +45,8 @@ export class AdminConsole {
   readonly notice = this.noticeState.asReadonly();
   readonly refreshedAt = this.refreshedState.asReadonly();
 
+  /** Whether the first read landed, so empty lists can be told from no data. */
+  readonly loaded = computed(() => this.refreshedAt() !== undefined);
   readonly activeSessions = computed(() =>
     this.sessions().filter((session) => session.status === "active"),
   );
@@ -87,35 +90,35 @@ export class AdminConsole {
   }
 
   destroyBrowser(browserId: string): Promise<void> {
-    return this.run(browserId, `Browser ${short(browserId)} destroyed`, async () => {
+    return this.run(browserId, `Browser ${shortId(browserId)} destroyed`, async () => {
       const response = await destroyPooledBrowser(browserId);
       if (response.status !== 200) throw failure("Browser could not be destroyed", response);
     });
   }
 
   restartBrowser(browserId: string): Promise<void> {
-    return this.run(browserId, `Browser ${short(browserId)} restarted`, async () => {
+    return this.run(browserId, `Browser ${shortId(browserId)} restarted`, async () => {
       const response = await restartPooledBrowser(browserId);
       if (response.status !== 200) throw failure("Browser could not be restarted", response);
     });
   }
 
   suspendSession(sessionId: string): Promise<void> {
-    return this.run(sessionId, `Session ${short(sessionId)} suspended`, async () => {
+    return this.run(sessionId, `Session ${shortId(sessionId)} suspended`, async () => {
       const response = await suspendSession(sessionId);
       if (response.status !== 200) throw failure("Session could not be suspended", response);
     });
   }
 
   resumeSession(sessionId: string): Promise<void> {
-    return this.run(sessionId, `Session ${short(sessionId)} resumed`, async () => {
+    return this.run(sessionId, `Session ${shortId(sessionId)} resumed`, async () => {
       const response = await resumeSession(sessionId, { ttl_seconds: RESUME_TTL_SECONDS });
       if (response.status !== 200) throw failure("Session could not be resumed", response);
     });
   }
 
   closeSession(sessionId: string): Promise<void> {
-    return this.run(sessionId, `Session ${short(sessionId)} closed`, async () => {
+    return this.run(sessionId, `Session ${shortId(sessionId)} closed`, async () => {
       const response = await closeSession(sessionId);
       if (response.status !== 204) throw failure("Session could not be closed", response);
     });
@@ -144,10 +147,6 @@ export class AdminConsole {
       return next;
     });
   }
-}
-
-export function short(id: string): string {
-  return id.slice(0, 8);
 }
 
 /** Prefer the backend's own explanation; fall back to the bare status. */
