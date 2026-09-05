@@ -8,7 +8,7 @@ import {
   viewChild,
 } from "@angular/core";
 import type { MouseParams } from "@browsertunnel/browser-rpc-client";
-import { BrowserSession } from "./browser-session";
+import { BrowserSession } from "../services/browser-session";
 
 type MousePoint = Pick<MouseParams, "x" | "y">;
 const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;

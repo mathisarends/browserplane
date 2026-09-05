@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from "@angular/core";
-import { BrowserSession } from "./browser-session";
-import { BrowserStateVault } from "./browser-state-vault";
+import { BrowserSession } from "../services/browser-session";
+import { BrowserStateVault } from "../services/browser-state-vault";
 
 type Operation = "capture" | "mount";
 type Notice = { readonly tone: "success" | "error"; readonly text: string };
@@ -39,7 +39,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
         <header>
           <span>
             <strong>Browser State</strong>
-            <small>Authentication, Tabs und Scrollposition · nur in diesem Tab</small>
+            <small>Authentication, Tabs und Scrollposition · dauerhaft in diesem Browser</small>
           </span>
           <button
             class="close-button"
@@ -75,7 +75,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
               <option value="">Snapshot auswählen</option>
               @for (snapshot of vault.snapshots(); track snapshot.id) {
                 <option [value]="snapshot.id">
-                  {{ snapshot.name }} · {{ snapshotTime(snapshot.createdAt) }}
+                  {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
                 </option>
               }
             </select>
@@ -443,8 +443,10 @@ export class BrowserStateToolbar {
     }
   }
 
-  protected snapshotTime(date: Date): string {
-    return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(date);
+  protected snapshotTime(timestamp: string): string {
+    return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(
+      new Date(timestamp),
+    );
   }
 }
 

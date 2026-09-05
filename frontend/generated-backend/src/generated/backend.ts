@@ -7,7 +7,9 @@
 import type {
   AuthenticationStateSchema,
   BrowserStateSchema,
+  BrowserStateSnapshotResponse,
   BrowserStateTransferFailedError,
+  CaptureBrowserStateSnapshotRequest,
   HTTPValidationError,
   Health200,
   NoBrowserAvailableError,
@@ -548,6 +550,121 @@ const res = await fetch(getMountSessionBrowserStateUrl(sessionId),
 
   const data: mountSessionBrowserStateResponse['data'] = body ? JSON.parse(body) : undefined
   return { data, status: res.status, headers: res.headers } as mountSessionBrowserStateResponse
+}
+
+
+
+export type listBrowserStateSnapshotsResponse200 = {
+  data: BrowserStateSnapshotResponse[]
+  status: 200
+}
+
+export type listBrowserStateSnapshotsResponseSuccess = (listBrowserStateSnapshotsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listBrowserStateSnapshotsResponse = (listBrowserStateSnapshotsResponseSuccess)
+
+export const getListBrowserStateSnapshotsUrl = () => {
+
+
+
+
+  return `/api/v1/browser-state-snapshots`
+}
+
+/**
+ * @summary List Browser State Snapshots
+ */
+export const listBrowserStateSnapshots = async ( options?: RequestInit): Promise<listBrowserStateSnapshotsResponse> => {
+
+  const res = await fetch(getListBrowserStateSnapshotsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listBrowserStateSnapshotsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listBrowserStateSnapshotsResponse
+}
+
+
+
+export type captureBrowserStateSnapshotResponse201 = {
+  data: BrowserStateSnapshotResponse
+  status: 201
+}
+
+export type captureBrowserStateSnapshotResponse404 = {
+  data: SessionNotFoundError
+  status: 404
+}
+
+export type captureBrowserStateSnapshotResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type captureBrowserStateSnapshotResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type captureBrowserStateSnapshotResponse503 = {
+  data: BrowserStateTransferFailedError
+  status: 503
+}
+
+export type captureBrowserStateSnapshotResponseSuccess = (captureBrowserStateSnapshotResponse201) & {
+  headers: Headers;
+};
+export type captureBrowserStateSnapshotResponseError = (captureBrowserStateSnapshotResponse404 | captureBrowserStateSnapshotResponse409 | captureBrowserStateSnapshotResponse422 | captureBrowserStateSnapshotResponse503) & {
+  headers: Headers;
+};
+
+export type captureBrowserStateSnapshotResponse = (captureBrowserStateSnapshotResponseSuccess | captureBrowserStateSnapshotResponseError)
+
+export const getCaptureBrowserStateSnapshotUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/browser-state-snapshots`
+}
+
+/**
+ * @summary Capture Browser State Snapshot
+ */
+export const captureBrowserStateSnapshot = async (sessionId: string,
+    captureBrowserStateSnapshotRequest: CaptureBrowserStateSnapshotRequest, options?: RequestInit): Promise<captureBrowserStateSnapshotResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getCaptureBrowserStateSnapshotUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(captureBrowserStateSnapshotRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: captureBrowserStateSnapshotResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as captureBrowserStateSnapshotResponse
 }
 
 

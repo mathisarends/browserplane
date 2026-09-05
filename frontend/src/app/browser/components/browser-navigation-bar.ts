@@ -6,7 +6,7 @@ import {
   output,
   viewChild,
 } from "@angular/core";
-import type { NavigationState } from "./browser-session";
+import type { NavigationState } from "../services/browser-session";
 
 @Component({
   selector: "app-browser-navigation-bar",

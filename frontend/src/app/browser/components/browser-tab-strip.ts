@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
-import type { BrowserTabState } from "./browser-session";
+import type { BrowserTabState } from "../services/browser-session";
 
 @Component({
   selector: "app-browser-tab-strip",

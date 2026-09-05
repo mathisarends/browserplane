@@ -12,7 +12,7 @@ import {
 } from "@angular/core";
 import { BrowserCanvas } from "./browser-canvas";
 import { BrowserNavigationBar } from "./browser-navigation-bar";
-import { BrowserSession } from "./browser-session";
+import { BrowserSession } from "../services/browser-session";
 import { BrowserStateToolbar } from "./browser-state-toolbar";
 import { BrowserTabStrip } from "./browser-tab-strip";
 

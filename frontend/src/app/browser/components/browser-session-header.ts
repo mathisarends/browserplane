@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
-import type { ConnectionState } from "./browser-session";
+import type { ConnectionState } from "../services/browser-session";
 
 @Component({
   selector: "app-browser-session-header",
