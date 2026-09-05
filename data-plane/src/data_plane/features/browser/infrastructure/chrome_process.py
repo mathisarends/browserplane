@@ -7,16 +7,20 @@ from pathlib import Path
 
 from data_plane.features.browser.application.exceptions import BrowserStartupException
 from data_plane.features.browser.application.ports import BrowserProcess
-from data_plane.settings import DataPlaneSettings
+from data_plane.features.browser.infrastructure.settings import BrowserSettings
 
 
 class ChromeProcess(BrowserProcess):
     """Own one Chromium process and its temporary profile."""
 
-    def __init__(self, settings: DataPlaneSettings) -> None:
+    def __init__(self, settings: BrowserSettings) -> None:
         self._settings = settings
         self._process: asyncio.subprocess.Process | None = None
         self._profile: tempfile.TemporaryDirectory[str] | None = None
+
+    @staticmethod
+    def is_available(settings: BrowserSettings) -> bool:
+        return _find_executable(settings) is not None
 
     async def start(self) -> str:
         executable = self._find_executable()
@@ -78,22 +82,31 @@ class ChromeProcess(BrowserProcess):
         raise BrowserStartupException("Timed out waiting for Chromium's CDP endpoint")
 
     def _find_executable(self) -> str:
-        candidates = [
-            self._settings.executable,
-            shutil.which("chromium"),
-            shutil.which("chromium-browser"),
-            shutil.which("google-chrome"),
-            shutil.which("chrome"),
-            shutil.which("msedge"),
-        ]
-        windows = [
-            Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
-            Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
-        ]
-        candidates.extend(str(path) for path in windows if path.exists())
-        executable = next((candidate for candidate in candidates if candidate), None)
+        executable = _find_executable(self._settings)
         if executable is None:
             raise BrowserStartupException(
                 "No Chromium browser found; set DATA_PLANE_EXECUTABLE"
             )
         return executable
+
+
+def _find_executable(settings: BrowserSettings) -> str | None:
+    if settings.executable is not None:
+        return shutil.which(settings.executable)
+
+    candidates = (
+        shutil.which("chromium"),
+        shutil.which("chromium-browser"),
+        shutil.which("google-chrome"),
+        shutil.which("chrome"),
+        shutil.which("msedge"),
+        _first_existing(
+            Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+            Path(r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"),
+        ),
+    )
+    return next((candidate for candidate in candidates if candidate is not None), None)
+
+
+def _first_existing(*paths: Path) -> str | None:
+    return next((str(path) for path in paths if path.is_file()), None)

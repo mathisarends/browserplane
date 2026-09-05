@@ -20,9 +20,9 @@ from data_plane.features.recordings.application.models import (
     RecordingState,
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
-from data_plane.settings import DataPlaneSettings
+from data_plane.features.workspace.application.workspace import Workspace
 
-RecorderFactory = Callable[[str, DataPlaneSettings], ScreenRecorder]
+RecorderFactory = Callable[[str], ScreenRecorder]
 
 
 @dataclass(slots=True)
@@ -38,11 +38,11 @@ class RecordingService:
     def __init__(
         self,
         browsers: BrowserService,
-        settings: DataPlaneSettings,
+        workspace: Workspace,
         recorder_factory: RecorderFactory,
     ) -> None:
         self._browsers = browsers
-        self._settings = settings
+        self._workspace = workspace
         self._recorder_factory = recorder_factory
         self._stored: dict[UUID, StoredRecording] = {}
         self._active: UUID | None = None
@@ -62,7 +62,7 @@ class RecordingService:
             )
             directory = self._storage_path() / str(recording.id)
             directory.mkdir()
-            recorder = self._recorder_factory(upstream_cdp_url, self._settings)
+            recorder = self._recorder_factory(upstream_cdp_url)
             await recorder.start(directory)
             self._stored[recording.id] = StoredRecording(
                 recording=recording,
@@ -141,7 +141,7 @@ class RecordingService:
 
     def _storage_path(self) -> Path:
         if self._storage is None:
-            self._storage = self._settings.workspace_path.resolve() / "recordings"
+            self._storage = self._workspace.recordings
             self._storage.mkdir(parents=True, exist_ok=True)
         return self._storage
 

@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Callable
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -9,9 +8,6 @@ from data_plane.features.browser.application.exceptions import (
 )
 from data_plane.features.browser.application.models import Browser
 from data_plane.features.browser.application.ports import BrowserProcess
-from data_plane.settings import DataPlaneSettings
-
-ProcessFactory = Callable[[DataPlaneSettings], BrowserProcess]
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,11 +24,9 @@ class BrowserService:
 
     def __init__(
         self,
-        settings: DataPlaneSettings,
-        process_factory: ProcessFactory,
+        process: BrowserProcess,
     ) -> None:
-        self._settings = settings
-        self._process_factory = process_factory
+        self._process = process
         self._running: RunningBrowser | None = None
         self._lock = asyncio.Lock()
 
@@ -42,15 +36,11 @@ class BrowserService:
                 if self._running.browser.id != browser_id:
                     raise BrowserAlreadyRunningException
                 return self._running.browser
-            process = self._process_factory(self._settings)
-            upstream_cdp_url = await process.start()
-            browser = Browser(
-                id=browser_id,
-                cdp_url=self._public_cdp_url(browser_id),
-            )
+            upstream_cdp_url = await self._process.start()
+            browser = Browser(id=browser_id)
             self._running = RunningBrowser(
                 browser=browser,
-                process=process,
+                process=self._process,
                 upstream_cdp_url=upstream_cdp_url,
             )
             return browser
@@ -73,7 +63,3 @@ class BrowserService:
             self._running = None
             if running is not None:
                 await running.process.stop()
-
-    def _public_cdp_url(self, browser_id: UUID) -> str:
-        base = self._settings.public_base_url.rstrip("/")
-        return f"{base}/api/v1/browser/{browser_id}/cdp"

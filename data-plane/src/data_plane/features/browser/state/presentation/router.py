@@ -39,7 +39,6 @@ async def capture_browser_state(
     response: Response,
     service: FromDishka[BrowserStateService],
 ) -> BrowserStateSchema:
-    """Read open tabs and their restorable UI state."""
     state = await service.capture_browser(browser_id)
     response.headers["Cache-Control"] = "no-store"
     return to_browser_state_response(state)
@@ -60,7 +59,6 @@ async def mount_browser_state(
     state: BrowserStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    """Replace open tabs without changing cookies or localStorage."""
     await service.mount_browser(browser_id, to_browser_state(state))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -108,6 +106,5 @@ async def mount_authentication_state(
     state: AuthenticationStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    """Replace cookies and localStorage without changing open tabs."""
     await service.mount_authentication(browser_id, to_authentication_state(state))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

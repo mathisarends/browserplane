@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-
-from data_plane.settings import DataPlaneSettings
+from tempfile import NamedTemporaryFile
 
 
 @dataclass(frozen=True, slots=True)
@@ -9,10 +8,6 @@ class Workspace:
     """Filesystem shared by browser inputs, outputs, and derived artifacts."""
 
     root: Path
-
-    @classmethod
-    def from_settings(cls, settings: DataPlaneSettings) -> Workspace:
-        return cls(settings.workspace_path.resolve())
 
     @property
     def uploads(self) -> Path:
@@ -38,3 +33,12 @@ class Workspace:
             self.artifacts,
         ):
             directory.mkdir(parents=True, exist_ok=True)
+
+    def is_available(self) -> bool:
+        try:
+            self.root.mkdir(parents=True, exist_ok=True)
+            with NamedTemporaryFile(dir=self.root):
+                pass
+        except OSError:
+            return False
+        return True

@@ -4,7 +4,7 @@ from dishka import Provider, Scope, provide
 
 from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.downloads.application.service import DownloadService
-from data_plane.workspace import Workspace
+from data_plane.features.workspace.application.workspace import Workspace
 
 
 class DownloadProvider(Provider):

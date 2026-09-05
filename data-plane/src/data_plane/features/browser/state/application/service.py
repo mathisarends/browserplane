@@ -11,7 +11,6 @@ from data_plane.features.browser.state.application.models import (
     BrowserState,
 )
 from data_plane.features.browser.state.application.ports import BrowserStateStore
-from data_plane.settings import DataPlaneSettings
 
 StateStoreFactory = Callable[[str], BrowserStateStore]
 
@@ -28,11 +27,11 @@ class BrowserStateService:
     def __init__(
         self,
         browsers: BrowserService,
-        settings: DataPlaneSettings,
+        max_tabs: int,
         store_factory: StateStoreFactory,
     ) -> None:
         self._browsers = browsers
-        self._settings = settings
+        self._max_tabs = max_tabs
         self._store_factory = store_factory
 
     async def capture_authentication(
@@ -65,7 +64,7 @@ class BrowserStateService:
         return self._store_factory(self._browsers.upstream_cdp_url(browser_id))
 
     def _validate_browser(self, state: BrowserState) -> None:
-        max_tabs = self._settings.browser_state_max_tabs
+        max_tabs = self._max_tabs
         if len(state.tabs) > max_tabs:
             raise BrowserStateInvalidException(
                 f"Browser state has more than {max_tabs} tabs"

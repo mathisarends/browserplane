@@ -14,6 +14,9 @@ from data_plane.features.browser.state.application.models import (
 )
 from data_plane.features.browser.state.application.ports import BrowserStateStore
 from data_plane.features.browser.state.application.service import BrowserStateService
+from data_plane.features.browser.state.infrastructure.settings import (
+    BrowserStateSettings,
+)
 from data_plane.features.browser.state.presentation.mapper import (
     to_authentication_state,
     to_authentication_state_response,
@@ -24,7 +27,6 @@ from data_plane.features.browser.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )
-from data_plane.settings import DataPlaneSettings
 
 PLAYWRIGHT_STATE = {
     "tabs": [
@@ -90,10 +92,14 @@ class FakeStore(BrowserStateStore):
 
 
 async def _running_service(store: FakeStore) -> tuple[BrowserStateService, object]:
-    settings = DataPlaneSettings()
-    browsers = BrowserService(settings, lambda _: FakeProcess())
+    browsers = BrowserService(FakeProcess())
     browser = await browsers.create(uuid4())
-    return BrowserStateService(browsers, settings, lambda _: store), browser.id
+    service = BrowserStateService(
+        browsers,
+        BrowserStateSettings(_env_file=None).max_tabs,
+        lambda _: store,
+    )
+    return service, browser.id
 
 
 @pytest.mark.asyncio

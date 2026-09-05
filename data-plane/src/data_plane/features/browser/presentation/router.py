@@ -5,6 +5,7 @@ from fastapi import APIRouter, Response, WebSocket, status
 
 from data_plane.features.browser.application.exceptions import BrowserNotFoundException
 from data_plane.features.browser.application.service import BrowserService
+from data_plane.features.browser.infrastructure.settings import BrowserSettings
 from data_plane.features.browser.infrastructure.websocket_proxy import proxy_cdp
 from data_plane.features.browser.presentation.errors import (
     BROWSER_ALREADY_RUNNING,
@@ -32,10 +33,11 @@ async def create_browser(
     request: CreateBrowserRequest,
     service: FromDishka[BrowserService],
     downloads: FromDishka[DownloadService],
+    settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
     browser = await service.create(request.id)
     await downloads.start(browser.id)
-    return to_browser_response(browser)
+    return to_browser_response(browser, settings.public_base_url)
 
 
 @browser_router.get(
@@ -43,9 +45,12 @@ async def create_browser(
     operation_id="inspect_browser",
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
-async def inspect_browser(service: FromDishka[BrowserService]) -> BrowserResponse:
+async def inspect_browser(
+    service: FromDishka[BrowserService],
+    settings: FromDishka[BrowserSettings],
+) -> BrowserResponse:
     browser = service.get()
-    return to_browser_response(browser)
+    return to_browser_response(browser, settings.public_base_url)
 
 
 @browser_router.delete(

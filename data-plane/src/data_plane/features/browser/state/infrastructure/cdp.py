@@ -26,7 +26,9 @@ from data_plane.features.browser.state.application.models import (
     StorageItem,
 )
 from data_plane.features.browser.state.application.ports import BrowserStateStore
-from data_plane.settings import DataPlaneSettings
+from data_plane.features.browser.state.infrastructure.settings import (
+    BrowserStateSettings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ _BLANK_URL = "about:blank"
 
 
 class CdpBrowserStateStore(BrowserStateStore):
-    def __init__(self, cdp_url: str, settings: DataPlaneSettings) -> None:
+    def __init__(self, cdp_url: str, settings: BrowserStateSettings) -> None:
         self._cdp_url = cdp_url
         self._settings = settings
 
@@ -100,7 +102,7 @@ async def _capture_browser_state(client: Client) -> BrowserState:
 
 
 async def _restore_browser_state(
-    client: Client, *, state: BrowserState, settings: DataPlaneSettings
+    client: Client, *, state: BrowserState, settings: BrowserStateSettings
 ) -> None:
     if state.tabs:
         await _restore_tabs(client, state, settings)
@@ -295,7 +297,7 @@ async def _restore_origin(client: Client, origin: BrowserOriginState) -> None:
 async def _restore_tabs(
     client: Client,
     state: BrowserState,
-    settings: DataPlaneSettings,
+    settings: BrowserStateSettings,
 ) -> None:
     target_ids = await _align_targets(client, len(state.tabs))
     results = await asyncio.gather(
@@ -334,7 +336,7 @@ async def _restore_tab(
     client: Client,
     target_id: str,
     tab: BrowserTabState,
-    settings: DataPlaneSettings,
+    settings: BrowserStateSettings,
 ) -> Exception | None:
     origin = _to_origin(tab.url)
     if origin is None:
@@ -346,7 +348,7 @@ async def _restore_tab(
                 source=_build_restore_script(tab, origin)
             )
             load = asyncio.create_task(
-                _wait_for_load(session, settings.browser_state_restore_timeout),
+                _wait_for_load(session, settings.restore_timeout),
                 name=f"browser-state:load:{target_id}",
             )
             try:

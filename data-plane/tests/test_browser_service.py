@@ -4,7 +4,6 @@ import pytest
 
 from data_plane.features.browser.application.ports import BrowserProcess
 from data_plane.features.browser.application.service import BrowserService
-from data_plane.settings import DataPlaneSettings
 
 
 class FakeProcess(BrowserProcess):
@@ -20,16 +19,12 @@ class FakeProcess(BrowserProcess):
 @pytest.mark.asyncio
 async def test_service_owns_browser_lifecycle() -> None:
     process = FakeProcess()
-    service = BrowserService(
-        DataPlaneSettings(public_base_url="ws://worker:8000", _env_file=None),
-        process_factory=lambda _: process,
-    )
+    service = BrowserService(process)
 
     browser_id = uuid4()
 
-    browser = await service.create(browser_id)
+    await service.create(browser_id)
 
-    assert browser.cdp_url == f"ws://worker:8000/api/v1/browser/{browser_id}/cdp"
     assert service.get().id == browser_id
 
     await service.destroy()

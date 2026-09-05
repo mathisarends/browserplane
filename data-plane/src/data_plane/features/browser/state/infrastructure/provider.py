@@ -9,7 +9,9 @@ from data_plane.features.browser.state.application.service import (
 from data_plane.features.browser.state.infrastructure.cdp import (
     CdpBrowserStateStore,
 )
-from data_plane.settings import DataPlaneSettings
+from data_plane.features.browser.state.infrastructure.settings import (
+    BrowserStateSettings,
+)
 
 
 class BrowserStateProvider(Provider):
@@ -18,7 +20,11 @@ class BrowserStateProvider(Provider):
         self._service = service
 
     @provide(scope=Scope.APP)
-    def store_factory(self, settings: DataPlaneSettings) -> StateStoreFactory:
+    def settings(self) -> BrowserStateSettings:
+        return BrowserStateSettings()
+
+    @provide(scope=Scope.APP)
+    def store_factory(self, settings: BrowserStateSettings) -> StateStoreFactory:
         """Talk to the browser over its own short-lived CDP connection."""
 
         def build(cdp_url: str) -> BrowserStateStore:
@@ -30,7 +36,11 @@ class BrowserStateProvider(Provider):
     def browser_state_service(
         self,
         browsers: BrowserService,
-        settings: DataPlaneSettings,
+        settings: BrowserStateSettings,
         store_factory: StateStoreFactory,
     ) -> BrowserStateService:
-        return self._service or BrowserStateService(browsers, settings, store_factory)
+        return self._service or BrowserStateService(
+            browsers,
+            settings.max_tabs,
+            store_factory,
+        )

@@ -12,7 +12,7 @@ from data_plane.features.recordings.application.models import (
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
 from data_plane.features.recordings.application.service import RecordingService
-from data_plane.settings import DataPlaneSettings
+from data_plane.features.workspace.application.workspace import Workspace
 
 
 class FakeProcess(BrowserProcess):
@@ -48,11 +48,10 @@ class FakeRecorder(ScreenRecorder):
 
 
 @pytest.mark.asyncio
-async def test_service_records_the_active_tab_into_one_video() -> None:
-    settings = DataPlaneSettings(_env_file=None)
-    browsers = BrowserService(settings, process_factory=lambda _: FakeProcess())
+async def test_service_records_the_active_tab_into_one_video(tmp_path: Path) -> None:
+    browsers = BrowserService(FakeProcess())
     recorder = FakeRecorder()
-    service = RecordingService(browsers, settings, lambda *_: recorder)
+    service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
 
     browser = await browsers.create(uuid4())
     recording = await service.start(browser.id)

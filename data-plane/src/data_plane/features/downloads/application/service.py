@@ -17,7 +17,7 @@ from data_plane.features.downloads.application.exceptions import (
     DownloadNotFoundException,
 )
 from data_plane.features.downloads.application.models import Download
-from data_plane.workspace import Workspace
+from data_plane.features.workspace.application.workspace import Workspace
 
 logger = logging.getLogger(__name__)
 

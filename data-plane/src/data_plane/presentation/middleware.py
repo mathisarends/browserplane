@@ -1,18 +1,18 @@
 import logging
-from collections.abc import Awaitable, Callable
 from time import perf_counter
 from uuid import uuid4
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 logger = logging.getLogger("data_plane.requests")
 
 
-def install_request_logging(app: FastAPI) -> None:
-    @app.middleware("http")
-    async def log_request(
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(
+        self,
         request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
+        call_next: RequestResponseEndpoint,
     ) -> Response:
         request_id = _safe_request_id(request.headers.get("x-request-id"))
         request.state.request_id = request_id

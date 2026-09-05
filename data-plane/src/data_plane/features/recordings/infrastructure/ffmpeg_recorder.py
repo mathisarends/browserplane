@@ -12,15 +12,15 @@ from data_plane.features.recordings.application.models import (
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
 from data_plane.features.recordings.infrastructure.ffmpeg import VideoRecorder
+from data_plane.features.recordings.infrastructure.settings import RecordingSettings
 from data_plane.features.screencast.application.ports import FrameStream
 from data_plane.features.screencast.infrastructure.tasks import cancel_and_wait
-from data_plane.settings import DataPlaneSettings
 
 
 class FfmpegScreenRecorder(ScreenRecorder):
     """Record raw active-tab screencast frames through FFmpeg."""
 
-    def __init__(self, stream: FrameStream, settings: DataPlaneSettings) -> None:
+    def __init__(self, stream: FrameStream, settings: RecordingSettings) -> None:
         self._stream = stream
         self._settings = settings
         self._scope: AsyncExitStack | None = None
@@ -34,7 +34,7 @@ class FfmpegScreenRecorder(ScreenRecorder):
         frames = await scope.enter_async_context(self._stream.subscribe())
         try:
             first_frame = await asyncio.wait_for(
-                anext(frames), self._settings.recording_start_timeout
+                anext(frames), self._settings.start_timeout
             )
             path = directory / "0.mp4"
             video = VideoRecorder(path)
