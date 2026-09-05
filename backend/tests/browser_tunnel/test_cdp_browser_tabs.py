@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from browsertunnel.infrastructure.cdp_browser.tabs import CdpTabs
+from backend.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs
 
 
 def page(tab_id: str) -> SimpleNamespace:
