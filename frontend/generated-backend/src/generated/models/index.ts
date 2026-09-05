@@ -19,6 +19,8 @@ export * from './browserStateTransferFailedError';
 export * from './browserTabStateSchema';
 export * from './captureAuthenticationStateSnapshotRequest';
 export * from './captureBrowserStateSnapshotRequest';
+export * from './downloadNotFoundError';
+export * from './downloadResponse';
 export * from './health200';
 export * from './hTTPValidationError';
 export * from './listOwnerSessionsParams';

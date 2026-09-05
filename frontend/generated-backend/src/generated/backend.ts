@@ -14,6 +14,8 @@ import type {
   BrowserStateTransferFailedError,
   CaptureAuthenticationStateSnapshotRequest,
   CaptureBrowserStateSnapshotRequest,
+  DownloadNotFoundError,
+  DownloadResponse,
   HTTPValidationError,
   Health200,
   ListOwnerSessionsParams,
@@ -235,6 +237,7 @@ export const listOwnerSessions = async (params: ListOwnerSessionsParams, options
 
 
   }
+)
 
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
@@ -625,6 +628,142 @@ const res = await fetch(getMountSessionBrowserStateUrl(sessionId),
 
   const data: mountSessionBrowserStateResponse['data'] = body ? JSON.parse(body) : undefined
   return { data, status: res.status, headers: res.headers } as mountSessionBrowserStateResponse
+}
+
+
+
+export type listSessionDownloadsResponse200 = {
+  data: DownloadResponse[]
+  status: 200
+}
+
+export type listSessionDownloadsResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError
+  status: 404
+}
+
+export type listSessionDownloadsResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type listSessionDownloadsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listSessionDownloadsResponse503 = {
+  data: BrowserStateTransferFailedError
+  status: 503
+}
+
+export type listSessionDownloadsResponseSuccess = (listSessionDownloadsResponse200) & {
+  headers: Headers;
+};
+export type listSessionDownloadsResponseError = (listSessionDownloadsResponse404 | listSessionDownloadsResponse409 | listSessionDownloadsResponse422 | listSessionDownloadsResponse503) & {
+  headers: Headers;
+};
+
+export type listSessionDownloadsResponse = (listSessionDownloadsResponseSuccess | listSessionDownloadsResponseError)
+
+export const getListSessionDownloadsUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/downloads`
+}
+
+/**
+ * @summary List Session Downloads
+ */
+export const listSessionDownloads = async (sessionId: string, options?: RequestInit): Promise<listSessionDownloadsResponse> => {
+
+  const res = await fetch(getListSessionDownloadsUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listSessionDownloadsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listSessionDownloadsResponse
+}
+
+
+
+export type downloadSessionFileResponse200ApplicationJson = {
+  data: unknown
+  status: 200
+}
+
+export type downloadSessionFileResponse200ApplicationOctetStream = {
+  data: Blob
+  status: 200
+}
+
+export type downloadSessionFileResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError | DownloadNotFoundError
+  status: 404
+}
+
+export type downloadSessionFileResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type downloadSessionFileResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type downloadSessionFileResponse503 = {
+  data: BrowserStateTransferFailedError
+  status: 503
+}
+
+export type downloadSessionFileResponseSuccess = (downloadSessionFileResponse200ApplicationJson | downloadSessionFileResponse200ApplicationOctetStream) & {
+  headers: Headers;
+};
+export type downloadSessionFileResponseError = (downloadSessionFileResponse404 | downloadSessionFileResponse409 | downloadSessionFileResponse422 | downloadSessionFileResponse503) & {
+  headers: Headers;
+};
+
+export type downloadSessionFileResponse = (downloadSessionFileResponseSuccess | downloadSessionFileResponseError)
+
+export const getDownloadSessionFileUrl = (sessionId: string,
+    downloadId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/downloads/${downloadId}/file`
+}
+
+/**
+ * @summary Download Session File
+ */
+export const downloadSessionFile = async (sessionId: string,
+    downloadId: string, options?: RequestInit): Promise<downloadSessionFileResponse> => {
+
+  const res = await fetch(getDownloadSessionFileUrl(sessionId,downloadId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: downloadSessionFileResponse['data'] = body as downloadSessionFileResponse['data']
+  return { data, status: res.status, headers: res.headers } as downloadSessionFileResponse
 }
 
 
