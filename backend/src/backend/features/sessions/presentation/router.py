@@ -69,8 +69,14 @@ async def session_tunnel(
 ) -> None:
     pending = service.upstream_tunnel_url(session_id)
     upstream_url = await _resolve(websocket, pending)
-    if upstream_url is not None:
+    if upstream_url is None:
+        return
+    # The control channel is the session: once it is gone, so is the frontend,
+    # and the browser belongs back in the pool.
+    try:
         await proxy_stream(websocket, upstream_url, name="Browser tunnel")
+    finally:
+        await service.end(session_id)
 
 
 @session_router.websocket("/sessions/{session_id}/screencast")

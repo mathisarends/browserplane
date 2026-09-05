@@ -71,9 +71,6 @@ import { BrowserSession } from "./browser-session";
       </footer>
     </section>
   `,
-  host: {
-    "(window:pagehide)": "session.release()",
-  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserPanel implements OnInit, OnDestroy {

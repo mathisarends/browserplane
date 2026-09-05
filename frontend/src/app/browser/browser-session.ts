@@ -23,8 +23,11 @@ interface NavigationState {
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
 
-/** Long enough that a workspace outlives a browsing session without renewal. */
-const SESSION_TTL_SECONDS = 3600;
+/**
+ * A backstop only: the backend releases the session when the tunnel socket
+ * closes, so this covers a session whose socket never came up at all.
+ */
+const SESSION_TTL_SECONDS = 600;
 
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
@@ -170,15 +173,6 @@ export class BrowserSession {
     });
   }
 
-  /**
-   * Release the lease on a page unload, where the regular teardown cannot run.
-   * `keepalive` keeps the request alive past the document.
-   */
-  release(): void {
-    const session = this.sessionState();
-    if (session) void closeSession(session.id, { keepalive: true });
-  }
-
   reportError(error: unknown): void {
     this.errorState.set(error instanceof Error ? error.message : String(error));
   }
@@ -187,7 +181,9 @@ export class BrowserSession {
     action: (client: BrowserTunnelClient) => Promise<void>,
   ): Promise<void> {
     if (!this.client) {
-      this.reportError("RPC-Verbindung ist nicht verfügbar");
+      // Input keeps arriving after a failed connect; don't let its aftermath
+      // overwrite the error that actually explains the missing connection.
+      if (!this.error()) this.reportError("RPC-Verbindung ist nicht verfügbar");
       return;
     }
     try {
