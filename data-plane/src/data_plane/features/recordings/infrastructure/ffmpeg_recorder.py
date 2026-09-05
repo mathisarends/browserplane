@@ -1,14 +1,13 @@
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, suppress
-from datetime import UTC, datetime
 from pathlib import Path
 
 from data_plane.features.recordings.application.exceptions import (
     RecordingFailedException,
 )
 from data_plane.features.recordings.application.models import (
-    RecordedSegment,
+    RecordedVideo,
     RecordingFormat,
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
@@ -28,7 +27,6 @@ class FfmpegScreenRecorder(ScreenRecorder):
         self._writer: asyncio.Task[None] | None = None
         self._video: VideoRecorder | None = None
         self._path: Path | None = None
-        self._started_at: datetime | None = None
         self._failure: Exception | None = None
 
     async def start(self, directory: Path) -> None:
@@ -57,12 +55,11 @@ class FfmpegScreenRecorder(ScreenRecorder):
         self._scope = scope
         self._video = video
         self._path = path
-        self._started_at = datetime.now(UTC)
         self._writer = asyncio.create_task(
             self._write_frames(frames), name="recording:frames"
         )
 
-    async def stop(self) -> tuple[RecordedSegment, ...]:
+    async def stop(self) -> RecordedVideo:
         await self._stop_writer()
         await self._leave_stream()
         video, self._video = self._video, None
@@ -70,21 +67,15 @@ class FfmpegScreenRecorder(ScreenRecorder):
             await video.stop()
         if self._failure is not None:
             raise RecordingFailedException(str(self._failure)) from self._failure
-        if self._path is None or self._started_at is None:
+        if self._path is None:
             raise RecordingFailedException("Recording was not started")
         size = self._path.stat().st_size if self._path.exists() else 0
         if size == 0:
             raise RecordingFailedException("FFmpeg returned an empty recording")
-        return (
-            RecordedSegment(
-                index=0,
-                target_id="active-tab",
-                path=self._path,
-                size_bytes=size,
-                format=RecordingFormat.MP4,
-                started_at=self._started_at,
-                stopped_at=datetime.now(UTC),
-            ),
+        return RecordedVideo(
+            path=self._path,
+            size_bytes=size,
+            format=RecordingFormat.MP4,
         )
 
     async def close(self) -> None:

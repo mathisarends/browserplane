@@ -1,7 +1,4 @@
-from data_plane.features.recordings.application.models import (
-    RecordedSegment,
-    Recording,
-)
+from data_plane.features.recordings.application.models import Recording
 from data_plane.features.recordings.presentation.schemas import (
     RecordingResponse,
     RecordingSegmentResponse,
@@ -16,16 +13,20 @@ def to_recording_response(recording: Recording) -> RecordingResponse:
         started_at=recording.started_at,
         stopped_at=recording.stopped_at,
         size_bytes=recording.size_bytes,
-        segments=[_to_segment_response(segment) for segment in recording.segments],
+        segments=_to_segment_response(recording),
     )
 
 
-def _to_segment_response(segment: RecordedSegment) -> RecordingSegmentResponse:
-    return RecordingSegmentResponse(
-        index=segment.index,
-        target_id=segment.target_id,
-        size_bytes=segment.size_bytes,
-        format=segment.format,
-        started_at=segment.started_at,
-        stopped_at=segment.stopped_at,
-    )
+def _to_segment_response(recording: Recording) -> list[RecordingSegmentResponse]:
+    if recording.video is None or recording.stopped_at is None:
+        return []
+    return [
+        RecordingSegmentResponse(
+            index=0,
+            target_id="active-tab",
+            size_bytes=recording.video.size_bytes,
+            format=recording.video.format,
+            started_at=recording.started_at,
+            stopped_at=recording.stopped_at,
+        )
+    ]

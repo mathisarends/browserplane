@@ -25,16 +25,10 @@ class RecordingFormat(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class RecordedSegment:
-    """One file produced for a recording."""
-
-    index: int
-    target_id: str
+class RecordedVideo:
     path: Path
     size_bytes: int
     format: RecordingFormat
-    started_at: datetime
-    stopped_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,19 +40,15 @@ class Recording:
     state: RecordingState
     started_at: datetime
     stopped_at: datetime | None = None
-    segments: tuple[RecordedSegment, ...] = ()
+    video: RecordedVideo | None = None
 
     @property
     def size_bytes(self) -> int | None:
-        if self.state is not RecordingState.COMPLETED:
-            return None
-        return sum(segment.size_bytes for segment in self.segments)
+        return self.video.size_bytes if self.video is not None else None
 
 
 @dataclass(frozen=True, slots=True)
 class RecordingFile:
-    """A stored segment ready to be served to a client."""
-
     path: Path
     media_type: str
     filename: str

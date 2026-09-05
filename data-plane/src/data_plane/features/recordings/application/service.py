@@ -9,13 +9,12 @@ from uuid import UUID, uuid4
 from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.recordings.application.exceptions import (
     RecordingAlreadyRunningException,
-    RecordingHasSegmentsException,
     RecordingNotCompletedException,
     RecordingNotFoundException,
     RecordingNotRunningException,
 )
 from data_plane.features.recordings.application.models import (
-    RecordedSegment,
+    RecordedVideo,
     Recording,
     RecordingFile,
     RecordingState,
@@ -36,8 +35,6 @@ class StoredRecording:
 
 
 class RecordingService:
-    """Own the worker's screen recordings and the segments they produce."""
-
     def __init__(
         self,
         browsers: BrowserService,
@@ -81,7 +78,7 @@ class RecordingService:
             if stored.recording.state is not RecordingState.RECORDING:
                 raise RecordingNotRunningException
             try:
-                segments = await stored.recorder.stop()
+                video = await stored.recorder.stop()
             except Exception:
                 stored.recording = replace(
                     stored.recording,
@@ -95,7 +92,7 @@ class RecordingService:
                 stored.recording,
                 state=RecordingState.COMPLETED,
                 stopped_at=datetime.now(UTC),
-                segments=segments,
+                video=video,
             )
             return stored.recording
 
@@ -103,11 +100,7 @@ class RecordingService:
         return self._get(browser_id, recording_id).recording
 
     def file(self, browser_id: UUID, recording_id: UUID) -> RecordingFile:
-        """Serve a recording that consists of a single file."""
-        segments = self._completed_segments(browser_id, recording_id)
-        if len(segments) > 1:
-            raise RecordingHasSegmentsException
-        return _to_file(recording_id, segments[0])
+        return _to_file(recording_id, self._completed_video(browser_id, recording_id))
 
     def segment_file(
         self,
@@ -115,10 +108,9 @@ class RecordingService:
         recording_id: UUID,
         index: int,
     ) -> RecordingFile:
-        segments = self._completed_segments(browser_id, recording_id)
-        if index >= len(segments):
+        if index != 0:
             raise RecordingNotFoundException(f"Recording has no segment {index}")
-        return _to_file(recording_id, segments[index])
+        return self.file(browser_id, recording_id)
 
     async def destroy(self) -> None:
         async with self._lock:
@@ -131,15 +123,15 @@ class RecordingService:
             if self._storage is not None:
                 self._storage = None
 
-    def _completed_segments(
+    def _completed_video(
         self,
         browser_id: UUID,
         recording_id: UUID,
-    ) -> tuple[RecordedSegment, ...]:
+    ) -> RecordedVideo:
         recording = self._get(browser_id, recording_id).recording
-        if recording.state is not RecordingState.COMPLETED or not recording.segments:
+        if recording.state is not RecordingState.COMPLETED or recording.video is None:
             raise RecordingNotCompletedException
-        return recording.segments
+        return recording.video
 
     def _get(self, browser_id: UUID, recording_id: UUID) -> StoredRecording:
         stored = self._stored.get(recording_id)
@@ -154,9 +146,9 @@ class RecordingService:
         return self._storage
 
 
-def _to_file(recording_id: UUID, segment: RecordedSegment) -> RecordingFile:
+def _to_file(recording_id: UUID, video: RecordedVideo) -> RecordingFile:
     return RecordingFile(
-        path=segment.path,
-        media_type=segment.format.media_type,
-        filename=f"{recording_id}-{segment.index}.{segment.format.value}",
+        path=video.path,
+        media_type=video.format.media_type,
+        filename=f"{recording_id}-0.{video.format.value}",
     )
