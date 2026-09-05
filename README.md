@@ -8,13 +8,13 @@ Learning project: no auth, no rate limiting.
 
 ### See it in action
 
-Focus view — one session, full width:
+A leased session — tab strip, address bar, and state toolbar:
 
-![Focus view: a mirrored Wikipedia tab with tab strip, address bar, and state toolbar](static/image_2.png)
+![A mirrored Wikipedia tab with tab strip, address bar, and state toolbar](static/image_2.png)
 
-Grid view — several leased browsers side by side:
+The gallery — several leased browsers side by side:
 
-![Grid view: two mirrored browser sessions next to a create-browser tile](static/image.png)
+![Two mirrored browser sessions next to a create-browser tile](static/image.png)
 
 Real Chromium tabs on the server, not iframes: clipboard round-tripped through
 CDP, tabs in sync with the mirrored session, and cursor shape translated from

@@ -1,16 +1,8 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  signal,
-} from "@angular/core";
+import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
 import { AdminPanel } from "../admin/components/admin-panel";
 import { AppViewState } from "./view-mode";
 import { BrowserLayout } from "../browser/layouts/browser-layout";
 import { ShellViewSwitcher } from "./shell-view-switcher";
-import type { BrowserViewMode } from "../browser/layouts/browser-layout";
 
 @Component({
   selector: "app-shell",
@@ -24,7 +16,7 @@ import type { BrowserViewMode } from "../browser/layouts/browser-layout";
         session, so looking at the admin view must not cost the browsers it lists.
       -->
       <div class="pane" [class.is-hidden]="views.view() === 'admin'">
-        <app-browser-layout [view]="galleryView()" />
+        <app-browser-layout />
       </div>
       <div class="pane" [class.is-hidden]="views.view() !== 'admin'">
         <app-admin-panel [active]="views.view() === 'admin'" />
@@ -52,14 +44,4 @@ import type { BrowserViewMode } from "../browser/layouts/browser-layout";
 })
 export class AppShell {
   protected readonly views = inject(AppViewState);
-  /** Which gallery layout to return to when the admin tab is closed again. */
-  private readonly lastGalleryView = signal<BrowserViewMode>("grid");
-  protected readonly galleryView = computed(() => this.lastGalleryView());
-
-  constructor() {
-    effect(() => {
-      const view = this.views.view();
-      if (view !== "admin") this.lastGalleryView.set(view);
-    });
-  }
 }

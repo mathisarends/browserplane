@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output } from "@angular/core
 import { APP_VIEWS, type AppView } from "./view-mode";
 
 const LABELS: Record<AppView, string> = {
-  grid: "Grid",
-  focus: "Focus",
+  browsers: "Browsers",
   admin: "Admin",
 };
 
@@ -36,7 +35,7 @@ const LABELS: Record<AppView, string> = {
     }
     div {
       display: inline-flex;
-      width: 306px;
+      width: 204px;
       padding: 2px;
       background: #191a1d;
       border: 1px solid #2b2d31;
@@ -84,7 +83,7 @@ const LABELS: Record<AppView, string> = {
       }
       div {
         width: 100%;
-        max-width: 306px;
+        max-width: 204px;
       }
       button {
         padding: 0 10px;

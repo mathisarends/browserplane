@@ -1,10 +1,10 @@
 import { Injectable, signal } from "@angular/core";
 
-export const APP_VIEWS = ["grid", "focus", "admin"] as const;
+export const APP_VIEWS = ["browsers", "admin"] as const;
 export type AppView = (typeof APP_VIEWS)[number];
 
 const VIEW_PARAM = "view";
-const DEFAULT_VIEW: AppView = "grid";
+const DEFAULT_VIEW: AppView = "browsers";
 
 /**
  * The open tab, kept in the address bar.
