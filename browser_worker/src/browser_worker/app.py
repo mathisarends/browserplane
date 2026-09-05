@@ -52,7 +52,7 @@ API_ERRORS = (
 
 
 def create_app(service: BrowserService | None = None) -> FastAPI:
-    app = FastAPI(title="Browser Browser Worker", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Browser Worker", version="0.1.0", lifespan=lifespan)
     app.add_middleware(RequestLoggingMiddleware)
     for router in ROUTERS:
         app.include_router(router, prefix=API_PREFIX)
