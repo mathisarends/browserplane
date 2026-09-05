@@ -10,11 +10,7 @@ from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from data_plane.features.browsers.application.exceptions import BrowserNotFoundException
 from data_plane.features.browsers.application.service import BrowserService
-from data_plane.features.browsers.infrastructure.screencast import (
-    ActiveTabFrame,
-    ActiveTabStreams,
-    PageUpdate,
-)
+from data_plane.features.browsers.infrastructure.screencast import ActiveTabStreams
 from data_plane.features.browsers.infrastructure.screencast.fmp4 import Fmp4Livestream
 from data_plane.features.browsers.infrastructure.screencast.tasks import cancel_and_wait
 from data_plane.features.browsers.infrastructure.websocket_proxy import proxy_cdp
@@ -99,10 +95,9 @@ async def browser_screencast(
         return
     await websocket.accept()
     try:
-        async with streams.for_browser(upstream_url).subscribe() as subscription:
-            async for update in subscription.updates:
-                if isinstance(update, ActiveTabFrame):
-                    await websocket.send_bytes(update.data)
+        async with streams.for_browser(upstream_url).subscribe() as frames:
+            async for frame in frames:
+                await websocket.send_bytes(frame)
     except WebSocketDisconnect:
         pass
     except Exception:
@@ -135,11 +130,11 @@ async def browser_fmp4_screencast(
     try:
         await livestream.start()
         async with (
-            streams.for_browser(upstream_url).subscribe() as subscription,
+            streams.for_browser(upstream_url).subscribe() as frames,
             livestream.stream() as chunks,
         ):
             publisher = asyncio.create_task(
-                _publish_fmp4_frames(subscription.updates, livestream),
+                _publish_fmp4_frames(frames, livestream),
                 name="screencast:fmp4-publisher",
             )
             async for chunk in chunks:
@@ -160,11 +155,10 @@ async def browser_fmp4_screencast(
 
 
 async def _publish_fmp4_frames(
-    updates: AsyncGenerator[PageUpdate], livestream: Fmp4Livestream
+    frames: AsyncGenerator[bytes], livestream: Fmp4Livestream
 ) -> None:
     try:
-        async for update in updates:
-            if isinstance(update, ActiveTabFrame):
-                await livestream.publish_frame(update.data)
+        async for frame in frames:
+            await livestream.publish_frame(frame)
     finally:
         await livestream.stop()

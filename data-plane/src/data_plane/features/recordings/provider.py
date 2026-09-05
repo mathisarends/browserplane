@@ -9,8 +9,8 @@ from data_plane.features.recordings.application.service import (
     RecorderFactory,
     RecordingService,
 )
-from data_plane.features.recordings.infrastructure.chrome_recorder import (
-    ChromeScreenRecorder,
+from data_plane.features.recordings.infrastructure.ffmpeg_recorder import (
+    FfmpegScreenRecorder,
 )
 from data_plane.infrastructure.bucket import Bucket
 from data_plane.settings import DataPlaneSettings
@@ -23,10 +23,10 @@ class RecordingProvider(Provider):
 
     @provide(scope=Scope.APP)
     def recorder_factory(self, streams: ActiveTabStreams) -> RecorderFactory:
-        """Record through the browser's shared active-tab stream."""
+        """Encode the browser's shared raw screencast frames with FFmpeg."""
 
         def build(cdp_url: str, settings: DataPlaneSettings) -> ScreenRecorder:
-            return ChromeScreenRecorder(streams.for_browser(cdp_url), settings)
+            return FfmpegScreenRecorder(streams.for_browser(cdp_url), settings)
 
         return build
 

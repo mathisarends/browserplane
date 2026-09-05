@@ -19,10 +19,7 @@ from cdpify.domains.target.events import (
 )
 
 from data_plane.features.browsers.infrastructure.screencast.models import (
-    ActiveTabChanged,
-    ActiveTabFrame,
     Frame,
-    PageUpdate,
     ScreencastOptions,
     StreamEvent,
     TargetAdded,
@@ -52,28 +49,17 @@ class ActiveTabBridge:
         self._events: asyncio.Queue[StreamEvent] = asyncio.Queue()
         self._page_tasks: dict[str, asyncio.Task[None]] = {}
         self._visible_target = VisibleTarget()
-        self._announced: str | None = None
 
-    async def updates(self) -> AsyncGenerator[PageUpdate]:
+    async def frames(self) -> AsyncGenerator[bytes]:
         target_listeners = self._start_target_listeners()
         try:
             await self._discover_existing_pages()
             while True:
                 frame = await self._handle_next_event()
-                if (changed := self._active_tab_change()) is not None:
-                    yield changed
                 if frame is not None:
-                    yield ActiveTabFrame(self._visible_target.active or "", frame)
+                    yield frame
         finally:
             await cancel_and_wait(*target_listeners, *self._page_tasks.values())
-
-    def _active_tab_change(self) -> ActiveTabChanged | None:
-        """Announce a new active tab, ignoring the gap between two tabs."""
-        active = self._visible_target.active
-        if active is None or active == self._announced:
-            return None
-        self._announced = active
-        return ActiveTabChanged(active)
 
     def _start_target_listeners(self) -> tuple[asyncio.Task[None], ...]:
         return (

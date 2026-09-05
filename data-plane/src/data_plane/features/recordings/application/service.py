@@ -124,7 +124,7 @@ class RecordingService:
         return self._get(browser_id, recording_id).recording
 
     def file(self, browser_id: UUID, recording_id: UUID) -> RecordingFile:
-        """Serve the whole recording, which only exists as one file per tab."""
+        """Serve a recording that consists of a single file."""
         segments = self._completed_segments(browser_id, recording_id)
         if len(segments) > 1:
             raise RecordingHasSegmentsException

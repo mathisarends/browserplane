@@ -14,7 +14,7 @@ class RecordingState(StrEnum):
 
 
 class RecordingFormat(StrEnum):
-    """Container Chromium wrote the recording in."""
+    """Container used for a completed recording."""
 
     WEBM = "webm"
     MP4 = "mp4"
@@ -26,11 +26,7 @@ class RecordingFormat(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class RecordedSegment:
-    """One video file, covering the time a single tab was the active one.
-
-    Chromium records a fixed page target, so following the active tab means
-    ending a segment and starting the next one whenever the shown tab changes.
-    """
+    """One file produced for a recording."""
 
     index: int
     target_id: str
