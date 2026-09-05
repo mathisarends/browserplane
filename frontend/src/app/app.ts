@@ -1,15 +1,27 @@
 import { ChangeDetectionStrategy, Component } from "@angular/core";
 import { BrowserPanel } from "./browser/browser-panel";
+import { WorkspaceHeader } from "./workspace-header";
 
 @Component({
   selector: "app-root",
-  imports: [BrowserPanel],
+  imports: [BrowserPanel, WorkspaceHeader],
   template: `
-    <main class="workspace">
-      @for (ownerId of ownerIds; track ownerId) {
-        <app-browser-panel [ownerId]="ownerId" />
-      }
-    </main>
+    <div class="app-shell">
+      <app-workspace-header [sessionCount]="ownerIds.length" />
+
+      <main class="workspace" aria-label="Remote Browser Sessions">
+        @for (ownerId of ownerIds; track ownerId; let index = $index) {
+          <app-browser-panel [ownerId]="ownerId" [position]="index + 1" />
+        }
+      </main>
+    </div>
+  `,
+  styles: `
+    :host { display: block; }
+    .app-shell { width: min(100%, 1640px); margin-inline: auto; padding: clamp(12px, 2vw, 32px); }
+    app-workspace-header { margin-bottom: clamp(12px, 1.5vw, 20px); }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); }
+    @media (max-width: 580px) { .app-shell { padding: 8px; } }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

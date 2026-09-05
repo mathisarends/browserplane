@@ -15,13 +15,13 @@ import {
   type TabResult,
 } from "@browsertunnel/browser-rpc-client";
 
-interface NavigationState {
+export interface NavigationState {
   readonly canGoBack: boolean;
   readonly canGoForward: boolean;
   readonly loading: boolean;
 }
 
-type ConnectionState = "connecting" | "connected" | "disconnected";
+export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 /**
  * A backstop only: the backend releases the session when the tunnel socket

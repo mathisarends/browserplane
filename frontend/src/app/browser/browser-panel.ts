@@ -3,7 +3,6 @@ import {
   Component,
   computed,
   effect,
-  ElementRef,
   inject,
   input,
   OnDestroy,
@@ -12,75 +11,64 @@ import {
   viewChild,
 } from "@angular/core";
 import { BrowserCanvas } from "./browser-canvas";
+import { BrowserNavigationBar } from "./browser-navigation-bar";
 import { BrowserSession } from "./browser-session";
+import { BrowserSessionHeader } from "./browser-session-header";
+import { BrowserTabStrip } from "./browser-tab-strip";
 
 @Component({
   selector: "app-browser-panel",
-  imports: [BrowserCanvas],
+  imports: [BrowserCanvas, BrowserNavigationBar, BrowserSessionHeader, BrowserTabStrip],
   providers: [BrowserSession],
   template: `
     <section class="browser-panel" [attr.aria-label]="label() + ' Vorschau'">
       <header class="browser-chrome">
-        <div class="browser-heading">
-          <span>{{ label() }}</span><span class="plane-label">Data Plane</span>
-        </div>
-        <div class="tab-strip">
-          <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div class="tabs">
-            <div class="tab-list" role="tablist" aria-label="Browser-Tabs">
-              @for (tab of session.tabs(); track tab.id) {
-                <div class="browser-tab" role="tab" [tabIndex]="tab.active ? 0 : -1"
-                  [attr.aria-selected]="tab.active" (click)="session.activateTab(tab.id)">
-                  <i aria-hidden="true"></i><span>{{ tab.title || 'Neuer Tab' }}</span>
-                  <button type="button" class="close-tab"
-                    [attr.aria-label]="(tab.title || 'Neuer Tab') + ' schließen'"
-                    (click)="$event.stopPropagation(); session.closeTab(tab.id)">×</button>
-                </div>
-              }
-            </div>
-            <button class="new-tab" type="button" aria-label="Neuen Tab öffnen" (click)="createTab()">+</button>
-          </div>
-        </div>
-        <div class="browser-bar">
-          <nav class="navigation-controls" aria-label="Seitennavigation">
-            <button type="button" aria-label="Zurück" [disabled]="!session.navigation()?.canGoBack" (click)="session.back()">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12.5 4.5-5.5 5 5.5 5" /></svg>
-            </button>
-            <button type="button" aria-label="Vor" [disabled]="!session.navigation()?.canGoForward" (click)="session.forward()">
-              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m7.5 4.5 5.5 5-5.5 5" /></svg>
-            </button>
-            <button type="button" [disabled]="!session.activeTab()" (click)="session.reloadOrStop()"
-              [attr.data-loading]="session.navigation()?.loading ?? false"
-              [attr.aria-label]="session.navigation()?.loading ? 'Laden abbrechen' : 'Neu laden'">
-              <svg class="reload-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M15.3 7.1A6 6 0 1 0 16 10" /><path d="M15.3 3.8v3.7H12" /></svg>
-              <svg class="stop-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 6h8v8H6z" /></svg>
-            </button>
-          </nav>
-          <form class="address-form" (submit)="$event.preventDefault(); navigate()">
-            <label class="visually-hidden" [for]="ownerId() + '-url'">URL</label>
-            <input #addressInput [id]="ownerId() + '-url'" name="url" type="text" inputmode="url"
-              [value]="address()" (input)="updateAddress($event)" placeholder="URL eingeben"
-              autocomplete="url" spellcheck="false" />
-          </form>
-        </div>
+        <app-browser-session-header [position]="position()" [label]="label()" [connection]="session.connection()" />
+        <app-browser-tab-strip [tabs]="session.tabs()" (activate)="session.activateTab($event)"
+          (close)="session.closeTab($event)" (create)="createTab()" />
+        <app-browser-navigation-bar #navigationBar [ownerId]="ownerId()" [address]="address()"
+          [navigation]="session.navigation()" [hasActiveTab]="!!session.activeTab()"
+          (addressChange)="address.set($event)" (navigate)="navigate()" (back)="session.back()"
+          (forward)="session.forward()" (reloadOrStop)="session.reloadOrStop()" />
       </header>
       <app-browser-canvas />
       <footer class="stream-status">
         <span><i class="status-dot" [class.connected]="session.connection() === 'connected'"></i>{{ session.status() }}</span>
-        <span>cursor: {{ session.cursor() }} · 1600 × 900</span>
+        <span class="stream-meta">cursor: {{ session.cursor() }} · 1600 × 900</span>
       </footer>
     </section>
+  `,
+  styles: `
+    :host { display: block; }
+    .browser-panel { overflow: hidden; background: #11151c; border: 1px solid #252d3a; border-radius: 14px; box-shadow: 0 28px 80px rgb(0 0 0 / 34%); }
+    .browser-chrome { background: linear-gradient(180deg, #1a202a, #171c24); }
+    .stream-status { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 37px; padding: 8px 14px; color: #7f8998; font: 0.69rem/1.25 ui-monospace, SFMono-Regular, Consolas, monospace; background: #11151c; border-top: 1px solid #252a33; }
+    .stream-status span:first-child { display: flex; align-items: center; min-width: 0; gap: 7px; }
+    .status-dot { display: inline-block; flex: none; width: 7px; height: 7px; background: #e5a84b; border-radius: 50%; }
+    .status-dot.connected { background: #61c454; }
+    .stream-meta { flex: none; color: #626d7f; }
+    @media (max-width: 580px) {
+      .browser-panel { border-radius: 10px; }
+      .stream-status { min-height: 34px; padding: 7px 10px; }
+      .stream-status span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .stream-meta { display: none; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .browser-panel { animation: panel-enter 420ms both; }
+      @keyframes panel-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserPanel implements OnInit, OnDestroy {
   readonly ownerId = input.required<string>();
+  readonly position = input.required<number>();
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
   protected readonly label = computed(
     () => this.session.browserId() ?? "Keine Session",
   );
-  private readonly addressInput = viewChild<ElementRef<HTMLInputElement>>("addressInput");
+  private readonly navigationBar = viewChild<BrowserNavigationBar>("navigationBar");
 
   constructor() {
     effect(() => this.address.set(this.session.activeUrl()));
@@ -94,10 +82,6 @@ export class BrowserPanel implements OnInit, OnDestroy {
     void this.session.disconnect();
   }
 
-  protected updateAddress(event: Event): void {
-    this.address.set((event.target as HTMLInputElement).value);
-  }
-
   protected navigate(): void {
     const value = this.address().trim();
     if (value) void this.session.navigate(value);
@@ -105,7 +89,7 @@ export class BrowserPanel implements OnInit, OnDestroy {
 
   protected async createTab(): Promise<void> {
     await this.session.createTab();
-    this.addressInput()?.nativeElement.focus();
+    this.navigationBar()?.focusAddress();
   }
 
 }

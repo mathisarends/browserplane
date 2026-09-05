@@ -35,8 +35,12 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
   styles: `
     :host {
       display: flex;
-      flex: 1;
+      flex: none;
+      aspect-ratio: 16 / 9;
       min-height: 0;
+      width: 100%;
+      overflow: hidden;
+      background: #020304;
     }
 
     canvas {
