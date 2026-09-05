@@ -29,6 +29,7 @@ from backend.features.sessions.presentation.mapper import (
     to_authentication_state_snapshot_response,
     to_browser_state_snapshot_response,
     to_open_session_response,
+    to_owner_sessions_response,
     to_session_response,
 )
 from backend.features.sessions.presentation.schemas import (
@@ -38,6 +39,7 @@ from backend.features.sessions.presentation.schemas import (
     CaptureBrowserStateSnapshotRequest,
     OpenSessionRequest,
     OpenSessionResponse,
+    OwnerSessionsResponse,
     ResumeSessionRequest,
     SessionResponse,
 )
@@ -74,6 +76,22 @@ async def open_session(
     )
     return to_open_session_response(
         session, remaining_capacity=await service.remaining_capacity()
+    )
+
+
+@session_router.get(
+    "/sessions",
+    response_model=OwnerSessionsResponse,
+    operation_id="list_owner_sessions",
+    responses=api_error_responses(BROWSER_NOT_FOUND),
+)
+async def list_owner_sessions(
+    owner_id: UUID, service: FromDishka[SessionService]
+) -> OwnerSessionsResponse:
+    """What one client still owns, so a reloaded page can pick it back up."""
+    return to_owner_sessions_response(
+        await service.list(owner_id=owner_id),
+        remaining_capacity=await service.remaining_capacity(),
     )
 
 

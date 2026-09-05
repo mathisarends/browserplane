@@ -67,3 +67,14 @@ class OpenSessionResponse(SessionResponse):
     """A newly leased session and the capacity left after taking its browser."""
 
     remaining_capacity: int = Field(ge=0)
+
+
+class OwnerSessionsResponse(BaseModel):
+    """Everything one client owns, plus whether the pool has room for one more.
+
+    A page that just loaded needs both answers at once: which sessions to pick
+    back up, and whether another browser can still be leased.
+    """
+
+    sessions: list[SessionResponse]
+    remaining_capacity: int = Field(ge=0)

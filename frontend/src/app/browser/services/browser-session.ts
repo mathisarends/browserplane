@@ -1,10 +1,13 @@
-import { computed, Injectable, signal } from "@angular/core";
+import { computed, inject, Injectable, signal } from "@angular/core";
 import {
   closeSession,
+  getSession,
   openSession,
+  resumeSession,
   type openSessionResponse,
   type SessionResponse,
 } from "@browsertunnel/backend-client";
+import { ClientIdentity } from "./client-identity";
 import {
   BackendBrowserClient,
   WebSocketRpcTransport,
@@ -29,8 +32,11 @@ export interface BrowserTabState extends TabResult {
 export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 /**
- * A backstop only: the backend releases the session when the tunnel socket
- * closes, so this covers a session whose socket never came up at all.
+ * How long a browser stays leased without anyone asking for it again.
+ *
+ * The lease deliberately survives a dropped tunnel — that is what lets a
+ * reloaded page pick its session back up — so this is what eventually hands
+ * the browser back when the page never returns.
  */
 const SESSION_TTL_SECONDS = 600;
 const DUCKDUCKGO_SEARCH_URL = "https://duckduckgo.com/?q=";
@@ -38,6 +44,7 @@ const DUCKDUCKGO_SEARCH_URL = "https://duckduckgo.com/?q=";
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
 export class BrowserSession {
+  private readonly identity = inject(ClientIdentity);
   private transport?: WebSocketRpcTransport;
   private client?: BackendBrowserClient;
   private screencast?: WebSocket;
@@ -75,34 +82,46 @@ export class BrowserSession {
     return `${tab.title || "New tab"} · ${this.navigation()?.loading ? "loading" : "connected"}`;
   });
 
-  async connect(ownerId: string): Promise<number | undefined> {
+  /** Lease a browser. Answers with the capacity left, or nothing if it failed. */
+  async open(): Promise<number | undefined> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
     try {
       const response = await openSession({
-        owner_id: ownerId,
+        owner_id: this.identity.ownerId,
         ttl_seconds: SESSION_TTL_SECONDS,
       });
       if (response.status !== 201) throw new Error(openSessionError(response));
-      const session = response.data;
-      // A session that was just opened is active, so it carries both paths;
-      // a suspended one holds no browser and leaves them empty.
-      if (!session.tunnel_path || !session.screencast_path) {
-        throw new Error("The session does not contain a browser");
-      }
-      this.sessionState.set(session);
-      this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
-      this.client = new BackendBrowserClient(this.transport);
-      await this.transport.connect();
-      await this.connectScreencast(socketUrl(session.screencast_path));
-      this.connectionState.set("connected");
-      void this.receiveNotifications();
-      this.tabsState.set((await this.client.browser.tab.list()).tabs);
+      await this.start(response.data);
       return response.data.remaining_capacity;
     } catch (error) {
-      await this.disconnect();
-      this.reportError(error);
+      await this.abandon(error);
       return undefined;
+    }
+  }
+
+  /**
+   * Take a session this client already owns back over.
+   *
+   * The lease outlives the page, so a reload reconnects to the browser it was
+   * looking at rather than leasing a second one. A session that was parked in
+   * the meantime is resumed onto whichever browser is free now.
+   */
+  async attach(sessionId: string): Promise<boolean> {
+    this.connectionState.set("connecting");
+    this.errorState.set(undefined);
+    try {
+      const response = await getSession(sessionId);
+      if (response.status !== 200) {
+        throw new Error(`Session could not be read (${response.status})`);
+      }
+      await this.start(
+        response.data.status === "suspended" ? await resume(sessionId) : response.data,
+      );
+      return true;
+    } catch (error) {
+      await this.abandon(error);
+      return false;
     }
   }
 
@@ -191,6 +210,30 @@ export class BrowserSession {
 
   reportError(error: unknown): void {
     this.errorState.set(error instanceof Error ? error.message : String(error));
+  }
+
+  private async start(session: SessionResponse): Promise<void> {
+    // An active session carries both paths; a suspended one holds no browser
+    // and leaves them empty, which is nothing this can connect to.
+    if (!session.tunnel_path || !session.screencast_path) {
+      throw new Error("The session does not contain a browser");
+    }
+    this.sessionState.set(session);
+    const transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
+    const client = new BackendBrowserClient(transport);
+    this.transport = transport;
+    this.client = client;
+    await transport.connect();
+    await this.connectScreencast(socketUrl(session.screencast_path));
+    this.connectionState.set("connected");
+    void this.receiveNotifications();
+    this.tabsState.set((await client.browser.tab.list()).tabs);
+  }
+
+  /** Give up on a half-built connection without leaving its browser leased. */
+  private async abandon(error: unknown): Promise<void> {
+    await this.disconnect();
+    this.reportError(error);
   }
 
   private async run(action: (client: BackendBrowserClient) => Promise<void>): Promise<void> {
@@ -322,6 +365,14 @@ function socketOpened(socket: WebSocket): Promise<void> {
       { once: true },
     );
   });
+}
+
+async function resume(sessionId: string): Promise<SessionResponse> {
+  const response = await resumeSession(sessionId, { ttl_seconds: SESSION_TTL_SECONDS });
+  if (response.status !== 200) {
+    throw new Error(`Session could not be resumed (${response.status})`);
+  }
+  return response.data;
 }
 
 function openSessionError(response: openSessionResponse): string {

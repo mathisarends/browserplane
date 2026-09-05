@@ -52,7 +52,7 @@ import type { NavigationState } from "../services/browser-session";
       </button>
     </nav>
     <form class="address-form" (submit)="$event.preventDefault(); navigate.emit()">
-      <label class="visually-hidden" [for]="ownerId() + '-url'">Search or enter address</label>
+      <label class="visually-hidden" [for]="panelId() + '-url'">Search or enter address</label>
       <div class="omnibox">
         @if (looksLikeUrl()) {
           <svg class="omnibox-icon" viewBox="0 0 20 20" aria-hidden="true">
@@ -69,7 +69,7 @@ import type { NavigationState } from "../services/browser-session";
         }
         <input
           #addressInput
-          [id]="ownerId() + '-url'"
+          [id]="panelId() + '-url'"
           name="url"
           type="text"
           inputmode="search"
@@ -244,7 +244,7 @@ import type { NavigationState } from "../services/browser-session";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserNavigationBar {
-  readonly ownerId = input.required<string>();
+  readonly panelId = input.required<string>();
   readonly address = input.required<string>();
   readonly navigation = input<NavigationState>();
   readonly hasActiveTab = input.required<boolean>();

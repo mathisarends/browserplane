@@ -16,9 +16,11 @@ import type {
   CaptureBrowserStateSnapshotRequest,
   HTTPValidationError,
   Health200,
+  ListOwnerSessionsParams,
   NoBrowserAvailableError,
   OpenSessionRequest,
   OpenSessionResponse,
+  OwnerSessionsResponse,
   PooledBrowserResponse,
   Readiness200,
   RecordingAlreadyRunningError,
@@ -177,6 +179,68 @@ const res = await fetch(getOpenSessionUrl(),
 
   const data: openSessionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as openSessionResponse
+}
+
+
+
+export type listOwnerSessionsResponse200 = {
+  data: OwnerSessionsResponse
+  status: 200
+}
+
+export type listOwnerSessionsResponse404 = {
+  data: BrowserNotFoundError
+  status: 404
+}
+
+export type listOwnerSessionsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listOwnerSessionsResponseSuccess = (listOwnerSessionsResponse200) & {
+  headers: Headers;
+};
+export type listOwnerSessionsResponseError = (listOwnerSessionsResponse404 | listOwnerSessionsResponse422) & {
+  headers: Headers;
+};
+
+export type listOwnerSessionsResponse = (listOwnerSessionsResponseSuccess | listOwnerSessionsResponseError)
+
+export const getListOwnerSessionsUrl = (params: ListOwnerSessionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/sessions?${stringifiedParams}` : `/api/v1/sessions`
+}
+
+/**
+ * What one client still owns, so a reloaded page can pick it back up.
+ * @summary List Owner Sessions
+ */
+export const listOwnerSessions = async (params: ListOwnerSessionsParams, options?: RequestInit): Promise<listOwnerSessionsResponse> => {
+
+  const res = await fetch(getListOwnerSessionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listOwnerSessionsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listOwnerSessionsResponse
 }
 
 

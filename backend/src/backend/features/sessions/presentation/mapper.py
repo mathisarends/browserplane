@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+
 from backend.features.sessions.application.models import (
     AuthenticationStateSnapshot,
     BrowserStateSnapshot,
@@ -9,6 +11,7 @@ from backend.features.sessions.presentation.schemas import (
     AuthenticationStateSnapshotResponse,
     BrowserStateSnapshotResponse,
     OpenSessionResponse,
+    OwnerSessionsResponse,
     SessionResponse,
 )
 from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
@@ -37,6 +40,15 @@ def to_open_session_response(
     response = to_session_response(session)
     return OpenSessionResponse(
         **response.model_dump(), remaining_capacity=remaining_capacity
+    )
+
+
+def to_owner_sessions_response(
+    sessions: Sequence[Session | SuspendedSession], *, remaining_capacity: int
+) -> OwnerSessionsResponse:
+    return OwnerSessionsResponse(
+        sessions=[to_session_response(session) for session in sessions],
+        remaining_capacity=remaining_capacity,
     )
 
 

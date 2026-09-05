@@ -245,3 +245,33 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
         auth_list = client.get("/api/v1/authentication-state-snapshots")
         assert auth_list.headers["cache-control"] == "no-store"
         assert len(auth_list.json()) == 1
+
+
+def test_a_client_finds_its_own_sessions_again() -> None:
+    """A reloaded page asks the backend what it owns instead of remembering."""
+    app = create_app(
+        FakeProvisioner(),
+        InMemoryBrowserRepository(),
+        InMemorySuspendedSessionRepository(),
+        FakeBrowserStateGateway(),
+    )
+    with TestClient(app) as client:
+        session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
+
+        owned = client.get("/api/v1/sessions", params={"owner_id": OWNER_ID})
+        assert owned.status_code == 200
+        assert [entry["id"] for entry in owned.json()["sessions"]] == [session["id"]]
+        assert owned.json()["sessions"][0]["tunnel_path"] is not None
+        # The only browser is taken, so the page must not offer another one.
+        assert owned.json()["remaining_capacity"] == 0
+
+        # A session belongs to the client that opened it, not to everyone.
+        stranger = client.get("/api/v1/sessions", params={"owner_id": str(UUID(int=8))})
+        assert stranger.json()["sessions"] == []
+        assert stranger.json()["remaining_capacity"] == 0
+
+        # A parked session is still the client's, and its browser is free again.
+        client.post(f"/api/v1/sessions/{session['id']}/suspend")
+        parked = client.get("/api/v1/sessions", params={"owner_id": OWNER_ID})
+        assert [entry["status"] for entry in parked.json()["sessions"]] == ["suspended"]
+        assert parked.json()["remaining_capacity"] == 1

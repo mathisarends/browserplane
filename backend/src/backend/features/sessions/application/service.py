@@ -90,8 +90,14 @@ class SessionService:
         browser = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=browser)
 
-    async def list(self) -> tuple[Session | SuspendedSession, ...]:
-        """Every session the backend still holds, with a browser or parked."""
+    async def list(
+        self, owner_id: UUID | None = None
+    ) -> tuple[Session | SuspendedSession, ...]:
+        """Every session the backend still holds, with a browser or parked.
+
+        Narrowed to one owner it answers the question a returning client asks:
+        which sessions are still mine, so the page can pick them back up.
+        """
         active = [
             Session(lease=lease, browser=await self._browsers.get(lease.browser_id))
             for lease in await self._leases.list()
@@ -102,7 +108,10 @@ class SessionService:
             for suspended in await self._suspensions.list_all()
             if not suspended.is_expired(now)
         ]
-        return (*active, *parked)
+        sessions = (*active, *parked)
+        if owner_id is None:
+            return sessions
+        return tuple(session for session in sessions if session.owner_id == owner_id)
 
     async def capture_authentication(
         self, session_id: UUID

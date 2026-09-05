@@ -32,7 +32,7 @@ import { BrowserTabStrip } from "./browser-tab-strip";
         />
         <app-browser-navigation-bar
           #navigationBar
-          [ownerId]="ownerId()"
+          [panelId]="panelId()"
           [address]="address()"
           [navigation]="session.navigation()"
           [hasActiveTab]="!!session.activeTab()"
@@ -85,10 +85,12 @@ import { BrowserTabStrip } from "./browser-tab-strip";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserPanel implements OnInit, OnDestroy {
-  readonly ownerId = input.required<string>();
+  readonly panelId = input.required<string>();
+  /** Set when the panel takes a session over instead of leasing a browser. */
+  readonly sessionId = input<string>();
   readonly position = input.required<number>();
   readonly capacityChange = output<number>();
-  readonly leaseFailed = output<string>();
+  readonly sessionLost = output<string>();
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
   protected readonly label = computed(() => this.session.browserId() ?? "No session");
@@ -117,9 +119,16 @@ export class BrowserPanel implements OnInit, OnDestroy {
   }
 
   private async connect(): Promise<void> {
-    const remainingCapacity = await this.session.connect(this.ownerId());
+    const sessionId = this.sessionId();
+    if (sessionId) {
+      // Taking a session over leaves the pool as it was, so there is no
+      // capacity news to report.
+      if (!(await this.session.attach(sessionId))) this.sessionLost.emit(this.panelId());
+      return;
+    }
+    const remainingCapacity = await this.session.open();
     if (remainingCapacity === undefined) {
-      this.leaseFailed.emit(this.ownerId());
+      this.sessionLost.emit(this.panelId());
       return;
     }
     this.capacityChange.emit(remainingCapacity);

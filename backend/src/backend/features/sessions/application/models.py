@@ -37,6 +37,10 @@ class Session:
         return self.lease.id
 
     @property
+    def owner_id(self) -> UUID:
+        return self.lease.owner_id
+
+    @property
     def browser_id(self) -> UUID:
         return self.browser.id
 
