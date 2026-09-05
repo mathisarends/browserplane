@@ -3,6 +3,7 @@ from uuid import UUID
 
 from backend.features.browsers.application.models import Browser
 from backend.features.sessions.application.models import (
+    AuthenticationStateDocument,
     BrowserStateDocument,
     SuspendedSession,
 )
@@ -25,7 +26,19 @@ class BrowserStateGateway(ABC):
     """Reads and writes a browser's state through its worker."""
 
     @abstractmethod
-    async def capture(self, browser: Browser) -> BrowserStateDocument: ...
+    async def capture_authentication(
+        self, browser: Browser
+    ) -> AuthenticationStateDocument: ...
 
     @abstractmethod
-    async def mount(self, browser: Browser, state: BrowserStateDocument) -> None: ...
+    async def mount_authentication(
+        self, browser: Browser, state: AuthenticationStateDocument
+    ) -> None: ...
+
+    @abstractmethod
+    async def capture_browser(self, browser: Browser) -> BrowserStateDocument: ...
+
+    @abstractmethod
+    async def mount_browser(
+        self, browser: Browser, state: BrowserStateDocument
+    ) -> None: ...

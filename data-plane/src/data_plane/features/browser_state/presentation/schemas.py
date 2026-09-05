@@ -47,8 +47,7 @@ class BrowserTabStateSchema(PlaywrightModel):
 
 
 class BrowserStateSchema(PlaywrightModel):
-    """The restorable state of a browser; the body of both state endpoints."""
+    """Restorable tabs and their UI state, independent of authentication."""
 
     tabs: list[BrowserTabStateSchema] = []
     active_tab_index: int = 0
-    authentication: AuthenticationStateSchema = AuthenticationStateSchema()

@@ -109,7 +109,6 @@ class BrowserStateSchema(BaseModel):
 
     tabs: list[BrowserTabStateSchema] = []
     active_tab_index: int = 0
-    authentication: AuthenticationStateSchema = {'cookies': [], 'origins': []}
 
 
 class CreateBrowserRequest(BaseModel):
@@ -220,5 +219,5 @@ class RecordingResponse(BaseModel):
     segments: list[RecordingSegmentResponse] = []
 
 
-class CaptureBrowserStateParams(BaseModel):
+class CaptureAuthenticationStateParams(BaseModel):
     origins: list[str] | None = None

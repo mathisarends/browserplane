@@ -53,6 +53,9 @@ class SuspendedSessionModel(DatabaseModel, table=True):
         nullable=False,
         index=True,
     )
-    # The captured state is the data plane's document, stored as it arrived:
-    # the backend never reads into it, it only hands it back.
-    state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+    # Kept as separate opaque data-plane documents: authentication can be
+    # reused without also restoring a suspended browser's tabs (and vice versa).
+    authentication_state: dict[str, Any] = Field(
+        sa_column=Column(JSONB, nullable=False)
+    )
+    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))

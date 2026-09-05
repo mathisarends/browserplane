@@ -70,4 +70,3 @@ class BrowserState:
 
     tabs: tuple[BrowserTabState, ...] = ()
     active_tab_index: int = 0
-    authentication: AuthenticationState = AuthenticationState()

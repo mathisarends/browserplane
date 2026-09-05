@@ -19,7 +19,8 @@ class SqlSuspendedSessionRepository(
         return SuspendedSession(
             id=model.id,
             owner_id=model.owner_id,
-            state=model.state,
+            authentication_state=model.authentication_state,
+            browser_state=model.browser_state,
             created_at=model.created_at,
             expires_at=model.expires_at,
         )
@@ -28,7 +29,8 @@ class SqlSuspendedSessionRepository(
         return SuspendedSessionModel(
             id=entity.id,
             owner_id=entity.owner_id,
-            state=entity.state,
+            authentication_state=entity.authentication_state,
+            browser_state=entity.browser_state,
             created_at=entity.created_at,
             expires_at=entity.expires_at,
         )

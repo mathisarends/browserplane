@@ -8,7 +8,10 @@ from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.infrastructure.in_memory_repository import (
     InMemoryBrowserRepository,
 )
-from backend.features.sessions.application.models import BrowserStateDocument
+from backend.features.sessions.application.models import (
+    AuthenticationStateDocument,
+    BrowserStateDocument,
+)
 from backend.features.sessions.application.ports import BrowserStateGateway
 from backend.features.sessions.infrastructure.in_memory_repository import (
     InMemorySuspendedSessionRepository,
@@ -36,32 +39,80 @@ class FakeBrowserStateGateway(BrowserStateGateway):
     """Keep the captured document, the way a worker would hand it back."""
 
     def __init__(self) -> None:
-        self.mounted: BrowserStateDocument | None = None
+        self.mounted_authentication: AuthenticationStateDocument | None = None
+        self.mounted_browser: BrowserStateDocument | None = None
 
-    async def capture(self, browser: Browser) -> BrowserStateDocument:
+    async def capture_authentication(
+        self, browser: Browser
+    ) -> AuthenticationStateDocument:
+        return {"cookies": [], "origins": []}
+
+    async def mount_authentication(
+        self, browser: Browser, state: AuthenticationStateDocument
+    ) -> None:
+        self.mounted_authentication = state
+
+    async def capture_browser(self, browser: Browser) -> BrowserStateDocument:
         return {
-            "tabs": [{"url": "https://example.com/inbox"}],
+            "tabs": [
+                {
+                    "url": "https://example.com/inbox",
+                    "scroll": {"x": 0, "y": 0},
+                    "sessionStorage": [],
+                }
+            ],
             "active_tab_index": 0,
-            "authentication": {"cookies": [], "origins": []},
         }
 
-    async def mount(self, browser: Browser, state: BrowserStateDocument) -> None:
-        self.mounted = state
+    async def mount_browser(
+        self, browser: Browser, state: BrowserStateDocument
+    ) -> None:
+        self.mounted_browser = state
 
 
 def test_backend_serves_a_session_lifecycle() -> None:
+    state = FakeBrowserStateGateway()
     app = create_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
-        FakeBrowserStateGateway(),
+        state,
     )
     with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 200
 
-        created = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})
+        created = client.post(
+            "/api/v1/sessions",
+            json={
+                "owner_id": OWNER_ID,
+                "authentication_state": {"cookies": [], "origins": []},
+                "browser_state": {
+                    "tabs": [
+                        {
+                            "url": "https://example.com/profile",
+                            "scroll": {"x": 0, "y": 0},
+                            "sessionStorage": [],
+                        }
+                    ],
+                    "active_tab_index": 0,
+                },
+            },
+        )
         assert created.status_code == 201
         session = created.json()
+        assert state.mounted_authentication == {"cookies": [], "origins": []}
+        assert state.mounted_browser is not None
+        assert state.mounted_browser["tabs"][0]["url"].endswith("/profile")
+        authentication = client.get(
+            f"/api/v1/sessions/{session['id']}/authentication-state"
+        )
+        assert authentication.status_code == 200
+        assert authentication.headers["cache-control"] == "no-store"
+        browser_state = client.get(
+            f"/api/v1/sessions/{session['id']}/browser-state"
+        )
+        assert browser_state.status_code == 200
+        assert browser_state.json()["tabs"][0]["url"].endswith("/inbox")
         assert session["browser_id"] == str(UUID(int=1))
         assert session["tunnel_path"] == f"/api/v1/sessions/{session['id']}/tunnel"
 
@@ -108,5 +159,6 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
         assert resumed.json()["status"] == "active"
         # The session kept its id, so the links handed out before still work.
         assert resumed.json()["id"] == opened["id"]
-        assert state.mounted is not None
-        assert state.mounted["tabs"][0]["url"] == "https://example.com/inbox"
+        assert state.mounted_authentication == {"cookies": [], "origins": []}
+        assert state.mounted_browser is not None
+        assert state.mounted_browser["tabs"][0]["url"] == "https://example.com/inbox"

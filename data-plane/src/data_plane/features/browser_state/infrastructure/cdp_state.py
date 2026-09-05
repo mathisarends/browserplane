@@ -48,35 +48,49 @@ class CdpBrowserStateStore(BrowserStateStore):
         self._cdp_url = cdp_url
         self._settings = settings
 
-    async def capture(self, extra_origins: Sequence[str] = ()) -> BrowserState:
+    async def capture_authentication(
+        self, extra_origins: Sequence[str] = ()
+    ) -> AuthenticationState:
         try:
             async with Client(self._cdp_url) as client:
                 targets = await _page_targets(client)
-                cookies, tabs = await asyncio.gather(
+                cookies, origins = await asyncio.gather(
                     _capture_cookies(client),
-                    _capture_tabs(client, targets),
-                )
-                origins = await _capture_origins(
-                    client,
-                    _origins_of(targets) | set(extra_origins),
+                    _capture_origins(
+                        client, _origins_of(targets) | set(extra_origins)
+                    ),
                 )
         except Exception as error:
             raise BrowserStateFailedException(
                 f"Could not read the browser state: {type(error).__name__}"
             ) from error
-        captured_tabs, active_tab_index = tabs
-        return BrowserState(
-            tabs=captured_tabs,
-            active_tab_index=active_tab_index,
-            authentication=AuthenticationState(cookies=cookies, origins=origins),
-        )
+        return AuthenticationState(cookies=cookies, origins=origins)
 
-    async def restore(self, state: BrowserState) -> None:
+    async def restore_authentication(self, state: AuthenticationState) -> None:
         try:
             async with Client(self._cdp_url) as client:
-                # Authentication first, so the restored tabs load logged in.
-                if not state.authentication.is_empty:
-                    await _restore_authentication(client, state.authentication)
+                await _restore_authentication(client, state)
+        except BrowserStateFailedException:
+            raise
+        except Exception as error:
+            raise BrowserStateFailedException(
+                f"Could not mount the browser state: {type(error).__name__}"
+            ) from error
+
+    async def capture_browser(self) -> BrowserState:
+        try:
+            async with Client(self._cdp_url) as client:
+                targets = await _page_targets(client)
+                tabs, active_tab_index = await _capture_tabs(client, targets)
+        except Exception as error:
+            raise BrowserStateFailedException(
+                f"Could not read the browser state: {type(error).__name__}"
+            ) from error
+        return BrowserState(tabs=tabs, active_tab_index=active_tab_index)
+
+    async def restore_browser(self, state: BrowserState) -> None:
+        try:
+            async with Client(self._cdp_url) as client:
                 if state.tabs:
                     await _restore_tabs(client, state, self._settings)
         except BrowserStateFailedException:
@@ -213,8 +227,11 @@ async def _capture_tab(
 
 
 async def _restore_authentication(client: Client, auth: AuthenticationState) -> None:
+    # A mounted authentication document replaces the cookie jar. In
+    # particular, an empty profile must not inherit the previous session's
+    # cookies from a pooled browser process.
+    await client.storage.clear_cookies()
     if auth.cookies:
-        await client.storage.clear_cookies()
         # Storage.setCookies takes the whole list; no per-cookie round trips.
         await client.storage.set_cookies(
             cookies=[_to_cookie_param(cookie) for cookie in auth.cookies]

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, WebSocket, status
+from fastapi import APIRouter, Response, WebSocket, status
 
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.leases.application.exceptions import LeaseNotFoundException
@@ -29,6 +29,7 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
 )
 from backend.presentation.api_errors import api_error_responses
+from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
 
@@ -44,7 +45,18 @@ async def open_session(
     request: OpenSessionRequest, service: FromDishka[SessionService]
 ) -> SessionResponse:
     session = await service.open(
-        owner_id=request.owner_id, ttl=timedelta(seconds=request.ttl_seconds)
+        owner_id=request.owner_id,
+        ttl=timedelta(seconds=request.ttl_seconds),
+        authentication_state=(
+            request.authentication_state.model_dump(mode="json", by_alias=True)
+            if request.authentication_state is not None
+            else None
+        ),
+        browser_state=(
+            request.browser_state.model_dump(mode="json", by_alias=True)
+            if request.browser_state is not None
+            else None
+        ),
     )
     return to_session_response(session)
 
@@ -60,6 +72,86 @@ async def get_session(
 ) -> SessionResponse:
     session = await service.get(session_id)
     return to_session_response(session)
+
+
+@session_router.get(
+    "/sessions/{session_id}/authentication-state",
+    operation_id="capture_session_authentication_state",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def capture_session_authentication_state(
+    session_id: UUID,
+    response: Response,
+    service: FromDishka[SessionService],
+) -> AuthenticationStateSchema:
+    state = await service.capture_authentication(session_id)
+    response.headers["Cache-Control"] = "no-store"
+    return AuthenticationStateSchema.model_validate(state)
+
+
+@session_router.put(
+    "/sessions/{session_id}/authentication-state",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="mount_session_authentication_state",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def mount_session_authentication_state(
+    session_id: UUID,
+    state: AuthenticationStateSchema,
+    service: FromDishka[SessionService],
+) -> Response:
+    await service.mount_authentication(
+        session_id, state.model_dump(mode="json", by_alias=True)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@session_router.get(
+    "/sessions/{session_id}/browser-state",
+    operation_id="capture_session_browser_state",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def capture_session_browser_state(
+    session_id: UUID,
+    response: Response,
+    service: FromDishka[SessionService],
+) -> BrowserStateSchema:
+    state = await service.capture_browser(session_id)
+    response.headers["Cache-Control"] = "no-store"
+    return BrowserStateSchema.model_validate(state)
+
+
+@session_router.put(
+    "/sessions/{session_id}/browser-state",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="mount_session_browser_state",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def mount_session_browser_state(
+    session_id: UUID,
+    state: BrowserStateSchema,
+    service: FromDishka[SessionService],
+) -> Response:
+    await service.mount_browser(
+        session_id, state.model_dump(mode="json", by_alias=True)
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @session_router.post(

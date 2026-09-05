@@ -7,13 +7,14 @@ from uuid import UUID
 from backend.features.browsers.application.models import Browser
 from backend.features.leases.application.models import Lease
 
+type AuthenticationStateDocument = dict[str, Any]
 type BrowserStateDocument = dict[str, Any]
-"""A captured browser state, exactly as the data plane hands it over.
+"""Captured state documents, exactly as the data plane hands them over.
 
-The backend does not model the payload: its shape is owned by the data
-plane's ``BrowserStateSchema`` and travels back there unchanged. Re-modelling
-it here would mean a migration every time the data plane learns to capture
-one more thing.
+The backend does not model the payloads: their shapes are owned by the data
+plane's authentication and browser-state schemas and travel back there
+unchanged. Re-modelling them here would mean a migration every time the data
+plane learns to capture one more thing.
 """
 
 
@@ -60,7 +61,8 @@ class SuspendedSession:
 
     id: UUID
     owner_id: UUID
-    state: BrowserStateDocument
+    authentication_state: AuthenticationStateDocument
+    browser_state: BrowserStateDocument
     created_at: datetime
     expires_at: datetime
 

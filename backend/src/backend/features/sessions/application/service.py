@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -12,6 +13,8 @@ from backend.features.sessions.application.exceptions import (
     SessionNotSuspendedException,
 )
 from backend.features.sessions.application.models import (
+    AuthenticationStateDocument,
+    BrowserStateDocument,
     Session,
     SuspendedSession,
 )
@@ -38,9 +41,26 @@ class SessionService:
         self._browser_state = browser_state
         self._suspension_ttl = suspension_ttl
 
-    async def open(self, owner_id: UUID, ttl: timedelta) -> Session:
+    async def open(
+        self,
+        owner_id: UUID,
+        ttl: timedelta,
+        authentication_state: AuthenticationStateDocument | None = None,
+        browser_state: BrowserStateDocument | None = None,
+    ) -> Session:
         browser = await self._pick_available_browser()
         lease = await self._leases.create(browser.id, owner_id, ttl)
+        try:
+            if authentication_state is not None:
+                await self._browser_state.mount_authentication(
+                    browser, authentication_state
+                )
+            if browser_state is not None:
+                await self._browser_state.mount_browser(browser, browser_state)
+        except Exception:
+            with suppress(LeaseNotFoundException):
+                await self._leases.release(lease.id)
+            raise
         leased = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=leased)
 
@@ -56,6 +76,28 @@ class SessionService:
         browser = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=browser)
 
+    async def capture_authentication(
+        self, session_id: UUID
+    ) -> AuthenticationStateDocument:
+        session = await self._active_session(session_id)
+        return await self._browser_state.capture_authentication(session.browser)
+
+    async def mount_authentication(
+        self, session_id: UUID, state: AuthenticationStateDocument
+    ) -> None:
+        session = await self._active_session(session_id)
+        await self._browser_state.mount_authentication(session.browser, state)
+
+    async def capture_browser(self, session_id: UUID) -> BrowserStateDocument:
+        session = await self._active_session(session_id)
+        return await self._browser_state.capture_browser(session.browser)
+
+    async def mount_browser(
+        self, session_id: UUID, state: BrowserStateDocument
+    ) -> None:
+        session = await self._active_session(session_id)
+        await self._browser_state.mount_browser(session.browser, state)
+
     async def suspend(self, session_id: UUID) -> SuspendedSession:
         """Store what the browser holds and give the browser back to the pool.
 
@@ -63,13 +105,17 @@ class SessionService:
         anywhere in between leaves the session running rather than empty.
         """
         session = await self._active_session(session_id)
-        state = await self._browser_state.capture(session.browser)
+        authentication_state, browser_state = await asyncio.gather(
+            self._browser_state.capture_authentication(session.browser),
+            self._browser_state.capture_browser(session.browser),
+        )
         now = datetime.now(UTC)
         suspended = await self._suspensions.save(
             suspended=SuspendedSession(
                 id=session.id,
                 owner_id=session.lease.owner_id,
-                state=state,
+                authentication_state=authentication_state,
+                browser_state=browser_state,
                 created_at=now,
                 expires_at=now + self._suspension_ttl,
             )
@@ -92,7 +138,13 @@ class SessionService:
             lease_id=suspended.id,
         )
         try:
-            await self._browser_state.mount(browser, suspended.state)
+            # Authentication must be present before restored tabs navigate.
+            await self._browser_state.mount_authentication(
+                browser, suspended.authentication_state
+            )
+            await self._browser_state.mount_browser(
+                browser, suspended.browser_state
+            )
         except Exception:
             # The state is still stored, so the session stays resumable.
             with suppress(LeaseNotFoundException):

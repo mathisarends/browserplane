@@ -4,11 +4,14 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from backend.features.sessions.application.models import SessionStatus
+from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
 
 
 class OpenSessionRequest(BaseModel):
     owner_id: UUID
     ttl_seconds: int = Field(default=300, gt=0, le=86_400)
+    authentication_state: AuthenticationStateSchema | None = None
+    browser_state: BrowserStateSchema | None = None
 
 
 class ResumeSessionRequest(BaseModel):

@@ -5,7 +5,10 @@ from uuid import UUID
 from data_plane.features.browser_state.application.exceptions import (
     BrowserStateInvalidException,
 )
-from data_plane.features.browser_state.application.models import BrowserState
+from data_plane.features.browser_state.application.models import (
+    AuthenticationState,
+    BrowserState,
+)
 from data_plane.features.browser_state.application.ports import BrowserStateStore
 from data_plane.features.browsers.application.service import BrowserService
 from data_plane.settings import DataPlaneSettings
@@ -32,24 +35,36 @@ class BrowserStateService:
         self._settings = settings
         self._store_factory = store_factory
 
-    async def capture(
+    async def capture_authentication(
         self,
         browser_id: UUID,
         origins: Sequence[str] = (),
-    ) -> BrowserState:
+    ) -> AuthenticationState:
         for origin in origins:
             _validate_origin(origin)
-        return await self._store(browser_id).capture(extra_origins=origins)
+        return await self._store(browser_id).capture_authentication(
+            extra_origins=origins
+        )
 
-    async def mount(self, browser_id: UUID, state: BrowserState) -> None:
-        self._validate(state)
-        await self._store(browser_id).restore(state)
+    async def mount_authentication(
+        self, browser_id: UUID, state: AuthenticationState
+    ) -> None:
+        for origin in state.origins:
+            _validate_origin(origin.origin)
+        await self._store(browser_id).restore_authentication(state)
+
+    async def capture_browser(self, browser_id: UUID) -> BrowserState:
+        return await self._store(browser_id).capture_browser()
+
+    async def mount_browser(self, browser_id: UUID, state: BrowserState) -> None:
+        self._validate_browser(state)
+        await self._store(browser_id).restore_browser(state)
 
     def _store(self, browser_id: UUID) -> BrowserStateStore:
         # Raises BrowserNotFoundException for an id the worker does not run.
         return self._store_factory(self._browsers.upstream_cdp_url(browser_id))
 
-    def _validate(self, state: BrowserState) -> None:
+    def _validate_browser(self, state: BrowserState) -> None:
         max_tabs = self._settings.browser_state_max_tabs
         if len(state.tabs) > max_tabs:
             raise BrowserStateInvalidException(
@@ -61,8 +76,6 @@ class BrowserStateService:
             raise BrowserStateInvalidException(
                 "active_tab_index does not point at one of the tabs"
             )
-        for origin in state.authentication.origins:
-            _validate_origin(origin.origin)
 
 
 def _validate_tab_url(url: str) -> None:

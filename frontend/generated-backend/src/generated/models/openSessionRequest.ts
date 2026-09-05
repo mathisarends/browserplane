@@ -4,6 +4,8 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
+import type { AuthenticationStateSchema } from "./authenticationStateSchema";
+import type { BrowserStateSchema } from "./browserStateSchema";
 
 export interface OpenSessionRequest {
   owner_id: string;
@@ -12,4 +14,6 @@ export interface OpenSessionRequest {
    * @exclusiveMinimum 0
    */
   ttl_seconds?: number;
+  authentication_state?: AuthenticationStateSchema | null;
+  browser_state?: BrowserStateSchema | null;
 }

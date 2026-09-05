@@ -114,6 +114,22 @@ infrastructure layer imports `generated.data_plane` instead of hand-writing
 requests.
 `./scripts/generate_http_clients.sh --check` flags a stale client.
 
+## Session state
+
+Authentication and browser UI state are separate documents:
+
+- `authentication_state` contains cookies and origin-localStorage and can be
+  reused as a browser profile.
+- `browser_state` contains tabs, the active-tab index, scroll positions and
+  per-tab sessionStorage.
+
+`POST /api/v1/sessions` accepts either or both documents. Authentication is
+mounted before browser state, so restored tabs navigate with the supplied
+login. A running session also exposes each document independently at
+`/api/v1/sessions/{id}/authentication-state` and
+`/api/v1/sessions/{id}/browser-state` via `GET` and `PUT`. Suspend/resume keeps
+both documents, but stores them separately.
+
 ## Backend protocol
 
 The BrowserTunnel WebSocket uses JSON-RPC 2.0:
