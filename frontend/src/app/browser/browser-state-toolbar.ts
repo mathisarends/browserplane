@@ -89,10 +89,10 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       display: grid;
       grid-template-columns: minmax(190px, auto) minmax(0, 1fr);
       align-items: center;
-      gap: 10px 18px;
-      padding: 9px 12px;
-      background: #131820;
-      border-bottom: 1px solid #29313d;
+      gap: 8px 16px;
+      padding: 8px 10px;
+      background: #121318;
+      border-top: 1px solid #292b31;
     }
     .state-intro {
       display: flex;
@@ -106,13 +106,13 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       min-width: 0;
     }
     .state-intro strong {
-      color: #c6cfdd;
+      color: #e0e2e6;
       font-size: 0.75rem;
       font-weight: 650;
     }
     .state-intro small {
       overflow: hidden;
-      color: #6f7b8d;
+      color: #747882;
       font-size: 0.65rem;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -123,10 +123,11 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       flex: none;
       width: 30px;
       height: 30px;
-      color: #84a9fa;
-      background: rgb(83 123 209 / 12%);
-      border: 1px solid rgb(102 145 235 / 22%);
-      border-radius: 8px;
+      color: #b9bec7;
+      background: #1b1d22;
+      border: 1px solid #30333a;
+      border-radius: 999px;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
     }
     .state-icon svg {
       width: 17px;
@@ -146,7 +147,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
     button,
     select {
       min-height: 32px;
-      border-radius: 8px;
+      border-radius: 999px;
     }
     button {
       display: inline-flex;
@@ -154,18 +155,18 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       justify-content: center;
       gap: 7px;
       padding: 0 11px;
-      color: #b7c1d0;
+      color: #b9bdc5;
       font-size: 0.7rem;
       font-weight: 650;
-      background: #1c222c;
-      border: 1px solid #303947;
+      background: #1c1e23;
+      border: 1px solid #303238;
       cursor: pointer;
       white-space: nowrap;
     }
     button:hover:not(:disabled) {
       color: #eef3fc;
-      background: #252d39;
-      border-color: #3b4759;
+      background: #292b30;
+      border-color: #3a3d44;
     }
     button:focus-visible,
     select:focus-visible {
@@ -186,19 +187,20 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       stroke-linejoin: round;
     }
     .capture-button {
-      color: #c7d7f7;
-      background: rgb(73 108 181 / 16%);
-      border-color: rgb(101 144 231 / 28%);
+      color: #d6d8dd;
+      background: #22242a;
+      border-color: #34373e;
     }
     .mount-button:not(:disabled) {
-      color: #07110b;
-      background: #85d69b;
-      border-color: #85d69b;
+      color: #131417;
+      background: #eceef1;
+      border-color: #eceef1;
+      box-shadow: 0 1px 5px rgb(0 0 0 / 24%);
     }
     .mount-button:hover:not(:disabled) {
-      color: #061009;
-      background: #9ae4ad;
-      border-color: #9ae4ad;
+      color: #0d0e10;
+      background: #fff;
+      border-color: #fff;
     }
     .snapshot-picker {
       min-width: 0;
@@ -206,10 +208,10 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
     select {
       width: 100%;
       padding: 0 30px 0 10px;
-      color: #aeb8c7;
+      color: #b8bcc4;
       font-size: 0.7rem;
-      background: #0e131a;
-      border: 1px solid #303947;
+      background: #17191d;
+      border: 1px solid #303238;
       outline: none;
     }
     select:disabled {
