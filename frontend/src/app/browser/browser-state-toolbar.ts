@@ -8,135 +8,239 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
 @Component({
   selector: "app-browser-state-toolbar",
   template: `
-    <section class="state-toolbar" aria-label="Browserzustand verwalten">
-      <div class="state-intro">
-        <span class="state-icon" aria-hidden="true">
-          <svg viewBox="0 0 20 20">
-            <path d="M10 2.8 16 6v8l-6 3.2L4 14V6l6-3.2Z" />
-            <path d="m4.4 6.2 5.6 3 5.6-3M10 9.2v7.4" />
-          </svg>
-        </span>
-        <span>
-          <strong>Browser State</strong>
-          <small>Auth, Tabs &amp; Scroll · temporär in diesem Tab</small>
-        </span>
-      </div>
+    <div class="state-bar" aria-label="Browserzustand">
+      <button
+        class="state-trigger"
+        type="button"
+        [attr.aria-expanded]="expanded()"
+        (click)="toggle()"
+      >
+        <i class="state-dot" [attr.data-state]="session.connection()" aria-hidden="true"></i>
+        <span>State · {{ selectedSnapshot()?.name ?? "Default" }}</span>
+        <svg viewBox="0 0 16 16" aria-hidden="true" [class.open]="expanded()">
+          <path d="m5 6 3 3 3-3" />
+        </svg>
+      </button>
 
-      <div class="state-actions">
-        <button
-          class="capture-button"
-          type="button"
-          [disabled]="!session.sessionId() || !!operation()"
-          (click)="capture()"
-        >
-          @if (operation() === "capture") {
-            <i class="spinner" aria-hidden="true"></i> Speichert …
-          } @else {
+      <span class="bar-status" [attr.data-tone]="notice()?.tone">
+        @if (operation()) {
+          <i class="spinner" aria-hidden="true"></i
+          >{{ operation() === "capture" ? "Speichert" : "Mountet" }}
+        } @else if (notice(); as currentNotice) {
+          {{ currentNotice.text }}
+        } @else {
+          {{ vault.snapshots().length }} gespeichert
+        }
+      </span>
+    </div>
+
+    @if (expanded()) {
+      <section class="state-popover" aria-label="Browser State verwalten">
+        <header>
+          <span>
+            <strong>Browser State</strong>
+            <small>Authentication, Tabs und Scrollposition · nur in diesem Tab</small>
+          </span>
+          <button
+            class="close-button"
+            type="button"
+            aria-label="Browser-State-Menü schließen"
+            (click)="expanded.set(false)"
+          >
+            ×
+          </button>
+        </header>
+
+        <div class="state-actions">
+          <button
+            class="capture-button"
+            type="button"
+            [disabled]="!session.sessionId() || !!operation()"
+            (click)="capture()"
+          >
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <path d="M10 3v9m0 0 3-3m-3 3L7 9" />
               <path d="M4 14v2h12v-2" />
             </svg>
             Zustand sichern
-          }
-        </button>
+          </button>
 
-        <label class="snapshot-picker">
-          <span class="visually-hidden">Gespeicherten Snapshot auswählen</span>
-          <select
-            [value]="selectedSnapshotId()"
-            [disabled]="vault.snapshots().length === 0 || !!operation()"
-            (change)="selectedSnapshotId.set($any($event.target).value)"
+          <label class="snapshot-picker">
+            <span class="visually-hidden">Gespeicherten Snapshot auswählen</span>
+            <select
+              [value]="selectedSnapshotId()"
+              [disabled]="vault.snapshots().length === 0 || !!operation()"
+              (change)="selectedSnapshotId.set($any($event.target).value)"
+            >
+              <option value="">Snapshot auswählen</option>
+              @for (snapshot of vault.snapshots(); track snapshot.id) {
+                <option [value]="snapshot.id">
+                  {{ snapshot.name }} · {{ snapshotTime(snapshot.createdAt) }}
+                </option>
+              }
+            </select>
+          </label>
+
+          <button
+            class="mount-button"
+            type="button"
+            [disabled]="!session.sessionId() || !selectedSnapshotId() || !!operation()"
+            (click)="mount()"
           >
-            <option value="">Snapshot auswählen</option>
-            @for (snapshot of vault.snapshots(); track snapshot.id) {
-              <option [value]="snapshot.id">
-                {{ snapshot.name }} · {{ snapshotTime(snapshot.createdAt) }}
-              </option>
-            }
-          </select>
-        </label>
-
-        <button
-          class="mount-button"
-          type="button"
-          [disabled]="!session.sessionId() || !selectedSnapshotId() || !!operation()"
-          (click)="mount()"
-        >
-          @if (operation() === "mount") {
-            <i class="spinner" aria-hidden="true"></i> Mountet …
-          } @else {
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <path d="M10 17V8m0 0 3 3m-3-3-3 3" />
               <path d="M4 6V4h12v2" />
             </svg>
             Mounten
-          }
-        </button>
-      </div>
-
-      @if (notice(); as currentNotice) {
-        <div class="state-notice" [attr.data-tone]="currentNotice.tone" role="status">
-          <i aria-hidden="true"></i>{{ currentNotice.text }}
+          </button>
         </div>
-      }
-    </section>
+
+        @if (notice(); as currentNotice) {
+          <div class="popover-notice" [attr.data-tone]="currentNotice.tone" role="status">
+            <i aria-hidden="true"></i>{{ currentNotice.text }}
+          </div>
+        }
+      </section>
+    }
   `,
   styles: `
     :host {
+      position: relative;
+      z-index: 12;
       display: block;
     }
-    .state-toolbar {
-      display: grid;
-      grid-template-columns: minmax(190px, auto) minmax(0, 1fr);
-      align-items: center;
-      gap: 8px 16px;
-      padding: 8px 10px;
-      background: #121318;
-      border-top: 1px solid #292b31;
-    }
-    .state-intro {
+    .state-bar {
       display: flex;
       align-items: center;
-      gap: 9px;
+      justify-content: space-between;
+      gap: 12px;
+      height: 30px;
+      padding: 0 8px;
+      color: #747982;
+      font-size: 0.68rem;
+      background: #101116;
+      border-top: 1px solid #25272d;
+    }
+    .state-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       min-width: 0;
+      height: 24px;
+      padding: 0 5px;
+      color: #9297a0;
+      font-size: inherit;
+      background: transparent;
+      border: 0;
+      border-radius: 5px;
+      cursor: pointer;
     }
-    .state-intro > span:last-child {
-      display: grid;
-      gap: 2px;
-      min-width: 0;
+    .state-trigger:hover {
+      color: #d7d9de;
+      background: #1b1d22;
     }
-    .state-intro strong {
-      color: #e0e2e6;
-      font-size: 0.75rem;
-      font-weight: 650;
+    .state-trigger:focus-visible,
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid #79a4ff;
+      outline-offset: 1px;
     }
-    .state-intro small {
+    .state-trigger span {
       overflow: hidden;
-      color: #747882;
-      font-size: 0.65rem;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .state-icon {
+    .state-trigger svg {
+      flex: none;
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentcolor;
+      stroke-width: 1.5;
+      transition: transform 180ms ease;
+    }
+    .state-trigger svg.open {
+      transform: rotate(180deg);
+    }
+    .state-dot {
+      flex: none;
+      width: 6px;
+      height: 6px;
+      background: #c69a4b;
+      border-radius: 50%;
+    }
+    .state-dot[data-state="connected"] {
+      background: #65b879;
+    }
+    .state-dot[data-state="disconnected"] {
+      background: #cb6962;
+    }
+    .bar-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      color: #60656e;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bar-status[data-tone="success"] {
+      color: #73a981;
+    }
+    .bar-status[data-tone="error"] {
+      color: #c9756e;
+    }
+    .state-popover {
+      position: absolute;
+      right: 8px;
+      bottom: calc(100% + 6px);
+      left: 8px;
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+      background: rgb(20 21 25 / 97%);
+      border: 1px solid #303238;
+      border-radius: 12px;
+      box-shadow: 0 18px 50px rgb(0 0 0 / 48%);
+      backdrop-filter: blur(18px);
+      animation: popover-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .state-popover header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .state-popover header > span {
+      display: grid;
+      gap: 3px;
+    }
+    .state-popover strong {
+      color: #e3e5e8;
+      font-size: 0.78rem;
+      font-weight: 650;
+    }
+    .state-popover small {
+      color: #747982;
+      font-size: 0.68rem;
+    }
+    .close-button {
       display: grid;
       place-items: center;
       flex: none;
-      width: 30px;
-      height: 30px;
-      color: #b9bec7;
-      background: #1b1d22;
-      border: 1px solid #30333a;
-      border-radius: 999px;
-      box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+      width: 24px;
+      height: 24px;
+      padding: 0 0 2px;
+      color: #8a8f98;
+      font-size: 1rem;
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    .state-icon svg {
-      width: 17px;
-      height: 17px;
-      fill: none;
-      stroke: currentcolor;
-      stroke-width: 1.35;
-      stroke-linecap: round;
-      stroke-linejoin: round;
+    .close-button:hover {
+      color: #f1f2f4;
+      background: #292b30;
     }
     .state-actions {
       display: grid;
@@ -144,40 +248,35 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       gap: 7px;
       min-width: 0;
     }
-    button,
+    .state-actions button,
     select {
       min-height: 32px;
-      border-radius: 999px;
+      border-radius: 8px;
     }
-    button {
+    .state-actions button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 7px;
       padding: 0 11px;
-      color: #b9bdc5;
+      color: #c2c5cb;
       font-size: 0.7rem;
       font-weight: 650;
-      background: #1c1e23;
-      border: 1px solid #303238;
+      background: #22242a;
+      border: 1px solid #34373e;
       cursor: pointer;
       white-space: nowrap;
     }
-    button:hover:not(:disabled) {
-      color: #eef3fc;
-      background: #292b30;
-      border-color: #3a3d44;
+    .state-actions button:hover:not(:disabled) {
+      color: #f2f3f5;
+      background: #2b2d33;
+      border-color: #40434a;
     }
-    button:focus-visible,
-    select:focus-visible {
-      outline: 2px solid #79a4ff;
-      outline-offset: 1px;
-    }
-    button:disabled {
-      opacity: 0.45;
+    .state-actions button:disabled {
+      opacity: 0.42;
       cursor: default;
     }
-    button svg {
+    .state-actions button svg {
       width: 15px;
       height: 15px;
       fill: none;
@@ -186,16 +285,10 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-    .capture-button {
-      color: #d6d8dd;
-      background: #22242a;
-      border-color: #34373e;
-    }
     .mount-button:not(:disabled) {
-      color: #131417;
+      color: #151619;
       background: #eceef1;
       border-color: #eceef1;
-      box-shadow: 0 1px 5px rgb(0 0 0 / 24%);
     }
     .mount-button:hover:not(:disabled) {
       color: #0d0e10;
@@ -215,28 +308,27 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       outline: none;
     }
     select:disabled {
-      color: #596474;
+      color: #585d66;
     }
-    .state-notice {
-      grid-column: 2;
+    .popover-notice {
       display: flex;
       align-items: center;
       gap: 7px;
-      color: #91d4a3;
+      color: #79ad86;
       font-size: 0.68rem;
     }
-    .state-notice i {
+    .popover-notice i {
       width: 6px;
       height: 6px;
       background: currentcolor;
       border-radius: 50%;
     }
-    .state-notice[data-tone="error"] {
-      color: #ef8d83;
+    .popover-notice[data-tone="error"] {
+      color: #cf776f;
     }
     .spinner {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border: 1.5px solid currentcolor;
       border-right-color: transparent;
       border-radius: 50%;
@@ -258,18 +350,17 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
         transform: rotate(360deg);
       }
     }
-    @media (max-width: 760px) {
-      .state-toolbar {
-        grid-template-columns: minmax(0, 1fr);
+    @keyframes popover-in {
+      from {
+        opacity: 0;
+        transform: translateY(5px) scale(0.99);
       }
-      .state-actions {
-        grid-template-columns: auto minmax(120px, 1fr) auto;
-      }
-      .state-notice {
-        grid-column: 1;
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
       }
     }
-    @media (max-width: 500px) {
+    @media (max-width: 560px) {
       .state-actions {
         grid-template-columns: 1fr 1fr;
       }
@@ -277,12 +368,21 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
         grid-column: 1 / -1;
         grid-row: 1;
       }
-      .state-intro small {
-        white-space: normal;
-        line-height: 1.25;
+      .state-popover {
+        right: 5px;
+        left: 5px;
+      }
+      .bar-status {
+        display: none;
       }
     }
     @media (prefers-reduced-motion: reduce) {
+      .state-trigger svg {
+        transition: none;
+      }
+      .state-popover {
+        animation: none;
+      }
       .spinner {
         animation-duration: 1.6s;
       }
@@ -294,12 +394,20 @@ export class BrowserStateToolbar {
   readonly position = input.required<number>();
   protected readonly session = inject(BrowserSession);
   protected readonly vault = inject(BrowserStateVault);
+  protected readonly expanded = signal(false);
   protected readonly operation = signal<Operation | undefined>(undefined);
   protected readonly selectedSnapshotId = signal("");
   protected readonly notice = signal<Notice | undefined>(undefined);
+  protected readonly selectedSnapshot = computed(() =>
+    this.vault.snapshots().find(({ id }) => id === this.selectedSnapshotId()),
+  );
   protected readonly sourceLabel = computed(
     () => this.session.browserId() ?? `Session ${this.position().toString().padStart(2, "0")}`,
   );
+
+  protected toggle(): void {
+    this.expanded.update((value) => !value);
+  }
 
   protected async capture(): Promise<void> {
     const sessionId = this.session.sessionId();
@@ -309,10 +417,7 @@ export class BrowserStateToolbar {
     try {
       const snapshot = await this.vault.capture(sessionId, this.sourceLabel());
       this.selectedSnapshotId.set(snapshot.id);
-      this.notice.set({
-        tone: "success",
-        text: `${snapshot.name} inklusive Authentication gespeichert`,
-      });
+      this.notice.set({ tone: "success", text: `${snapshot.name} gespeichert` });
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {
@@ -329,10 +434,8 @@ export class BrowserStateToolbar {
     try {
       const snapshot = await this.vault.mount(sessionId, snapshotId);
       await this.session.refreshTabs();
-      this.notice.set({
-        tone: "success",
-        text: `${snapshot.name} erfolgreich auf diesen Browser gemountet`,
-      });
+      this.notice.set({ tone: "success", text: `${snapshot.name} gemountet` });
+      this.expanded.set(false);
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {

@@ -220,7 +220,7 @@ import { BrowserPanel } from "./browser/browser-panel";
     .gallery-dots {
       position: absolute;
       z-index: 10;
-      bottom: 49px;
+      bottom: 38px;
       left: 50%;
       display: flex;
       justify-content: center;
@@ -367,7 +367,7 @@ import { BrowserPanel } from "./browser/browser-panel";
         right: 6px;
       }
       .gallery-dots {
-        bottom: 45px;
+        bottom: 36px;
       }
       .browser-stage[data-view="grid"] .browser-track {
         grid-template-columns: minmax(0, 1fr);
