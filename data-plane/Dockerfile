@@ -11,7 +11,7 @@ COPY generated/pyproject.toml generated/pyproject.toml
 RUN uv sync --frozen --no-dev --package data-plane --no-install-project
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends chromium \
+    && apt-get install -y --no-install-recommends chromium ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 COPY data-plane ./data-plane
