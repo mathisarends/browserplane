@@ -47,7 +47,9 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             aria-label="Close browser state menu"
             (click)="expanded.set(false)"
           >
-            ×
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m4.5 4.5 7 7M11.5 4.5l-7 7" />
+            </svg>
           </button>
         </header>
 
@@ -59,8 +61,8 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             (click)="capture()"
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 3v9m0 0 3-3m-3 3L7 9" />
-              <path d="M4 14v2h12v-2" />
+              <path d="M10 3.5v7.6m0 0 3.2-3.1M10 11.1 6.8 8" />
+              <path d="M4.5 14.2v2.3h11v-2.3" />
             </svg>
             Save state
           </button>
@@ -69,16 +71,22 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             <span class="visually-hidden">Select saved snapshot</span>
             <select
               [value]="selectedSnapshotId()"
+              [attr.data-empty]="!selectedSnapshotId()"
               [disabled]="vault.snapshots().length === 0 || !!operation()"
               (change)="selectedSnapshotId.set($any($event.target).value)"
             >
-              <option value="">Select snapshot</option>
+              <option value="">
+                {{ vault.snapshots().length ? "Select snapshot" : "No saved snapshots" }}
+              </option>
               @for (snapshot of vault.snapshots(); track snapshot.id) {
                 <option [value]="snapshot.id">
                   {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
                 </option>
               }
             </select>
+            <svg class="picker-chevron" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="m5 6.5 3 3 3-3" />
+            </svg>
           </label>
 
           <button
@@ -88,8 +96,8 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             (click)="mount()"
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 17V8m0 0 3 3m-3-3-3 3" />
-              <path d="M4 6V4h12v2" />
+              <path d="M10 11.1V3.5m0 0 3.2 3.1M10 3.5 6.8 6.6" />
+              <path d="M4.5 14.2v2.3h11v-2.3" />
             </svg>
             Mount
           </button>
@@ -198,10 +206,12 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       display: grid;
       gap: 12px;
       padding: 12px;
-      background: rgb(20 21 25 / 97%);
-      border: 1px solid #303238;
-      border-radius: 12px;
-      box-shadow: 0 18px 50px rgb(0 0 0 / 48%);
+      background: rgb(22 23 28 / 97%);
+      border: 1px solid #34363d;
+      border-radius: 13px;
+      box-shadow:
+        0 20px 56px rgb(0 0 0 / 52%),
+        inset 0 1px 0 rgb(255 255 255 / 4%);
       backdrop-filter: blur(18px);
       animation: popover-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
     }
@@ -213,16 +223,19 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
     }
     .state-popover header > span {
       display: grid;
-      gap: 3px;
+      gap: 4px;
+      min-width: 0;
     }
     .state-popover strong {
-      color: #e3e5e8;
-      font-size: 0.78rem;
+      color: #e7e9ec;
+      font-size: 0.79rem;
       font-weight: 650;
+      letter-spacing: -0.01em;
     }
     .state-popover small {
-      color: #747982;
+      color: #767b85;
       font-size: 0.68rem;
+      line-height: 1.45;
     }
     .close-button {
       display: grid;
@@ -230,17 +243,28 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       flex: none;
       width: 24px;
       height: 24px;
-      padding: 0 0 2px;
-      color: #8a8f98;
-      font-size: 1rem;
+      padding: 0;
+      margin: -2px -3px 0 0;
+      color: #7d828b;
       background: transparent;
       border: 0;
-      border-radius: 6px;
+      border-radius: 7px;
       cursor: pointer;
+      transition:
+        color 130ms ease,
+        background-color 130ms ease;
+    }
+    .close-button svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentcolor;
+      stroke-linecap: round;
+      stroke-width: 1.5;
     }
     .close-button:hover {
       color: #f1f2f4;
-      background: #292b30;
+      background: #2b2d34;
     }
     .state-actions {
       display: grid;
@@ -264,19 +288,31 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       font-weight: 650;
       background: #22242a;
       border: 1px solid #34373e;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
       cursor: pointer;
       white-space: nowrap;
+      transition:
+        color 130ms ease,
+        background-color 130ms ease,
+        border-color 130ms ease;
     }
     .state-actions button:hover:not(:disabled) {
       color: #f2f3f5;
       background: #2b2d33;
-      border-color: #40434a;
+      border-color: #43464e;
+    }
+    .state-actions button:active:not(:disabled) {
+      background: #303239;
     }
     .state-actions button:disabled {
-      opacity: 0.42;
+      color: #666b74;
+      background: #1c1e23;
+      border-color: #2b2d33;
+      box-shadow: none;
       cursor: default;
     }
     .state-actions button svg {
+      flex: none;
       width: 15px;
       height: 15px;
       fill: none;
@@ -289,26 +325,76 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       color: #151619;
       background: #eceef1;
       border-color: #eceef1;
+      box-shadow: inset 0 -1px 0 rgb(0 0 0 / 8%);
     }
     .mount-button:hover:not(:disabled) {
       color: #0d0e10;
       background: #fff;
       border-color: #fff;
     }
+    .mount-button:active:not(:disabled) {
+      background: #dfe2e6;
+      border-color: #dfe2e6;
+    }
     .snapshot-picker {
+      position: relative;
+      display: grid;
       min-width: 0;
     }
     select {
       width: 100%;
-      padding: 0 30px 0 10px;
-      color: #b8bcc4;
+      padding: 0 30px 0 11px;
+      color: #c2c6cd;
       font-size: 0.7rem;
-      background: #17191d;
-      border: 1px solid #303238;
+      background: #16181d;
+      border: 1px solid #2e3037;
+      box-shadow: inset 0 1px 2px rgb(0 0 0 / 26%);
       outline: none;
+      appearance: none;
+      cursor: pointer;
+      text-overflow: ellipsis;
+      transition:
+        background-color 130ms ease,
+        border-color 130ms ease;
+    }
+    select:hover:not(:disabled) {
+      background: #1a1c22;
+      border-color: #3b3e46;
+    }
+    select:focus {
+      border-color: #474b55;
+    }
+    select[data-empty="true"] {
+      color: #71767f;
     }
     select:disabled {
       color: #585d66;
+      background: #191b1f;
+      border-color: #2a2c32;
+      box-shadow: none;
+      cursor: default;
+    }
+    select option {
+      color: #d6d9df;
+      background: #1c1e23;
+    }
+    .picker-chevron {
+      position: absolute;
+      top: 50%;
+      right: 10px;
+      width: 13px;
+      height: 13px;
+      margin-top: -6.5px;
+      color: #71767f;
+      fill: none;
+      stroke: currentcolor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.5;
+      pointer-events: none;
+    }
+    select:disabled ~ .picker-chevron {
+      color: #4d525a;
     }
     .popover-notice {
       display: flex;
