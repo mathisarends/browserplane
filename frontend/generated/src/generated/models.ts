@@ -36,6 +36,7 @@ export type BrowserNavigationEvent = {
   loading: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
+  faviconUrl?: string | null;
   error?: string | null;
 };
 

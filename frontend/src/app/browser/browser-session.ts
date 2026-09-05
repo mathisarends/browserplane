@@ -19,6 +19,11 @@ export interface NavigationState {
   readonly canGoBack: boolean;
   readonly canGoForward: boolean;
   readonly loading: boolean;
+  readonly faviconUrl?: string | null;
+}
+
+export interface BrowserTabState extends TabResult {
+  readonly faviconUrl?: string | null;
 }
 
 export type ConnectionState = "connecting" | "connected" | "disconnected";
@@ -36,7 +41,7 @@ export class BrowserSession {
   private client?: BackendBrowserClient;
   private screencast?: WebSocket;
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
-  private readonly tabsState = signal<readonly TabResult[]>([]);
+  private readonly tabsState = signal<readonly BrowserTabState[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
   private readonly errorState = signal<string | undefined>(undefined);
@@ -229,7 +234,14 @@ export class BrowserSession {
         });
         this.tabsState.update((tabs) =>
           tabs.map((tab) =>
-            tab.id === event.tabId ? { ...tab, title: event.title, url: event.url } : tab,
+            tab.id === event.tabId
+              ? {
+                  ...tab,
+                  title: event.title,
+                  url: event.url,
+                  faviconUrl: event.faviconUrl,
+                }
+              : tab,
           ),
         );
         if (event.error) this.errorState.set(event.error);

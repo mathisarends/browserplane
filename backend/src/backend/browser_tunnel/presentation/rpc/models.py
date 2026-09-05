@@ -108,6 +108,7 @@ class BrowserNavigationEvent(RpcModel):
     loading: bool
     can_go_back: bool = Field(alias="canGoBack")
     can_go_forward: bool = Field(alias="canGoForward")
+    favicon_url: str | None = Field(default=None, alias="faviconUrl")
     error: str | None = None
 
 

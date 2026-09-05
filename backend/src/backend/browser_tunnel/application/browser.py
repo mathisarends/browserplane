@@ -87,6 +87,7 @@ class NavigationChanged:
     can_go_back: bool
     can_go_forward: bool
     error: str | None = None
+    favicon_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +129,14 @@ class BrowserNavigation(Protocol):
     async def reload(self, *, ignore_cache: bool = False) -> None: ...
 
     async def stop(self) -> None: ...
+
+
+class BrowserPageMetadata(Protocol):
+    """Read presentation-neutral metadata from the active browser page."""
+
+    async def favicon_url(self) -> str | None:
+        """Return an absolute, publicly addressable favicon URL when available."""
+        ...
 
 
 class BrowserInput(Protocol):

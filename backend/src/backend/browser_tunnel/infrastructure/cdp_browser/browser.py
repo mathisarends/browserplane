@@ -16,6 +16,9 @@ from backend.browser_tunnel.infrastructure.cdp_browser.active_target import Acti
 from backend.browser_tunnel.infrastructure.cdp_browser.clipboard import CdpClipboard
 from backend.browser_tunnel.infrastructure.cdp_browser.input import CdpInput
 from backend.browser_tunnel.infrastructure.cdp_browser.navigation import CdpNavigation
+from backend.browser_tunnel.infrastructure.cdp_browser.page_metadata import (
+    CdpPageMetadata,
+)
 from backend.browser_tunnel.infrastructure.cdp_browser.tabs import (
     CdpTabs,
     select_any_page,
@@ -37,7 +40,8 @@ class CdpBrowser(Browser):
         self._settings = settings
         self._target = ActiveTarget()
         self._event_bus = EventBus()
-        self._event_bridge = ListenerEventBridge(self._event_bus)
+        self._page_metadata = CdpPageMetadata(self._target)
+        self._event_bridge = ListenerEventBridge(self._event_bus, self._page_metadata)
         self._browser_event_forwarder = BrowserEventForwarder(self._event_bus)
         self._cursor_bridge = CursorEventBridge(self._event_bus)
         self._clipboard = CdpClipboard(self._target)

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
-import type { TabResult } from "@browsertunnel/browser-rpc-client";
+import type { BrowserTabState } from "./browser-session";
 
 @Component({
   selector: "app-browser-tab-strip",
@@ -15,7 +15,19 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
             [attr.aria-selected]="tab.active"
             (click)="activate.emit(tab.id)"
           >
-            <i aria-hidden="true"></i><span>{{ tab.title || "Neuer Tab" }}</span>
+            <span class="tab-icon" aria-hidden="true">
+              <i></i>
+              @if (tab.faviconUrl) {
+                <img
+                  [src]="tab.faviconUrl"
+                  alt=""
+                  referrerpolicy="no-referrer"
+                  (load)="$any($event.target).hidden = false"
+                  (error)="$any($event.target).hidden = true"
+                />
+              }
+            </span>
+            <span>{{ tab.title || "Neuer Tab" }}</span>
             <button
               type="button"
               class="close-tab"
@@ -81,7 +93,7 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
     }
     .browser-tab {
       display: grid;
-      grid-template-columns: 9px minmax(0, 1fr) 22px;
+      grid-template-columns: 14px minmax(0, 1fr) 22px;
       align-items: center;
       gap: 7px;
       flex: 0 1 230px;
@@ -107,14 +119,28 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
     .browser-tab:focus-visible {
       box-shadow: inset 0 0 0 1px #79a4ff;
     }
-    .browser-tab > i {
+    .tab-icon {
+      position: relative;
+      width: 14px;
+      height: 14px;
+    }
+    .tab-icon i {
+      position: absolute;
+      inset: 3.5px;
       width: 7px;
       height: 7px;
       background: #666c76;
       border-radius: 50%;
     }
-    .browser-tab[aria-selected="true"] > i {
+    .browser-tab[aria-selected="true"] .tab-icon i {
       background: #b8bdc6;
+    }
+    .tab-icon img {
+      position: absolute;
+      inset: 0;
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
     }
     .browser-tab > span {
       overflow: hidden;
@@ -178,7 +204,7 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserTabStrip {
-  readonly tabs = input.required<readonly TabResult[]>();
+  readonly tabs = input.required<readonly BrowserTabState[]>();
   readonly activate = output<string>();
   readonly close = output<string>();
   readonly create = output<void>();

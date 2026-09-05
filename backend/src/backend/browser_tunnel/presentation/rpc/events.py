@@ -36,6 +36,7 @@ def browser_event(event: DomainEvent) -> BrowserEvent:
                 loading=event.loading,
                 canGoBack=event.can_go_back,
                 canGoForward=event.can_go_forward,
+                faviconUrl=event.favicon_url,
                 error=event.error,
             )
         case CursorChanged():

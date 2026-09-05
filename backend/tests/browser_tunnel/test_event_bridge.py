@@ -39,6 +39,11 @@ class FakeListenerSource:
         await self.queues[event_name].put(event)
 
 
+class FakePageMetadata:
+    async def favicon_url(self) -> str | None:
+        return "https://example.com/favicon.ico"
+
+
 @pytest.mark.asyncio
 async def test_event_bus_dispatches_typed_events_to_subscribers() -> None:
     event_bus = EventBus()
@@ -59,7 +64,7 @@ async def test_event_bus_dispatches_typed_events_to_subscribers() -> None:
 async def test_target_bridge_owns_cdp_listener_registration() -> None:
     event_bus = EventBus()
     source = FakeListenerSource()
-    bridge = ListenerEventBridge(event_bus)
+    bridge = ListenerEventBridge(event_bus, FakePageMetadata())
     await bridge.start(cast(Client, source))
     try:
         assert source.event_names == {
