@@ -2,6 +2,13 @@ from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
+from data_plane.features.browser_state.presentation.errors import (
+    API_ERRORS as BROWSER_STATE_API_ERRORS,
+)
+from data_plane.features.browser_state.presentation.router import (
+    browser_state_router,
+)
+from data_plane.features.browser_state.provider import BrowserStateProvider
 from data_plane.features.browsers.application.service import BrowserService
 from data_plane.features.browsers.presentation.errors import (
     API_ERRORS as BROWSER_API_ERRORS,
@@ -20,8 +27,8 @@ from data_plane.presentation.api_errors import register_api_error_handlers
 from data_plane.provider import SettingsProvider
 
 API_PREFIX = "/api/v1"
-ROUTERS = (health_router, browser_router, recording_router)
-API_ERRORS = (*BROWSER_API_ERRORS, *RECORDING_API_ERRORS)
+ROUTERS = (health_router, browser_router, browser_state_router, recording_router)
+API_ERRORS = (*BROWSER_API_ERRORS, *BROWSER_STATE_API_ERRORS, *RECORDING_API_ERRORS)
 
 
 def create_app(service: BrowserService | None = None) -> FastAPI:
@@ -32,6 +39,7 @@ def create_app(service: BrowserService | None = None) -> FastAPI:
     container = make_async_container(
         SettingsProvider(),
         BrowserProvider(service),
+        BrowserStateProvider(),
         RecordingProvider(),
         HealthProvider(),
     )

@@ -10,7 +10,41 @@ from enum import StrEnum
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+
+class BrowserCookieSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str
+    value: str
+    domain: str
+    path: str
+    expires: float | None = None
+    http_only: bool = Field(False, alias="httpOnly")
+    secure: bool = False
+    same_site: str | None = Field(None, alias="sameSite")
+
+
+class StorageItemSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str
+    value: str
+
+
+class BrowserOriginStateSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    origin: str
+    local_storage: list[StorageItemSchema] = Field([], alias="localStorage")
+
+
+class AuthenticationStateSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    cookies: list[BrowserCookieSchema] = []
+    origins: list[BrowserOriginStateSchema] = []
 
 
 class BrowserAlreadyRunningError(BaseModel):
@@ -39,6 +73,43 @@ class BrowserStartupFailedError(BaseModel):
 
     code: Literal["browser_startup_failed"]
     message: str
+
+
+class BrowserStateFailedError(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    code: Literal["browser_state_failed"]
+    message: str
+
+
+class BrowserStateInvalidError(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    code: Literal["browser_state_invalid"]
+    message: str
+
+
+class ScrollPositionSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    x: int = 0
+    y: int = 0
+
+
+class BrowserTabStateSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    url: str
+    scroll: ScrollPositionSchema = {'x': 0, 'y': 0}
+    session_storage: list[StorageItemSchema] = Field([], alias="sessionStorage")
+
+
+class BrowserStateSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    tabs: list[BrowserTabStateSchema] = []
+    active_tab_index: int = 0
+    authentication: AuthenticationStateSchema = {'cookies': [], 'origins': []}
 
 
 class CreateBrowserRequest(BaseModel):
@@ -147,3 +218,7 @@ class RecordingResponse(BaseModel):
     stopped_at: datetime | None = None
     size_bytes: int | None = None
     segments: list[RecordingSegmentResponse] = []
+
+
+class CaptureBrowserStateParams(BaseModel):
+    origins: list[str] | None = None

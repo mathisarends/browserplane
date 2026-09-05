@@ -17,6 +17,10 @@ from generated.data_plane.models import (
     BrowserNotFoundError,
     BrowserResponse,
     BrowserStartupFailedError,
+    BrowserStateFailedError,
+    BrowserStateInvalidError,
+    BrowserStateSchema,
+    CaptureBrowserStateParams,
     CreateBrowserRequest,
     HTTPValidationError,
     HealthResponse,
@@ -28,7 +32,7 @@ from generated.data_plane.models import (
     RecordingNotRunningError,
     RecordingResponse,
 )
-from generated.data_plane.serialization import serialize_path
+from generated.data_plane.serialization import serialize_path, serialize_query
 
 
 class GeneratedDataPlaneClient:
@@ -319,6 +323,87 @@ class GeneratedDataPlaneClient:
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
             parsed_body = RecordingFailedError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def capture_browser_state(
+        self,
+        browser_id: UUID,
+        origins: list[str] | None = None,
+        *,
+        timeout: float | None = None,
+    ) -> BrowserStateSchema:
+        path = "/api/v1/browser/{browser_id}/state"
+        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+
+        params = CaptureBrowserStateParams(
+            origins=origins,
+        )
+        query: list[tuple[str, str]] = []
+        if params.origins is not None:
+            query.extend(serialize_query("origins", params.origins))
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        response = await self._client.request(
+            method=HttpMethods.GET,
+            url=f"{self._base_url}{path}",
+            params=query,
+            headers=headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 200:
+            return BrowserStateSchema.model_validate(response.json())
+        if response.status_code == 404:
+            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 422:
+            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 503:
+            parsed_body = BrowserStateFailedError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def mount_browser_state(
+        self,
+        browser_id: UUID,
+        body: BrowserStateSchema,
+        *,
+        timeout: float | None = None,
+    ) -> None:
+        path = "/api/v1/browser/{browser_id}/state"
+        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        json_body = TypeAdapter(BrowserStateSchema).dump_python(
+            body, mode="json", by_alias=True, exclude_none=True
+        )
+
+        response = await self._client.request(
+            method=HttpMethods.PUT,
+            url=f"{self._base_url}{path}",
+            headers=headers,
+            json=json_body,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 204:
+            return None
+        if response.status_code == 404:
+            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 422:
+            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 503:
+            parsed_body = BrowserStateFailedError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)

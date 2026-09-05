@@ -7,10 +7,17 @@ from .client import GeneratedDataPlaneClient
 from .exceptions import ApiError
 from .http_methods import HttpMethods
 from .models import (
+    AuthenticationStateSchema,
     BrowserAlreadyRunningError,
+    BrowserCookieSchema,
     BrowserNotFoundError,
+    BrowserOriginStateSchema,
     BrowserResponse,
     BrowserStartupFailedError,
+    BrowserStateFailedError,
+    BrowserStateInvalidError,
+    BrowserStateSchema,
+    BrowserTabStateSchema,
     CreateBrowserRequest,
     HTTPValidationError,
     HealthResponse,
@@ -25,15 +32,24 @@ from .models import (
     RecordingResponse,
     RecordingSegmentResponse,
     RecordingState,
+    ScrollPositionSchema,
+    StorageItemSchema,
     ValidationError,
 )
 
 __all__ = [
     "ApiError",
+    "AuthenticationStateSchema",
     "BrowserAlreadyRunningError",
+    "BrowserCookieSchema",
     "BrowserNotFoundError",
+    "BrowserOriginStateSchema",
     "BrowserResponse",
     "BrowserStartupFailedError",
+    "BrowserStateFailedError",
+    "BrowserStateInvalidError",
+    "BrowserStateSchema",
+    "BrowserTabStateSchema",
     "CreateBrowserRequest",
     "GeneratedDataPlaneClient",
     "HTTPValidationError",
@@ -50,5 +66,7 @@ __all__ = [
     "RecordingResponse",
     "RecordingSegmentResponse",
     "RecordingState",
+    "ScrollPositionSchema",
+    "StorageItemSchema",
     "ValidationError",
 ]

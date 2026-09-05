@@ -19,5 +19,7 @@ class DataPlaneSettings(BaseSettings):
     recording_frame_rate: int = Field(default=30, gt=0)
     recording_audio: bool = False
     recording_start_timeout: float = Field(default=10, gt=0)
+    browser_state_restore_timeout: float = Field(default=10, gt=0)
+    browser_state_max_tabs: int = Field(default=20, gt=0)
     startup_timeout: float = Field(default=15, gt=0)
     public_base_url: str = "ws://127.0.0.1:8000"
