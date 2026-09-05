@@ -100,7 +100,7 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Postgres, migrations, backend and data-plane workers
+# Postgres, MinIO, migrations, backend and data-plane workers
 docker compose up --build
 
 # Frontend on http://localhost:5173
@@ -117,6 +117,13 @@ uv run ruff check .  # lint
 uv run ruff format . # format
 (cd frontend && npm run build) # type-check and build
 ```
+
+Completed recording segments are stored under the `recordings/` prefix in the
+S3-compatible `browser-recordings` bucket. MinIO exposes its S3 API at
+`http://localhost:9000` and its object browser/admin console at
+`http://localhost:9001`. Development credentials default to
+`minioadmin` / `minioadmin`; override them and the bucket name with
+`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, and `MINIO_RECORDINGS_BUCKET`.
 
 `predev` regenerates schemas and clients; Vite hot-reloads and proxies `/api`
 to port 8000.

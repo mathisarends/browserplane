@@ -1,7 +1,17 @@
+x-data-plane-environment: &data-plane-environment
+  PORT: 8000
+  BUCKET_NAME: ${MINIO_RECORDINGS_BUCKET:-browser-recordings}
+  BUCKET_ENDPOINT: http://minio:9000
+  BUCKET_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+  BUCKET_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  BUCKET_PREFIX: recordings
+
 x-data-plane: &data-plane
   image: browser-provisioner-data-plane:local
-  environment:
-    - PORT=8000
+  environment: *data-plane-environment
+  depends_on:
+    minio-init:
+      condition: service_completed_successfully
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
     interval: 2s
@@ -42,6 +52,40 @@ services:
       postgres:
         condition: service_healthy
 
+  # S3 API: http://localhost:9000
+  # Object browser / admin console: http://localhost:9001
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        && mc mb --ignore-existing "local/$$MINIO_RECORDINGS_BUCKET"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_RECORDINGS_BUCKET: ${MINIO_RECORDINGS_BUCKET:-browser-recordings}
+    depends_on:
+      minio:
+        condition: service_healthy
+
   # One-shot: brings the schema up to date before the backend opens its pool.
   # Runs the backend image, which the backend service builds.
   migrate:
@@ -62,16 +106,16 @@ services:
     ports:
       - "8011:8000"
     environment:
-      - PORT=8000
-      - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8011
+      <<: *data-plane-environment
+      DATA_PLANE_PUBLIC_BASE_URL: ws://localhost:8011
 
   data-plane-2:
     <<: *data-plane
     ports:
       - "8012:8000"
     environment:
-      - PORT=8000
-      - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8012
+      <<: *data-plane-environment
+      DATA_PLANE_PUBLIC_BASE_URL: ws://localhost:8012
 
   backend:
     image: browser-provisioner-backend:local
@@ -102,3 +146,4 @@ services:
 
 volumes:
   postgres-data:
+  minio-data:

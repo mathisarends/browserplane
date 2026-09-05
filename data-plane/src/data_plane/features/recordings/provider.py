@@ -12,6 +12,7 @@ from data_plane.features.recordings.application.service import (
 from data_plane.features.recordings.infrastructure.chrome_recorder import (
     ChromeScreenRecorder,
 )
+from data_plane.infrastructure.bucket import Bucket
 from data_plane.settings import DataPlaneSettings
 
 
@@ -35,9 +36,10 @@ class RecordingProvider(Provider):
         browsers: BrowserService,
         settings: DataPlaneSettings,
         recorder_factory: RecorderFactory,
+        bucket: Bucket,
     ) -> AsyncIterator[RecordingService]:
         service = self._service or RecordingService(
-            browsers, settings, recorder_factory
+            browsers, settings, recorder_factory, bucket
         )
         try:
             yield service
