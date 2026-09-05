@@ -1,4 +1,4 @@
-from browsertunnel.application.browser import (
+from .browser import (
     Browser,
     BrowserClipboard,
     BrowserEvent,

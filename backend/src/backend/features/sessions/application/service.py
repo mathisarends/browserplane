@@ -175,10 +175,10 @@ class SessionService:
         with suppress(LeaseNotFoundException):
             await self._leases.release(session_id)
 
-    async def upstream_tunnel_url(self, session_id: UUID) -> str:
-        """Resolve where a session's control channel actually lives."""
+    async def upstream_cdp_url(self, session_id: UUID) -> str:
+        """Resolve the internal CDP stream used by the backend RPC endpoint."""
         session = await self._active_session(session_id)
-        return session.tunnel_url
+        return session.cdp_url
 
     async def upstream_screencast_url(self, session_id: UUID) -> str:
         """Resolve where a session's frame stream actually lives."""

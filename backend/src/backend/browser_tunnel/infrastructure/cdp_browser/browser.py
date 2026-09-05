@@ -5,22 +5,22 @@ from collections.abc import AsyncIterator
 from cdpify import CDPSession, Client
 from cdpify.domains.browser.types import PermissionDescriptor
 
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     Browser,
     BrowserEvent,
     BrowserTabNotFoundError,
     TabsChanged,
     TargetDetached,
 )
-from browsertunnel.infrastructure.cdp_browser.active_target import ActiveTarget
-from browsertunnel.infrastructure.cdp_browser.clipboard import CdpClipboard
-from browsertunnel.infrastructure.cdp_browser.input import CdpInput
-from browsertunnel.infrastructure.cdp_browser.navigation import CdpNavigation
-from browsertunnel.infrastructure.cdp_browser.tabs import CdpTabs, select_any_page
-from browsertunnel.infrastructure.cursor_event_bridge import CursorEventBridge
-from browsertunnel.infrastructure.events import BrowserEventForwarder, EventBus
-from browsertunnel.infrastructure.listener_event_bridge import ListenerEventBridge
-from browsertunnel.settings import BrowserSettings
+from backend.browser_tunnel.infrastructure.cdp_browser.active_target import ActiveTarget
+from backend.browser_tunnel.infrastructure.cdp_browser.clipboard import CdpClipboard
+from backend.browser_tunnel.infrastructure.cdp_browser.input import CdpInput
+from backend.browser_tunnel.infrastructure.cdp_browser.navigation import CdpNavigation
+from backend.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs, select_any_page
+from backend.browser_tunnel.infrastructure.cursor_event_bridge import CursorEventBridge
+from backend.browser_tunnel.infrastructure.events import BrowserEventForwarder, EventBus
+from backend.browser_tunnel.infrastructure.listener_event_bridge import ListenerEventBridge
+from backend.browser_tunnel.settings import BrowserSettings
 
 logger = logging.getLogger(__name__)
 

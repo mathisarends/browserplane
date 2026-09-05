@@ -26,8 +26,6 @@ class FakeProvisioner(BrowserProvisioner):
             BrowserSlot(
                 UUID(int=1),
                 "http://worker-1",
-                "ws://tunnel-1/ws",
-                "ws://worker-1/screencast",
             ),
         )
 

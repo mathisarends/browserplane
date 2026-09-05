@@ -4,7 +4,7 @@ from typing import Literal
 import pyrpckit as rpc
 from pydantic import BaseModel, ConfigDict, Field
 
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     BrowserTab,
     CursorStyle,
     KeyEventType,

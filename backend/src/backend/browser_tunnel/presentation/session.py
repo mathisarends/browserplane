@@ -7,8 +7,8 @@ import pyrpckit as rpc
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from browsertunnel.application import Browser
-from browsertunnel.presentation.rpc import (
+from backend.browser_tunnel.application import Browser
+from backend.browser_tunnel.presentation.rpc import (
     BROWSER_EVENT_METHOD,
     BROWSER_PROTOCOL,
     BrowserEvent,

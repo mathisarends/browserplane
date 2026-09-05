@@ -1,6 +1,6 @@
 from pyrpckit.schema import render_json_schema, render_openrpc
 
-from browsertunnel.presentation.rpc import BROWSER_PROTOCOL
+from backend.browser_tunnel.presentation.rpc import BROWSER_PROTOCOL
 
 
 def browser_json_schema() -> dict:

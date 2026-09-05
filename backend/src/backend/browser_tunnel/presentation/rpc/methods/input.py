@@ -2,8 +2,8 @@ from enum import StrEnum
 
 import pyrpckit as rpc
 
-from browsertunnel.application import BrowserInput
-from browsertunnel.presentation.rpc.models import (
+from backend.browser_tunnel.application import BrowserInput
+from backend.browser_tunnel.presentation.rpc.models import (
     KeyParams,
     MouseParams,
     ScrollParams,

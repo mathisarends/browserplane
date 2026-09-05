@@ -41,8 +41,8 @@ class Session:
         return self.browser.id
 
     @property
-    def tunnel_url(self) -> str:
-        return self.browser.slot.tunnel_url
+    def cdp_url(self) -> str:
+        return self.browser.slot.cdp_url
 
     @property
     def screencast_url(self) -> str:

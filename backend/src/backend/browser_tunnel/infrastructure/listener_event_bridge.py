@@ -20,7 +20,7 @@ from cdpify.domains.target.events import (
 )
 from cdpify.exceptions import CDPCommandException
 
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     BrowserEvent,
     BrowserTab,
     NavigationChanged,
@@ -28,7 +28,7 @@ from browsertunnel.application import (
     TargetCrashed,
     TargetDetached,
 )
-from browsertunnel.infrastructure.events import EventBus
+from backend.browser_tunnel.infrastructure.events import EventBus
 
 logger = logging.getLogger(__name__)
 

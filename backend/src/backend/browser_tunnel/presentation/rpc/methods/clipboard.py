@@ -2,8 +2,8 @@ from enum import StrEnum
 
 import pyrpckit as rpc
 
-from browsertunnel.application import BrowserClipboard
-from browsertunnel.presentation.rpc.models import (
+from backend.browser_tunnel.application import BrowserClipboard
+from backend.browser_tunnel.presentation.rpc.models import (
     ClipboardResult,
     TextParams,
 )

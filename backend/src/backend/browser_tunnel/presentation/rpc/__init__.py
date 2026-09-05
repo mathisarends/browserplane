@@ -1,14 +1,14 @@
 import pyrpckit as rpc
 
-from browsertunnel.presentation.rpc.events import (
+from .events import (
     BROWSER_EVENT_METHOD,
     browser_event,
 )
-from browsertunnel.presentation.rpc.methods import (
+from .methods import (
     BROWSER_RPC_METHODS,
     browser_rpc_methods,
 )
-from browsertunnel.presentation.rpc.models import (
+from .models import (
     BrowserCursorEvent,
     BrowserEvent,
     BrowserNavigationEvent,

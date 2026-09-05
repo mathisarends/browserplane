@@ -1,11 +1,11 @@
-from browsertunnel.infrastructure.cdp_browser.browser import CdpBrowser
-from browsertunnel.infrastructure.cdp_browser.clipboard import (
+from .browser import CdpBrowser
+from .clipboard import (
     CdpClipboard,
     ClipboardUnavailableError,
 )
-from browsertunnel.infrastructure.cdp_browser.input import CdpInput
-from browsertunnel.infrastructure.cdp_browser.navigation import CdpNavigation
-from browsertunnel.infrastructure.cdp_browser.tabs import CdpTabs
+from .input import CdpInput
+from .navigation import CdpNavigation
+from .tabs import CdpTabs
 
 __all__ = [
     "CdpBrowser",

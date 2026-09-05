@@ -5,8 +5,8 @@ from contextlib import suppress
 from cdpify import CDPSession
 from cdpify.domains.runtime.events import BindingCalledEvent, RuntimeEvent
 
-from browsertunnel.application import CursorChanged, CursorStyle
-from browsertunnel.infrastructure.events import EventBus
+from backend.browser_tunnel.application import CursorChanged, CursorStyle
+from backend.browser_tunnel.infrastructure.events import EventBus
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
 import json
 import logging
 
-from browsertunnel.application import BrowserClipboard
-from browsertunnel.infrastructure.cdp_browser.active_target import ActiveTarget
+from backend.browser_tunnel.application import BrowserClipboard
+from backend.browser_tunnel.infrastructure.cdp_browser.active_target import ActiveTarget
 
 logger = logging.getLogger(__name__)
 

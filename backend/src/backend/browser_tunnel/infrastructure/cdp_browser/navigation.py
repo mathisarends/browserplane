@@ -1,5 +1,5 @@
-from browsertunnel.application import BrowserNavigation
-from browsertunnel.infrastructure.cdp_browser.active_target import ActiveTarget
+from backend.browser_tunnel.application import BrowserNavigation
+from backend.browser_tunnel.infrastructure.cdp_browser.active_target import ActiveTarget
 
 
 class CdpNavigation(BrowserNavigation):

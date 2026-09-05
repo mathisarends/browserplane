@@ -1,10 +1,10 @@
 import pyrpckit as rpc
 
-from browsertunnel.application import Browser
-from browsertunnel.presentation.rpc.methods.clipboard import ClipboardMethods
-from browsertunnel.presentation.rpc.methods.input import InputMethods
-from browsertunnel.presentation.rpc.methods.navigation import NavigationMethods
-from browsertunnel.presentation.rpc.methods.tabs import TabMethods
+from backend.browser_tunnel.application import Browser
+from .clipboard import ClipboardMethods
+from .input import InputMethods
+from .navigation import NavigationMethods
+from .tabs import TabMethods
 
 BROWSER_RPC_METHODS = (
     NavigationMethods,

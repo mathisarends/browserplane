@@ -1,6 +1,6 @@
 import asyncio
 
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     BrowserEvent,
     CursorChanged,
     NavigationChanged,
@@ -8,7 +8,7 @@ from browsertunnel.application import (
     TargetCrashed,
     TargetDetached,
 )
-from browsertunnel.infrastructure.events.bus import EventBus
+from backend.browser_tunnel.infrastructure.events.bus import EventBus
 
 
 class BrowserEventForwarder:

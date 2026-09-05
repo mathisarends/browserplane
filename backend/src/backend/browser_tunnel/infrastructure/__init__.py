@@ -1,5 +1,5 @@
-from browsertunnel.infrastructure.cdp_browser import CdpBrowser
-from browsertunnel.infrastructure.cursor_event_bridge import CursorEventBridge
+from .cdp_browser import CdpBrowser
+from .cursor_event_bridge import CursorEventBridge
 
 __all__ = [
     "CdpBrowser",

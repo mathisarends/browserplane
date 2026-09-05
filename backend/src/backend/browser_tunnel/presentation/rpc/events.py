@@ -1,16 +1,16 @@
 from typing import assert_never
 
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     BrowserEvent as DomainEvent,
 )
-from browsertunnel.application import (
+from backend.browser_tunnel.application import (
     CursorChanged,
     NavigationChanged,
     TabsChanged,
     TargetCrashed,
     TargetDetached,
 )
-from browsertunnel.presentation.rpc.models import (
+from backend.browser_tunnel.presentation.rpc.models import (
     BrowserCursorEvent,
     BrowserEvent,
     BrowserNavigationEvent,

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import cast
 
-from browsertunnel.infrastructure.events.models import EventHandler
+from backend.browser_tunnel.infrastructure.events.models import EventHandler
 
 logger = logging.getLogger(__name__)
 
