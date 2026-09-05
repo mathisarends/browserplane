@@ -28,6 +28,10 @@ class BrowserSlot:
     def screencast_url(self) -> str:
         return self._websocket_url("screencast")
 
+    @property
+    def fmp4_screencast_url(self) -> str:
+        return f"{self.screencast_url}/fmp4"
+
     def _websocket_url(self, stream: str) -> str:
         parsed = urlsplit(self.data_plane_url)
         scheme = "wss" if parsed.scheme == "https" else "ws"

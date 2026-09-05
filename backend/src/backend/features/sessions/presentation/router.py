@@ -291,6 +291,20 @@ async def session_screencast(
         await proxy_stream(websocket, upstream_url, name="Screencast")
 
 
+@session_router.websocket("/sessions/{session_id}/screencast/fmp4")
+@inject
+async def session_fmp4_screencast(
+    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
+) -> None:
+    upstream_url = await _resolve(
+        websocket,
+        container,
+        lambda service: service.upstream_fmp4_screencast_url(session_id),
+    )
+    if upstream_url is not None:
+        await proxy_stream(websocket, upstream_url, name="fMP4 screencast")
+
+
 @asynccontextmanager
 async def _session_service(
     container: AsyncContainer,

@@ -16,21 +16,43 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
 @Component({
   selector: "app-browser-canvas",
   template: `
-    <canvas
-      #canvas
-      width="1600"
-      height="900"
-      tabindex="0"
-      aria-label="Browser stream"
-      [style.cursor]="session.cursor()"
-      (mousedown)="onMouseDown($event)"
-      (mousemove)="onCanvasMouseMove($event)"
-      (mouseleave)="onCanvasMouseMove($event)"
-      (contextmenu)="preventContextMenu($event)"
-      (wheel)="onWheel($event)"
-      (keydown)="onKeyDown($event)"
-      (keyup)="onKeyUp($event)"
-    ></canvas>
+    @if (session.screencastMode === "fmp4") {
+      <video
+        #video
+        [src]="session.streamUrl()"
+        autoplay
+        muted
+        playsinline
+        tabindex="0"
+        aria-label="Browser stream"
+        [style.cursor]="session.cursor()"
+        (progress)="stayLive()"
+        (timeupdate)="stayLive()"
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onCanvasMouseMove($event)"
+        (mouseleave)="onCanvasMouseMove($event)"
+        (contextmenu)="preventContextMenu($event)"
+        (wheel)="onWheel($event)"
+        (keydown)="onKeyDown($event)"
+        (keyup)="onKeyUp($event)"
+      ></video>
+    } @else {
+      <canvas
+        #canvas
+        width="1600"
+        height="900"
+        tabindex="0"
+        aria-label="Browser stream"
+        [style.cursor]="session.cursor()"
+        (mousedown)="onMouseDown($event)"
+        (mousemove)="onCanvasMouseMove($event)"
+        (mouseleave)="onCanvasMouseMove($event)"
+        (contextmenu)="preventContextMenu($event)"
+        (wheel)="onWheel($event)"
+        (keydown)="onKeyDown($event)"
+        (keyup)="onKeyUp($event)"
+      ></canvas>
+    }
   `,
   styles: `
     :host {
@@ -43,6 +65,7 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
       background: #020304;
     }
 
+    video,
     canvas {
       display: block;
       width: 100%;
@@ -53,6 +76,7 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
       object-fit: contain;
     }
 
+    video:focus-visible,
     canvas:focus-visible {
       box-shadow: inset 0 0 0 2px #6797ff;
     }
@@ -67,6 +91,7 @@ const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
 })
 export class BrowserCanvas implements OnDestroy {
   protected readonly session = inject(BrowserSession);
+  private readonly video = viewChild<ElementRef<HTMLVideoElement>>("video");
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>("canvas");
   private latestFrame?: Blob;
   private rendering = false;
@@ -92,7 +117,7 @@ export class BrowserCanvas implements OnDestroy {
 
   protected onMouseDown(event: MouseEvent): void {
     event.preventDefault();
-    this.canvas()?.nativeElement.focus();
+    this.surface()?.focus();
     const button = mouseButton(event.button);
     this.pressedButtons.set(event.button, button);
     this.flushMove();
@@ -160,7 +185,7 @@ export class BrowserCanvas implements OnDestroy {
   }
 
   protected onPaste(event: ClipboardEvent): void {
-    if (document.activeElement !== this.canvas()?.nativeElement) return;
+    if (document.activeElement !== this.surface()) return;
     event.preventDefault();
     const text = event.clipboardData?.getData("text/plain");
     if (text) void this.session.paste(text);
@@ -184,12 +209,15 @@ export class BrowserCanvas implements OnDestroy {
   }
 
   private point(event: MouseEvent | WheelEvent): MousePoint {
-    const canvas = this.canvas()?.nativeElement;
-    if (!canvas) return { x: 0, y: 0 };
-    const bounds = canvas.getBoundingClientRect();
+    const surface = this.surface();
+    if (!surface) return { x: 0, y: 0 };
+    const bounds = surface.getBoundingClientRect();
+    const width = surface instanceof HTMLVideoElement ? surface.videoWidth || 1600 : surface.width;
+    const height =
+      surface instanceof HTMLVideoElement ? surface.videoHeight || 900 : surface.height;
     return {
-      x: ((event.clientX - bounds.left) / bounds.width) * canvas.width,
-      y: ((event.clientY - bounds.top) / bounds.height) * canvas.height,
+      x: ((event.clientX - bounds.left) / bounds.width) * width,
+      y: ((event.clientY - bounds.top) / bounds.height) * height,
     };
   }
 
@@ -236,6 +264,17 @@ export class BrowserCanvas implements OnDestroy {
       isKeypad: event.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD,
       isSystemKey: event.altKey,
     });
+  }
+
+  protected stayLive(): void {
+    const video = this.video()?.nativeElement;
+    if (!video || video.buffered.length === 0) return;
+    const liveEdge = video.buffered.end(video.buffered.length - 1);
+    if (liveEdge - video.currentTime > 0.5) video.currentTime = liveEdge - 0.1;
+  }
+
+  private surface(): HTMLVideoElement | HTMLCanvasElement | undefined {
+    return this.video()?.nativeElement ?? this.canvas()?.nativeElement;
   }
 
   private async renderLatestFrame(canvas: HTMLCanvasElement): Promise<void> {

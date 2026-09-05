@@ -27,6 +27,7 @@ export interface BrowserTabState extends TabResult {
 }
 
 export type ConnectionState = "connecting" | "connected" | "disconnected";
+export type ScreencastMode = "fmp4" | "jpeg";
 
 /**
  * A backstop only: the backend releases the session when the tunnel socket
@@ -41,18 +42,25 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BackendBrowserClient;
   private screencast?: WebSocket;
+  private mediaSource?: MediaSource;
+  private sourceBuffer?: SourceBuffer;
+  private streamObjectUrl?: string;
+  private readonly pendingChunks: ArrayBuffer[] = [];
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly BrowserTabState[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
   private readonly errorState = signal<string | undefined>(undefined);
   private readonly frameState = signal<Blob | undefined>(undefined);
+  private readonly streamUrlState = signal<string | undefined>(undefined);
   private readonly cursorState = signal("default");
 
   readonly tabs = this.tabsState.asReadonly();
   readonly connection = this.connectionState.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly frame = this.frameState.asReadonly();
+  readonly streamUrl = this.streamUrlState.asReadonly();
+  readonly screencastMode: ScreencastMode = selectedScreencastMode();
   readonly cursor = this.cursorState.asReadonly();
   readonly browserId = computed(() => this.sessionState()?.browser_id);
   readonly sessionId = computed(() => this.sessionState()?.id);
@@ -94,7 +102,11 @@ export class BrowserSession {
       this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
       this.client = new BackendBrowserClient(this.transport);
       await this.transport.connect();
-      await this.connectScreencast(socketUrl(session.screencast_path));
+      if (this.screencastMode === "fmp4") {
+        await this.connectFmp4Screencast(fmp4SocketUrl(session.screencast_path));
+      } else {
+        await this.connectJpegScreencast(socketUrl(session.screencast_path));
+      }
       this.connectionState.set("connected");
       void this.receiveNotifications();
       this.tabsState.set((await this.client.browser.tab.list()).tabs);
@@ -114,6 +126,7 @@ export class BrowserSession {
     this.screencast = undefined;
     this.sessionState.set(undefined);
     this.frameState.set(undefined);
+    this.clearMediaSource();
     screencast?.close();
     await client?.close().catch(() => undefined);
     // The lease would expire on its own, but releasing it hands the browser
@@ -255,20 +268,43 @@ export class BrowserSession {
     }
   }
 
-  private async connectScreencast(url: URL): Promise<void> {
+  private async connectFmp4Screencast(url: URL): Promise<void> {
+    const mimeType = 'video/mp4; codecs="avc1.42C01E"';
+    if (!MediaSource.isTypeSupported(mimeType)) {
+      throw new Error("This browser cannot play the fMP4 screencast");
+    }
+
+    const mediaSource = new MediaSource();
+    this.mediaSource = mediaSource;
+    this.streamObjectUrl = URL.createObjectURL(mediaSource);
+    this.streamUrlState.set(this.streamObjectUrl);
+    await eventOnce(mediaSource, "sourceopen", "Media source could not be opened");
+    if (mediaSource !== this.mediaSource) return;
+    const sourceBuffer = mediaSource.addSourceBuffer(mimeType);
+    this.sourceBuffer = sourceBuffer;
+    sourceBuffer.addEventListener("updateend", () => this.appendNextChunk());
+
+    const socket = new WebSocket(url);
+    socket.binaryType = "arraybuffer";
+    this.screencast = socket;
+    await socketOpened(socket);
+    socket.addEventListener("message", (event) => {
+      if (socket === this.screencast && event.data instanceof ArrayBuffer) {
+        this.pendingChunks.push(event.data);
+        this.appendNextChunk();
+      }
+    });
+    socket.addEventListener("close", () => {
+      if (socket === this.screencast) {
+        this.reportError("Screencast connection was disconnected");
+      }
+    });
+  }
+
+  private async connectJpegScreencast(url: URL): Promise<void> {
     const socket = new WebSocket(url);
     this.screencast = socket;
-    await new Promise<void>((resolve, reject) => {
-      socket.addEventListener("open", () => resolve(), { once: true });
-      socket.addEventListener("error", () => reject(new Error("Screencast connection failed")), {
-        once: true,
-      });
-      socket.addEventListener(
-        "close",
-        () => reject(new Error("Screencast connection was disconnected")),
-        { once: true },
-      );
-    });
+    await socketOpened(socket);
     socket.addEventListener("message", (event) => {
       if (socket === this.screencast && event.data instanceof Blob) {
         this.frameState.set(event.data);
@@ -279,6 +315,27 @@ export class BrowserSession {
         this.reportError("Screencast connection was disconnected");
       }
     });
+  }
+
+  private appendNextChunk(): void {
+    const sourceBuffer = this.sourceBuffer;
+    if (!sourceBuffer || sourceBuffer.updating) return;
+    const chunk = this.pendingChunks.shift();
+    if (!chunk) return;
+    try {
+      sourceBuffer.appendBuffer(chunk);
+    } catch (error) {
+      this.reportError(error);
+    }
+  }
+
+  private clearMediaSource(): void {
+    this.sourceBuffer = undefined;
+    this.mediaSource = undefined;
+    this.pendingChunks.length = 0;
+    this.streamUrlState.set(undefined);
+    if (this.streamObjectUrl) URL.revokeObjectURL(this.streamObjectUrl);
+    this.streamObjectUrl = undefined;
   }
 }
 
@@ -316,6 +373,37 @@ function socketUrl(path: string): URL {
   const url = new URL(path, window.location.href);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   return url;
+}
+
+function fmp4SocketUrl(path: string): URL {
+  const url = socketUrl(path);
+  url.pathname = `${url.pathname.replace(/\/$/, "")}/fmp4`;
+  return url;
+}
+
+function selectedScreencastMode(): ScreencastMode {
+  return new URLSearchParams(window.location.search).get("screencast") === "jpeg" ? "jpeg" : "fmp4";
+}
+
+function socketOpened(socket: WebSocket): Promise<void> {
+  return new Promise((resolve, reject) => {
+    socket.addEventListener("open", () => resolve(), { once: true });
+    socket.addEventListener("error", () => reject(new Error("Screencast connection failed")), {
+      once: true,
+    });
+    socket.addEventListener(
+      "close",
+      () => reject(new Error("Screencast connection was disconnected")),
+      { once: true },
+    );
+  });
+}
+
+function eventOnce(target: EventTarget, eventName: string, errorMessage: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    target.addEventListener(eventName, () => resolve(), { once: true });
+    target.addEventListener("error", () => reject(new Error(errorMessage)), { once: true });
+  });
 }
 
 function openSessionError(response: openSessionResponse): string {

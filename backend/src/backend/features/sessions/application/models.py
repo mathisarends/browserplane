@@ -48,6 +48,10 @@ class Session:
     def screencast_url(self) -> str:
         return self.browser.slot.screencast_url
 
+    @property
+    def fmp4_screencast_url(self) -> str:
+        return self.browser.slot.fmp4_screencast_url
+
 
 @dataclass(frozen=True, slots=True)
 class SuspendedSession:

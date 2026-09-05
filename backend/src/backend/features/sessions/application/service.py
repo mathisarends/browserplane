@@ -208,6 +208,11 @@ class SessionService:
         session = await self._active_session(session_id)
         return session.screencast_url
 
+    async def upstream_fmp4_screencast_url(self, session_id: UUID) -> str:
+        """Resolve the encoded frame stream without replacing the raw stream."""
+        session = await self._active_session(session_id)
+        return session.fmp4_screencast_url
+
     async def _active_session(self, session_id: UUID) -> Session:
         if await self._find_suspended(session_id) is not None:
             raise SessionNotActiveException()
