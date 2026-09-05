@@ -13,6 +13,3 @@ uv run python scripts/export_openapi_schemas.py
 
 uv run httpxgen schemas/data_plane-openapi.json generated/src/generated/data_plane \
   --package-name generated.data_plane "$@"
-
-uv run httpxgen schemas/control_plane-openapi.json generated/src/generated/control_plane \
-  --package-name generated.control_plane "$@"

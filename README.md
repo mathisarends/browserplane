@@ -104,10 +104,10 @@ client that [orval](https://orval.dev) renders from
 `schemas/backend-openapi.json` (see `frontend/orval.config.ts`).
 `npm run check:generated` (from `frontend/`) flags a stale one.
 
-The typed Python clients for the data-plane and control-plane HTTP APIs are
-rendered from their OpenAPI documents into the uv workspace package
-`generated/`, so the infrastructure layer imports
-`generated.data_plane` instead of hand-writing requests.
+The typed Python client for the data-plane HTTP API is rendered from its
+OpenAPI document into the uv workspace package `generated/`, so the
+infrastructure layer imports `generated.data_plane` instead of hand-writing
+requests.
 `./scripts/generate_http_clients.sh --check` flags a stale client.
 
 ## Backend protocol

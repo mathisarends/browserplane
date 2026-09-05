@@ -7,7 +7,6 @@ requires-python = ">=3.14"
 dependencies = [
     "backend",
     "browsertunnel",
-    "control-plane",
     "data-plane",
     "generated-clients",
 ]
@@ -15,12 +14,11 @@ dependencies = [
 [tool.uv.sources]
 backend = { workspace = true }
 browsertunnel = { workspace = true }
-control-plane = { workspace = true }
 data-plane = { workspace = true }
 generated-clients = { workspace = true }
 
 [tool.uv.workspace]
-members = ["backend", "browsertunnel", "control-plane", "data-plane", "generated"]
+members = ["backend", "browsertunnel", "data-plane", "generated"]
 
 [dependency-groups]
 dev = [
@@ -57,7 +55,6 @@ select = [
 known-first-party = [
     "backend",
     "browsertunnel",
-    "control_plane",
     "data_plane",
     "generated",
 ]
@@ -66,7 +63,6 @@ known-first-party = [
 testpaths = [
     "backend/tests",
     "browsertunnel/tests",
-    "control-plane/tests",
     "data-plane/tests",
     "frontend/tests",
     "generated/tests",
@@ -77,13 +73,11 @@ pythonpath = ["."]
 source = [
     "backend/src",
     "browsertunnel/src",
-    "control-plane/src",
     "data-plane/src",
 ]
 omit = [
     "backend/tests/*",
     "browsertunnel/tests/*",
-    "control-plane/tests/*",
     "data-plane/tests/*",
     ".venv/*",
 ]
