@@ -15,6 +15,11 @@ from backend.features.browsers.presentation.errors import (
 from backend.features.browsers.provider import BrowserProvider
 from backend.features.health.presentation.router import health_router
 from backend.features.leases.provider import LeaseProvider
+from backend.features.recordings.presentation.errors import (
+    API_ERRORS as RECORDING_API_ERRORS,
+)
+from backend.features.recordings.presentation.router import recording_router
+from backend.features.recordings.provider import RecordingProvider
 from backend.features.sessions.application.ports import (
     AuthenticationStateSnapshotRepository,
     BrowserStateGateway,
@@ -26,6 +31,7 @@ from backend.features.sessions.presentation.errors import (
 )
 from backend.features.sessions.presentation.router import session_router
 from backend.features.sessions.provider import SessionProvider
+from backend.infrastructure.bucket.provider import BucketProvider
 from backend.infrastructure.provider import DatabaseProvider
 from backend.lifespan import lifespan
 from backend.presentation.api_errors import register_api_error_handlers
@@ -33,8 +39,14 @@ from backend.provider import SettingsProvider
 from backend.request_logging import install_request_logging
 
 API_PREFIX = "/api/v1"
-API_ERRORS = SESSION_API_ERRORS + BROWSER_API_ERRORS
-ROUTERS = (health_router, session_router, admin_router, browser_rpc_router)
+API_ERRORS = SESSION_API_ERRORS + BROWSER_API_ERRORS + RECORDING_API_ERRORS
+ROUTERS = (
+    health_router,
+    session_router,
+    recording_router,
+    admin_router,
+    browser_rpc_router,
+)
 
 
 def create_app(
@@ -52,8 +64,10 @@ def create_app(
     register_api_error_handlers(app, API_ERRORS)
     container = make_async_container(
         SettingsProvider(),
+        BucketProvider(),
         DatabaseProvider(),
         BrowserProvider(provisioner, repository),
+        RecordingProvider(),
         LeaseProvider(),
         SessionProvider(
             suspensions, browser_state, snapshots, authentication_snapshots

@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "Minimal worker for provisioning Chromium resources and exposing CDP."
 requires-python = ">=3.14"
 dependencies = [
-    "boto3>=1.43.89",
     "cdpify[websocket]>=0.3.0",
     "dishka>=1.10.1",
     "fastapi>=0.141.1",

@@ -85,6 +85,7 @@ source = { editable = "backend" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "boto3" },
     { name = "cdpify", extra = ["websocket"] },
     { name = "dishka" },
     { name = "fastapi" },
@@ -102,6 +103,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "boto3", specifier = ">=1.43.89" },
     { name = "cdpify", extras = ["websocket"], specifier = ">=0.3.0" },
     { name = "dishka", specifier = ">=1.10.1" },
     { name = "fastapi", specifier = ">=0.141.1" },
@@ -311,7 +313,6 @@ name = "data-plane"
 version = "0.1.0"
 source = { editable = "data-plane" }
 dependencies = [
-    { name = "boto3" },
     { name = "cdpify", extra = ["websocket"] },
     { name = "dishka" },
     { name = "fastapi" },
@@ -324,7 +325,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = ">=1.43.89" },
     { name = "cdpify", extras = ["websocket"], specifier = ">=0.3.0" },
     { name = "dishka", specifier = ">=1.10.1" },
     { name = "fastapi", specifier = ">=0.141.1" },

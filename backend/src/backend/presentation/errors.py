@@ -11,6 +11,10 @@ class ApiErrorCode(StrEnum):
     BROWSER_STATE_TRANSFER_FAILED = "browser_state_transfer_failed"
     BROWSER_NOT_FOUND = "browser_not_found"
     BROWSER_PROVISIONING_FAILED = "browser_provisioning_failed"
+    RECORDING_NOT_FOUND = "recording_not_found"
+    RECORDING_ALREADY_RUNNING = "recording_already_running"
+    RECORDING_NOT_RUNNING = "recording_not_running"
+    RECORDING_TRANSFER_FAILED = "recording_transfer_failed"
 
 
 class ApiErrorResponse(BaseModel):

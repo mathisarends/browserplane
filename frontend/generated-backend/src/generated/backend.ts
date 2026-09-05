@@ -21,6 +21,11 @@ import type {
   OpenSessionResponse,
   PooledBrowserResponse,
   Readiness200,
+  RecordingAlreadyRunningError,
+  RecordingNotFoundError,
+  RecordingNotRunningError,
+  RecordingResponse,
+  RecordingTransferFailedError,
   ResumeSessionRequest,
   SessionNotActiveError,
   SessionNotFoundError,
@@ -925,6 +930,200 @@ const res = await fetch(getResumeSessionUrl(sessionId),
 
   const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as resumeSessionResponse
+}
+
+
+
+export type startRecordingResponse201 = {
+  data: RecordingResponse
+  status: 201
+}
+
+export type startRecordingResponse404 = {
+  data: BrowserNotFoundError
+  status: 404
+}
+
+export type startRecordingResponse409 = {
+  data: RecordingAlreadyRunningError
+  status: 409
+}
+
+export type startRecordingResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type startRecordingResponse503 = {
+  data: RecordingTransferFailedError
+  status: 503
+}
+
+export type startRecordingResponseSuccess = (startRecordingResponse201) & {
+  headers: Headers;
+};
+export type startRecordingResponseError = (startRecordingResponse404 | startRecordingResponse409 | startRecordingResponse422 | startRecordingResponse503) & {
+  headers: Headers;
+};
+
+export type startRecordingResponse = (startRecordingResponseSuccess | startRecordingResponseError)
+
+export const getStartRecordingUrl = (browserId: string,) => {
+
+
+
+
+  return `/api/v1/browser/${browserId}/recordings`
+}
+
+/**
+ * @summary Start Recording
+ */
+export const startRecording = async (browserId: string, options?: RequestInit): Promise<startRecordingResponse> => {
+
+  const res = await fetch(getStartRecordingUrl(browserId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: startRecordingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as startRecordingResponse
+}
+
+
+
+export type inspectRecordingResponse200 = {
+  data: RecordingResponse
+  status: 200
+}
+
+export type inspectRecordingResponse404 = {
+  data: BrowserNotFoundError | RecordingNotFoundError
+  status: 404
+}
+
+export type inspectRecordingResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type inspectRecordingResponse503 = {
+  data: RecordingTransferFailedError
+  status: 503
+}
+
+export type inspectRecordingResponseSuccess = (inspectRecordingResponse200) & {
+  headers: Headers;
+};
+export type inspectRecordingResponseError = (inspectRecordingResponse404 | inspectRecordingResponse422 | inspectRecordingResponse503) & {
+  headers: Headers;
+};
+
+export type inspectRecordingResponse = (inspectRecordingResponseSuccess | inspectRecordingResponseError)
+
+export const getInspectRecordingUrl = (browserId: string,
+    recordingId: string,) => {
+
+
+
+
+  return `/api/v1/browser/${browserId}/recordings/${recordingId}`
+}
+
+/**
+ * @summary Inspect Recording
+ */
+export const inspectRecording = async (browserId: string,
+    recordingId: string, options?: RequestInit): Promise<inspectRecordingResponse> => {
+
+  const res = await fetch(getInspectRecordingUrl(browserId,recordingId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: inspectRecordingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as inspectRecordingResponse
+}
+
+
+
+export type stopRecordingResponse200 = {
+  data: RecordingResponse
+  status: 200
+}
+
+export type stopRecordingResponse404 = {
+  data: BrowserNotFoundError | RecordingNotFoundError
+  status: 404
+}
+
+export type stopRecordingResponse409 = {
+  data: RecordingNotRunningError
+  status: 409
+}
+
+export type stopRecordingResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type stopRecordingResponse503 = {
+  data: RecordingTransferFailedError
+  status: 503
+}
+
+export type stopRecordingResponseSuccess = (stopRecordingResponse200) & {
+  headers: Headers;
+};
+export type stopRecordingResponseError = (stopRecordingResponse404 | stopRecordingResponse409 | stopRecordingResponse422 | stopRecordingResponse503) & {
+  headers: Headers;
+};
+
+export type stopRecordingResponse = (stopRecordingResponseSuccess | stopRecordingResponseError)
+
+export const getStopRecordingUrl = (browserId: string,
+    recordingId: string,) => {
+
+
+
+
+  return `/api/v1/browser/${browserId}/recordings/${recordingId}/stop`
+}
+
+/**
+ * @summary Stop Recording
+ */
+export const stopRecording = async (browserId: string,
+    recordingId: string, options?: RequestInit): Promise<stopRecordingResponse> => {
+
+  const res = await fetch(getStopRecordingUrl(browserId,recordingId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: stopRecordingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as stopRecordingResponse
 }
 
 

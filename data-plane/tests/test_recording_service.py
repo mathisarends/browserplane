@@ -13,7 +13,6 @@ from data_plane.features.recordings.application.models import (
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
 from data_plane.features.recordings.application.service import RecordingService
-from data_plane.infrastructure.bucket.port import NullBucket
 from data_plane.settings import DataPlaneSettings
 
 
@@ -65,7 +64,7 @@ async def test_service_records_the_active_tab_into_segments() -> None:
     settings = DataPlaneSettings(_env_file=None)
     browsers = BrowserService(settings, process_factory=lambda _: FakeProcess())
     recorder = FakeRecorder()
-    service = RecordingService(browsers, settings, lambda *_: recorder, NullBucket())
+    service = RecordingService(browsers, settings, lambda *_: recorder)
 
     browser = await browsers.create(uuid4())
     recording = await service.start(browser.id)

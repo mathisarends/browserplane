@@ -62,12 +62,14 @@ addresses off the wire. `application/` defines what a browser can do,
 it.
 
 **Control Plane** (`backend/src/backend/features/`) — `sessions`, `leases`,
-`browsers`, `health`. Owns the session and browser lifecycle; state documents
-live in Postgres.
+`browsers`, `recordings`, `health`. Owns the session and browser lifecycle;
+state documents live in Postgres, and completed recording files are persisted
+to object storage by the backend.
 
 **Data Plane** (`data-plane/`) — one worker per Chromium: lifecycle, CDP,
-screencast, state capture, recordings, health and capacity. Reachable only
-from the backend via `BACKEND_BROWSER_*_DATA_PLANE_URL`.
+screencast, state capture, recording capture, health and capacity. It streams
+completed recording segments to the backend and has no object-storage
+credentials. Reachable only via `BACKEND_BROWSER_*_DATA_PLANE_URL`.
 
 Live traffic uses two transports: the backend WebSocket for JSON-RPC and
 tab/navigation/cursor state, a data-plane WebSocket for binary JPEG frames.
@@ -118,8 +120,9 @@ uv run ruff format . # format
 (cd frontend && npm run build) # type-check and build
 ```
 
-Completed recording segments are stored under the `recordings/` prefix in the
-S3-compatible `browser-recordings` bucket. MinIO exposes its S3 API at
+After the backend stops a recording, it streams each completed segment from the
+data plane into the `recordings/` prefix of the S3-compatible
+`browser-recordings` bucket. MinIO exposes its S3 API at
 `http://localhost:9000` and its object browser/admin console at
 `http://localhost:9001`. Development credentials default to
 `minioadmin` / `minioadmin`; override them and the bucket name with

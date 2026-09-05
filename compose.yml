@@ -1,17 +1,9 @@
 x-data-plane-environment: &data-plane-environment
   PORT: 8000
-  BUCKET_NAME: ${MINIO_RECORDINGS_BUCKET:-browser-recordings}
-  BUCKET_ENDPOINT: http://minio:9000
-  BUCKET_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-  BUCKET_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
-  BUCKET_PREFIX: recordings
 
 x-data-plane: &data-plane
   image: browser-provisioner-data-plane:local
   environment: *data-plane-environment
-  depends_on:
-    minio-init:
-      condition: service_completed_successfully
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
     interval: 2s
@@ -127,6 +119,11 @@ services:
     environment:
       - PORT=8000
       - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
+      - BUCKET_NAME=${MINIO_RECORDINGS_BUCKET:-browser-recordings}
+      - BUCKET_ENDPOINT=http://minio:9000
+      - BUCKET_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - BUCKET_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - BUCKET_PREFIX=recordings
       # Only internal data-plane addresses are configured. RPC and live-traffic
       # endpoints exposed to the frontend belong to the backend itself.
       - BACKEND_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
@@ -137,6 +134,8 @@ services:
       data-plane-2:
         condition: service_healthy
       migrate:
+        condition: service_completed_successfully
+      minio-init:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]

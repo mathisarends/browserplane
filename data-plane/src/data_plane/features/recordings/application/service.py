@@ -3,7 +3,7 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from data_plane.features.browsers.application.service import BrowserService
@@ -21,7 +21,6 @@ from data_plane.features.recordings.application.models import (
     RecordingState,
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
-from data_plane.infrastructure.bucket import Bucket, BucketObject
 from data_plane.settings import DataPlaneSettings
 
 RecorderFactory = Callable[[str, DataPlaneSettings], ScreenRecorder]
@@ -44,12 +43,10 @@ class RecordingService:
         browsers: BrowserService,
         settings: DataPlaneSettings,
         recorder_factory: RecorderFactory,
-        bucket: Bucket,
     ) -> None:
         self._browsers = browsers
         self._settings = settings
         self._recorder_factory = recorder_factory
-        self._bucket = bucket
         self._stored: dict[UUID, StoredRecording] = {}
         self._active: UUID | None = None
         self._storage: tempfile.TemporaryDirectory[str] | None = None
@@ -85,24 +82,6 @@ class RecordingService:
                 raise RecordingNotRunningException
             try:
                 segments = await stored.recorder.stop()
-                await asyncio.gather(
-                    *(
-                        self._bucket.put(
-                            BucketObject(
-                                key=str(
-                                    PurePosixPath(
-                                        str(browser_id),
-                                        str(recording_id),
-                                        f"{segment.index}.{segment.format.value}",
-                                    )
-                                ),
-                                path=segment.path,
-                                content_type=segment.format.media_type,
-                            )
-                        )
-                        for segment in segments
-                    )
-                )
             except Exception:
                 stored.recording = replace(
                     stored.recording,

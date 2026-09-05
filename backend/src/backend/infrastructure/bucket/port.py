@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
 
-from data_plane.infrastructure.bucket.models import BucketObject
+from backend.infrastructure.bucket.models import BucketObject
 
 
 class Bucket(ABC):
     @abstractmethod
     async def put(self, item: BucketObject) -> None:
-        """Persist an object under its key."""
+        """Persist a streamed object under its key."""
 
 
 class NullBucket(Bucket):
     async def put(self, item: BucketObject) -> None:
-        return None
+        async for _ in item.content:
+            pass
