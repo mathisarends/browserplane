@@ -1,11 +1,13 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Edge API the frontend talks to instead of the control plane, data plane or browsertunnel."
+description = "Frontend-facing API that owns the browser pool, leases and live-traffic relays."
 requires-python = ">=3.14"
 dependencies = [
     "dishka>=1.10.1",
     "fastapi>=0.141.1",
+    "generated-clients",
+    "httpx2>=2.12.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
     "uvicorn[standard]>=0.35.0",
