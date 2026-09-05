@@ -9,40 +9,84 @@ reference for the core idea, not something to deploy as is.
 
 ### See it in action
 
-<video src="https://github.com/user-attachments/assets/b5fd9da7-6170-4d91-a70f-c37da632d414" controls></video>
+Focus view mirrors a single session full-width:
 
-*Sped up 1.5x.*
+![Focus view: a mirrored Wikipedia tab with tab strip, address bar, and state toolbar](static/image_2.png)
 
-As seen in the video: full clipboard support (copy/read/write round-tripped
-through CDP), full tab support (list/create/activate/close, all in sync with
-the mirrored session), and cursor shape. The cursor CDP reports has to be
-translated into a CSS cursor and played back in the frontend itself, it's
-not part of the video stream.
+Grid view keeps several leased browsers side by side:
+
+![Grid view: two mirrored browser sessions next to a create-browser tile](static/image.png)
+
+Both screenshots show real Chromium tabs running on the server, not iframes:
+full clipboard support (copy/read/write round-tripped through CDP), full tab
+support (list/create/activate/close, all in sync with the mirrored session),
+and cursor shape. The cursor CDP reports has to be translated into a CSS
+cursor and played back in the frontend itself, it's not part of the frame
+stream.
 
 ## Architecture
 
+Four layers, each with a single job:
+
 ```text
-Frontend ── HTTP/WS ──▶ Backend ── internal HTTP/CDP/WS ──▶ Data Plane ──▶ Chromium
+┌───────────────┐   HTTP + WS (JSON-RPC)   ┌──────────────────────────────┐
+│   Frontend    │ ───────────────────────▶ │           Backend            │
+│  Angular SPA  │ ◀─────────────────────── │                              │
+│  <canvas>     │   JPEG frames, events    │  ┌────────────────────────┐  │
+└───────────────┘                          │  │  Gateway               │  │
+                                           │  │  browser_tunnel        │  │
+                                           │  │  JSON-RPC + WS relay   │  │
+                                           │  └───────────┬────────────┘  │
+                                           │  ┌───────────┴────────────┐  │
+                                           │  │  Control Plane         │  │
+                                           │  │  sessions · leases ·   │  │
+                                           │  │  browsers · state      │  │
+                                           │  └───────────┬────────────┘  │
+                                           └──────────────┼───────────────┘
+                                     internal HTTP/CDP/WS │        │ SQL
+                                                          ▼        ▼
+                                    ┌──────────────────────┐  ┌──────────┐
+                                    │      Data Plane      │  │ Postgres │
+                                    │  worker per Chromium │  └──────────┘
+                                    │  lifecycle · CDP ·   │
+                                    │  screencast · state  │
+                                    └──────────┬───────────┘
+                                               ▼
+                                          ┌──────────┐
+                                          │ Chromium │
+                                          └──────────┘
 ```
 
-The frontend only ever talks to the backend. It opens a session
-(`POST /api/v1/sessions`), which leases a browser from the pool and answers
-with two backend-relative paths. The backend handles JSON-RPC itself and
-relays screencast frames from the data-plane workers, so their addresses stay
-internal.
+**Frontend** (`frontend/`) — an Angular SPA that only ever talks to the
+backend. It opens a session (`POST /api/v1/sessions`) and gets back two
+backend-relative paths: one for JSON-RPC, one for frames. The screencast is
+drawn frame by frame straight onto a `<canvas>`; there is no iframe and no
+embedded browser engine. Every DOM event on the canvas is translated into a
+CDP input command and replayed on the real tab.
 
-- The tab's screencast comes in frame by frame and gets drawn straight onto
-  the canvas. No iframe, no embedded browser engine.
-- The tab only exists on the server. Every DOM event the viewer triggers on
-  the canvas is translated into a CDP input command and replayed on the real
-  tab, so it looks like a real user interacting with it.
-- `backend/src/backend/browser_tunnel/application` defines what a browser can do,
-  `backend/src/backend/browser_tunnel/infrastructure/cdp_browser` implements
-  that over CDP, and `backend/src/backend/browser_tunnel/presentation` exposes
-  it as session-bound JSON-RPC.
-  Each layer can be swapped without touching the others.
-- The backend carries JSON-RPC commands and tab/navigation/cursor state. A
-  separate data-plane WebSocket carries binary JPEG screencast frames.
+**Gateway** (`backend/src/backend/browser_tunnel/`) — the session-bound edge
+of the backend. It speaks JSON-RPC 2.0 to the frontend, translates it to CDP,
+and relays binary screencast frames from a worker, so worker and CDP addresses
+never leave the server. Its three layers are separable:
+`application/` defines what a browser can do,
+`infrastructure/cdp_browser` implements that over CDP, and `presentation/`
+exposes it as session-bound JSON-RPC.
+
+**Control Plane** (`backend/src/backend/features/`) — owns the session and
+browser lifecycle: `sessions` (open, suspend, resume, capture and mount
+state), `leases` (who holds which browser), `browsers` (the pool provisioned
+against the workers), and `health`. State documents live in Postgres; the
+data-plane gateway moves them between worker and database.
+
+**Data Plane** (`data-plane/`) — one worker process per Chromium. It owns the
+browser lifecycle, exposes CDP, screencast frames, browser/authentication
+state capture, and video recordings over an internal HTTP API, and reports
+health and capacity. Workers are addressed only by the backend, through
+`BACKEND_BROWSER_*_DATA_PLANE_URL`.
+
+Two transports carry live traffic: the backend WebSocket carries JSON-RPC
+commands plus tab/navigation/cursor state, and a separate data-plane
+WebSocket carries the binary JPEG frames.
 
 ## Tunneled events
 
