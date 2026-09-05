@@ -28,7 +28,6 @@ admin_router = APIRouter(prefix="/admin", route_class=DishkaRoute, tags=["admin"
 async def list_pooled_browsers(
     service: FromDishka[AdminService],
 ) -> list[PooledBrowserResponse]:
-    """The whole pool, including the browsers no session can be opened on."""
     pooled = await service.list_browsers()
     return [to_pooled_browser_response(browser) for browser in pooled]
 
@@ -42,7 +41,6 @@ async def list_pooled_browsers(
 async def destroy_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
 ) -> PooledBrowserResponse:
-    """Stop the browser process. Its session, if any, is dropped with it."""
     return to_browser_response(await service.destroy_browser(browser_id))
 
 
@@ -55,7 +53,6 @@ async def destroy_pooled_browser(
 async def restart_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
 ) -> PooledBrowserResponse:
-    """Put a fresh browser behind the slot and hand it back to the pool."""
     return to_browser_response(await service.restart_browser(browser_id))
 
 
@@ -66,6 +63,5 @@ async def restart_pooled_browser(
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
 async def list_sessions(service: FromDishka[AdminService]) -> list[SessionResponse]:
-    """Active and suspended sessions in one list, newest first."""
     sessions = await service.list_sessions()
     return [to_session_response(session) for session in sessions]
