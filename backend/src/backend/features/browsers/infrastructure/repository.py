@@ -22,8 +22,6 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
             slot=BrowserSlot(
                 id=model.id,
                 data_plane_url=model.data_plane_url,
-                tunnel_url=model.tunnel_url,
-                screencast_url=model.screencast_url,
             ),
             created_at=model.created_at,
             state=BrowserState(model.state),
@@ -34,8 +32,6 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
             id=entity.id,
             created_at=entity.created_at,
             data_plane_url=entity.slot.data_plane_url,
-            tunnel_url=entity.slot.tunnel_url,
-            screencast_url=entity.slot.screencast_url,
             state=entity.state,
         )
 

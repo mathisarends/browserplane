@@ -35,8 +35,6 @@ class BrowserModel(DatabaseModel, table=True):
     __tablename__ = "browsers"
 
     data_plane_url: str
-    tunnel_url: str
-    screencast_url: str
     # Stored as plain text: the set of states still moves, and a native enum
     # type would need a migration for every new member.
     state: BrowserState = Field(sa_column=Column(String, nullable=False))
