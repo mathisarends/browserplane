@@ -24,7 +24,7 @@ from backend.features.recordings.presentation.errors import (
 from backend.features.recordings.presentation.router import recording_router
 from backend.features.sessions.application.ports import (
     AuthenticationStateSnapshotRepository,
-    BrowserStateGateway,
+    BrowserRuntime,
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
@@ -33,6 +33,7 @@ from backend.features.sessions.presentation.errors import (
     API_ERRORS as SESSION_API_ERRORS,
 )
 from backend.features.sessions.presentation.router import session_router
+from backend.infrastructure.browser_worker import BrowserWorkerProvider
 from backend.infrastructure.bucket.provider import BucketProvider
 from backend.infrastructure.database import DatabaseProvider
 from backend.lifespan import lifespan
@@ -54,7 +55,7 @@ def create_app(
     provisioner: BrowserProvisioner | None = None,
     repository: BrowserRepository | None = None,
     suspensions: SuspendedSessionRepository | None = None,
-    browser_state: BrowserStateGateway | None = None,
+    browser_state: BrowserRuntime | None = None,
     snapshots: BrowserStateSnapshotRepository | None = None,
     authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
 ) -> FastAPI:
@@ -66,6 +67,7 @@ def create_app(
     container = make_async_container(
         BucketProvider(),
         DatabaseProvider(),
+        BrowserWorkerProvider(),
         BrowserTunnelProvider(),
         BrowserProvider(provisioner, repository),
         HealthProvider(),

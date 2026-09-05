@@ -6,7 +6,7 @@ from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
-from backend.infrastructure import orm  # noqa: F401  (registers the tables)
+from backend.infrastructure.database import models  # noqa: F401
 from backend.infrastructure.database.settings import DatabaseSettings
 
 config = context.config

@@ -29,8 +29,8 @@ class SuspendedSessionRepository(ABC):
     async def delete(self, *, session_id: UUID) -> None: ...
 
 
-class BrowserStateGateway(ABC):
-    """Reads and writes a browser's state through its worker."""
+class BrowserRuntime(ABC):
+    """Access state and downloads belonging to a running browser."""
 
     @abstractmethod
     async def capture_authentication(

@@ -1,18 +1,22 @@
 from collections.abc import Sequence
 
-from httpx2 import AsyncClient
-
 from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
+from backend.infrastructure.browser_worker import BrowserWorkerClient
 from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
 
 
 class BrowserWorkerProvisioner(BrowserProvisioner):
     """Create one browser on each configured browser worker."""
 
-    def __init__(self, settings: BrowserPoolSettings) -> None:
+    def __init__(
+        self,
+        settings: BrowserPoolSettings,
+        client: BrowserWorkerClient,
+    ) -> None:
         self._settings = settings
+        self._client = client
         self._provisioned: list[BrowserSlot] = []
 
     async def provision(self) -> Sequence[BrowserSlot]:
@@ -28,14 +32,13 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
         self._provisioned.clear()
 
     async def start(self, slot: BrowserSlot) -> None:
-        async with self._client(slot) as client:
-            await client.create_browser(CreateBrowserRequest(id=slot.id))
+        await self._client.request(
+            slot.browser_worker_url,
+            lambda client: client.create_browser(CreateBrowserRequest(id=slot.id)),
+        )
 
     async def stop(self, slot: BrowserSlot) -> None:
-        async with self._client(slot) as client:
-            await client.destroy_browser()
-
-    def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
-        # The generated client closes the transport it was handed, so one client
-        # per call keeps a single worker's failure from leaking a shared pool.
-        return GeneratedBrowserWorkerClient(AsyncClient(), slot.browser_worker_url)
+        await self._client.request(
+            slot.browser_worker_url,
+            GeneratedBrowserWorkerClient.destroy_browser,
+        )

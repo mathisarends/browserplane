@@ -7,13 +7,13 @@ from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.ports import (
     AuthenticationStateSnapshotRepository,
-    BrowserStateGateway,
+    BrowserRuntime,
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.infrastructure.browser_worker_gateway import (
-    BrowserWorkerStateGateway,
+from backend.features.sessions.infrastructure.browser_worker import (
+    BrowserWorkerRuntime,
 )
 from backend.features.sessions.infrastructure.repository import (
     SqlAuthenticationStateSnapshotRepository,
@@ -21,13 +21,14 @@ from backend.features.sessions.infrastructure.repository import (
     SqlSuspendedSessionRepository,
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
+from backend.infrastructure.browser_worker import BrowserWorkerClient
 
 
 class SessionProvider(Provider):
     def __init__(
         self,
         suspensions: SuspendedSessionRepository | None = None,
-        browser_state: BrowserStateGateway | None = None,
+        browser_state: BrowserRuntime | None = None,
         snapshots: BrowserStateSnapshotRepository | None = None,
         authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
     ) -> None:
@@ -45,9 +46,9 @@ class SessionProvider(Provider):
     def suspensions(self, session: AsyncSession) -> SuspendedSessionRepository:
         return self._suspensions or SqlSuspendedSessionRepository(session)
 
-    @provide(scope=Scope.APP, provides=BrowserStateGateway)
-    def browser_state(self) -> BrowserStateGateway:
-        return self._browser_state or BrowserWorkerStateGateway()
+    @provide(scope=Scope.APP, provides=BrowserRuntime)
+    def browser_state(self, client: BrowserWorkerClient) -> BrowserRuntime:
+        return self._browser_state or BrowserWorkerRuntime(client)
 
     @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
     def snapshots(self, session: AsyncSession) -> BrowserStateSnapshotRepository:
@@ -70,7 +71,7 @@ class SessionProvider(Provider):
         suspensions: SuspendedSessionRepository,
         snapshots: BrowserStateSnapshotRepository,
         authentication_snapshots: AuthenticationStateSnapshotRepository,
-        browser_state: BrowserStateGateway,
+        browser_state: BrowserRuntime,
         settings: SessionSettings,
     ) -> SessionService:
         return SessionService(

@@ -25,7 +25,7 @@ from backend.features.sessions.application.models import (
 )
 from backend.features.sessions.application.ports import (
     AuthenticationStateSnapshotRepository,
-    BrowserStateGateway,
+    BrowserRuntime,
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
@@ -43,7 +43,7 @@ class SessionService:
         suspensions: SuspendedSessionRepository,
         snapshots: BrowserStateSnapshotRepository,
         authentication_snapshots: AuthenticationStateSnapshotRepository,
-        browser_state: BrowserStateGateway,
+        browser_state: BrowserRuntime,
         suspension_ttl: timedelta,
     ) -> None:
         self._browsers = browsers

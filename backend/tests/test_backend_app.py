@@ -13,7 +13,7 @@ from backend.features.sessions.application.models import (
     BrowserStateDocument,
     Download,
 )
-from backend.features.sessions.application.ports import BrowserStateGateway
+from backend.features.sessions.application.ports import BrowserRuntime
 from backend.features.sessions.infrastructure.in_memory_repository import (
     InMemoryAuthenticationStateSnapshotRepository,
     InMemoryBrowserStateSnapshotRepository,
@@ -46,7 +46,7 @@ class FakeProvisioner(BrowserProvisioner):
         self.stopped.append(slot.id)
 
 
-class FakeBrowserStateGateway(BrowserStateGateway):
+class FakeBrowserRuntime(BrowserRuntime):
     """Keep the captured document, the way a worker would hand it back."""
 
     def __init__(self) -> None:
@@ -91,7 +91,7 @@ class FakeBrowserStateGateway(BrowserStateGateway):
 
 
 def test_backend_serves_a_session_lifecycle() -> None:
-    state = FakeBrowserStateGateway()
+    state = FakeBrowserRuntime()
     app = create_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
@@ -162,7 +162,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
         provisioner,
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
-        FakeBrowserStateGateway(),
+        FakeBrowserRuntime(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -200,7 +200,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
 
 
 def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
-    state = FakeBrowserStateGateway()
+    state = FakeBrowserRuntime()
     app = create_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
@@ -235,7 +235,7 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
-        FakeBrowserStateGateway(),
+        FakeBrowserRuntime(),
         InMemoryBrowserStateSnapshotRepository(),
         InMemoryAuthenticationStateSnapshotRepository(),
     )
@@ -267,7 +267,7 @@ def test_a_client_finds_its_own_sessions_again() -> None:
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
-        FakeBrowserStateGateway(),
+        FakeBrowserRuntime(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()

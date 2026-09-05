@@ -11,6 +11,7 @@ from backend.features.browsers.infrastructure.browser_worker_provisioner import 
 )
 from backend.features.browsers.infrastructure.repository import SqlBrowserRepository
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
+from backend.infrastructure.browser_worker import BrowserWorkerClient
 
 
 class BrowserProvider(Provider):
@@ -28,8 +29,12 @@ class BrowserProvider(Provider):
         return BrowserPoolSettings()
 
     @provide(scope=Scope.APP, provides=BrowserProvisioner)
-    def provisioner(self, settings: BrowserPoolSettings) -> BrowserProvisioner:
-        return self._provisioner or BrowserWorkerProvisioner(settings)
+    def provisioner(
+        self,
+        settings: BrowserPoolSettings,
+        client: BrowserWorkerClient,
+    ) -> BrowserProvisioner:
+        return self._provisioner or BrowserWorkerProvisioner(settings, client)
 
     @provide(scope=Scope.REQUEST, provides=BrowserRepository)
     def repository(self, session: AsyncSession) -> BrowserRepository:

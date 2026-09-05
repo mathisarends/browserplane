@@ -11,8 +11,9 @@ from backend.features.recordings.presentation.errors import (
     RECORDING_NOT_RUNNING,
     RECORDING_TRANSFER_FAILED,
 )
+from backend.features.recordings.presentation.mapper import to_recording_response
+from backend.features.recordings.presentation.schemas import RecordingResponse
 from backend.presentation.api_errors import api_error_responses
-from generated.browser_worker import RecordingResponse
 
 recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 
@@ -31,7 +32,7 @@ async def start_recording(
     browser_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return await service.start(browser_id)
+    return to_recording_response(await service.start(browser_id))
 
 
 @recording_router.get(
@@ -48,7 +49,7 @@ async def inspect_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return await service.inspect(browser_id, recording_id)
+    return to_recording_response(await service.inspect(browser_id, recording_id))
 
 
 @recording_router.post(
@@ -66,4 +67,4 @@ async def stop_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return await service.stop(browser_id, recording_id)
+    return to_recording_response(await service.stop(browser_id, recording_id))
