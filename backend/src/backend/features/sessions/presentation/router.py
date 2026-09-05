@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncGenerator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -33,6 +34,7 @@ from backend.presentation.api_errors import api_error_responses
 from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
+logger = logging.getLogger(__name__)
 
 
 @session_router.post(
@@ -219,13 +221,17 @@ async def session_tunnel(
     )
     if cdp_url is None:
         return
-    # The control channel is the session: once it is gone, so is the frontend,
-    # and the browser belongs back in the pool.
     try:
+        logger.info("Session tunnel connected session_id=%s", session_id)
         await tunnel.serve(websocket, cdp_url)
     finally:
-        async with _session_service(container) as service:
-            await service.end(session_id)
+        # State capture is an independent HTTP operation. Keep the lease alive
+        # when this transport drops so state can still be read from the worker.
+        # DELETE /sessions/{id} or the TTL releases the browser.
+        logger.info(
+            "Session tunnel disconnected; lease remains active session_id=%s",
+            session_id,
+        )
 
 
 @session_router.websocket("/sessions/{session_id}/screencast")

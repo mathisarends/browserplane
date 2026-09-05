@@ -11,6 +11,7 @@ from backend.features.sessions.application.models import (
     BrowserStateDocument,
 )
 from backend.features.sessions.application.ports import BrowserStateGateway
+from backend.request_logging import current_request_id
 from generated.data_plane import (
     AuthenticationStateSchema,
     BrowserStateSchema,
@@ -18,6 +19,11 @@ from generated.data_plane import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _request_headers() -> dict[str, str] | None:
+    request_id = current_request_id()
+    return {"X-Request-ID": request_id} if request_id is not None else None
 
 
 class DataPlaneBrowserStateGateway(BrowserStateGateway):
@@ -31,7 +37,7 @@ class DataPlaneBrowserStateGateway(BrowserStateGateway):
         self, browser: Browser
     ) -> AuthenticationStateDocument:
         try:
-            async with AsyncClient() as http:
+            async with AsyncClient(headers=_request_headers()) as http:
                 client = GeneratedDataPlaneClient(http, browser.slot.data_plane_url)
                 state = await client.capture_authentication_state(browser.id)
         except Exception as error:
@@ -43,7 +49,7 @@ class DataPlaneBrowserStateGateway(BrowserStateGateway):
     ) -> None:
         try:
             body = AuthenticationStateSchema.model_validate(state)
-            async with AsyncClient() as http:
+            async with AsyncClient(headers=_request_headers()) as http:
                 client = GeneratedDataPlaneClient(http, browser.slot.data_plane_url)
                 await client.mount_authentication_state(browser.id, body)
         except Exception as error:
@@ -51,7 +57,7 @@ class DataPlaneBrowserStateGateway(BrowserStateGateway):
 
     async def capture_browser(self, browser: Browser) -> BrowserStateDocument:
         try:
-            async with AsyncClient() as http:
+            async with AsyncClient(headers=_request_headers()) as http:
                 client = GeneratedDataPlaneClient(http, browser.slot.data_plane_url)
                 state = await client.capture_browser_state(browser.id)
         except Exception as error:
@@ -63,7 +69,7 @@ class DataPlaneBrowserStateGateway(BrowserStateGateway):
     ) -> None:
         try:
             body = BrowserStateSchema.model_validate(state)
-            async with AsyncClient() as http:
+            async with AsyncClient(headers=_request_headers()) as http:
                 client = GeneratedDataPlaneClient(http, browser.slot.data_plane_url)
                 await client.mount_browser_state(browser.id, body)
         except Exception as error:

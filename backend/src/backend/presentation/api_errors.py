@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
@@ -8,6 +9,8 @@ from fastapi.responses import JSONResponse
 from pydantic import Field
 
 from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +58,17 @@ def _handler(
     spec: ApiErrorSpec,
 ) -> Callable[[Request, Exception], Awaitable[JSONResponse]]:
     async def handle(request: Request, error: Exception) -> JSONResponse:
+        logger.warning(
+            "API request failed request_id=%s method=%s path=%s status_code=%d "
+            "error_code=%s exception=%s message=%s",
+            getattr(request.state, "request_id", "unknown"),
+            request.method,
+            request.url.path,
+            spec.status_code,
+            spec.code,
+            type(error).__name__,
+            str(error),
+        )
         body = spec.response_model(code=spec.code, message=str(error))
         return JSONResponse(status_code=spec.status_code, content=body.model_dump())
 

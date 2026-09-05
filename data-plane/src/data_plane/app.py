@@ -25,6 +25,7 @@ from data_plane.features.recordings.provider import RecordingProvider
 from data_plane.lifespan import lifespan
 from data_plane.presentation.api_errors import register_api_error_handlers
 from data_plane.provider import SettingsProvider
+from data_plane.request_logging import install_request_logging
 
 API_PREFIX = "/api/v1"
 ROUTERS = (health_router, browser_router, browser_state_router, recording_router)
@@ -33,6 +34,7 @@ API_ERRORS = (*BROWSER_API_ERRORS, *BROWSER_STATE_API_ERRORS, *RECORDING_API_ERR
 
 def create_app(service: BrowserService | None = None) -> FastAPI:
     app = FastAPI(title="Browser Data Plane", version="0.1.0", lifespan=lifespan)
+    install_request_logging(app)
     for router in ROUTERS:
         app.include_router(router, prefix=API_PREFIX)
     register_api_error_handlers(app, API_ERRORS)

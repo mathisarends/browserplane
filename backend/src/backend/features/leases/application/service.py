@@ -1,10 +1,13 @@
 import asyncio
+import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.models import Lease
 from backend.features.leases.application.ports import BrowserAllocator, LeaseStore
+
+logger = logging.getLogger(__name__)
 
 
 class LeaseService:
@@ -35,6 +38,13 @@ class LeaseService:
                 created_at=now,
             )
             self._store.add(lease)
+            logger.info(
+                "Lease created lease_id=%s browser_id=%s owner_id=%s expires_at=%s",
+                lease.id,
+                lease.browser_id,
+                lease.owner_id,
+                lease.expires_at.isoformat(),
+            )
             return lease
 
     async def get(self, lease_id: UUID) -> Lease:
@@ -42,16 +52,33 @@ class LeaseService:
             await self._expire()
             lease = self._store.get(lease_id)
             if lease is None:
+                logger.warning(
+                    "Lease lookup failed lease_id=%s active_lease_count=%d",
+                    lease_id,
+                    len(self._store.list()),
+                )
                 raise LeaseNotFoundException()
             return lease
 
-    async def release(self, lease_id: UUID) -> None:
+    async def release(self, lease_id: UUID, *, reason: str = "requested") -> None:
         async with self._lock:
             lease = self._store.get(lease_id)
             if lease is None:
+                logger.warning(
+                    "Lease release skipped because it no longer exists "
+                    "lease_id=%s reason=%s",
+                    lease_id,
+                    reason,
+                )
                 raise LeaseNotFoundException()
             self._store.remove(lease.id)
             await self._allocator.release(lease.browser_id)
+            logger.info(
+                "Lease released lease_id=%s browser_id=%s reason=%s",
+                lease.id,
+                lease.browser_id,
+                reason,
+            )
 
     async def _expire(self) -> None:
         now = datetime.now(UTC)
@@ -59,3 +86,9 @@ class LeaseService:
             if lease.is_expired(now):
                 self._store.remove(lease.id)
                 await self._allocator.release(lease.browser_id)
+                logger.info(
+                    "Lease expired lease_id=%s browser_id=%s expires_at=%s",
+                    lease.id,
+                    lease.browser_id,
+                    lease.expires_at.isoformat(),
+                )

@@ -23,6 +23,7 @@ from backend.infrastructure.provider import DatabaseProvider
 from backend.lifespan import lifespan
 from backend.presentation.api_errors import register_api_error_handlers
 from backend.provider import SettingsProvider
+from backend.request_logging import install_request_logging
 
 API_PREFIX = "/api/v1"
 API_ERRORS = SESSION_API_ERRORS
@@ -36,6 +37,7 @@ def create_app(
     browser_state: BrowserStateGateway | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
+    install_request_logging(app)
     for router in ROUTERS:
         app.include_router(router, prefix=API_PREFIX)
     register_api_error_handlers(app, API_ERRORS)

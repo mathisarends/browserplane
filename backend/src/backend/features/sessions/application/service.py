@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -22,6 +23,8 @@ from backend.features.sessions.application.ports import (
     BrowserStateGateway,
     SuspendedSessionRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SessionService:
@@ -59,7 +62,7 @@ class SessionService:
                 await self._browser_state.mount_browser(browser, browser_state)
         except Exception:
             with suppress(LeaseNotFoundException):
-                await self._leases.release(lease.id)
+                await self._leases.release(lease.id, reason="open_state_mount_failed")
             raise
         leased = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=leased)
@@ -80,6 +83,11 @@ class SessionService:
         self, session_id: UUID
     ) -> AuthenticationStateDocument:
         session = await self._active_session(session_id)
+        logger.info(
+            "Capturing authentication state session_id=%s browser_id=%s",
+            session_id,
+            session.browser_id,
+        )
         return await self._browser_state.capture_authentication(session.browser)
 
     async def mount_authentication(
@@ -90,6 +98,11 @@ class SessionService:
 
     async def capture_browser(self, session_id: UUID) -> BrowserStateDocument:
         session = await self._active_session(session_id)
+        logger.info(
+            "Capturing browser state session_id=%s browser_id=%s",
+            session_id,
+            session.browser_id,
+        )
         return await self._browser_state.capture_browser(session.browser)
 
     async def mount_browser(
@@ -120,7 +133,7 @@ class SessionService:
                 expires_at=now + self._suspension_ttl,
             )
         )
-        await self._leases.release(session_id)
+        await self._leases.release(session_id, reason="session_suspended")
         return suspended
 
     async def resume(self, session_id: UUID, ttl: timedelta) -> Session:
@@ -146,7 +159,7 @@ class SessionService:
         except Exception:
             # The state is still stored, so the session stays resumable.
             with suppress(LeaseNotFoundException):
-                await self._leases.release(lease.id)
+                await self._leases.release(lease.id, reason="resume_state_mount_failed")
             raise
         await self._suspensions.delete(session_id=suspended.id)
         leased = await self._browsers.get(lease.browser_id)
@@ -156,22 +169,7 @@ class SessionService:
         if await self._find_suspended(session_id) is not None:
             await self._suspensions.delete(session_id=session_id)
             return
-        await self._leases.release(session_id)
-
-    async def end(self, session_id: UUID) -> None:
-        """
-        Close a session whose live connection dropped.
-
-        Nothing but the connection tells us the frontend is gone: a reload or a
-        crash never gets around to closing the session itself, and the browser
-        would stay leased until the TTL runs out. A session that is already
-        closed is the normal case here, not a failure. A suspended one is left
-        alone: its connection was meant to drop.
-        """
-        if await self._find_suspended(session_id) is not None:
-            return
-        with suppress(LeaseNotFoundException):
-            await self._leases.release(session_id)
+        await self._leases.release(session_id, reason="session_closed")
 
     async def upstream_cdp_url(self, session_id: UUID) -> str:
         """Resolve the internal CDP stream used by the backend RPC endpoint."""
