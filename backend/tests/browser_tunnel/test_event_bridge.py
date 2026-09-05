@@ -7,9 +7,9 @@ from cdpify import Client
 from cdpify.domains.target.events import TargetCrashedEvent as CdpTargetCrashedEvent
 from cdpify.domains.target.events import TargetEvent
 
-from browsertunnel.application import TargetCrashed
-from browsertunnel.infrastructure.events import EventBus
-from browsertunnel.infrastructure.listener_event_bridge import ListenerEventBridge
+from backend.browser_tunnel.application import TargetCrashed
+from backend.browser_tunnel.infrastructure.events import EventBus
+from backend.browser_tunnel.infrastructure.listener_event_bridge import ListenerEventBridge
 
 
 @dataclass(frozen=True)

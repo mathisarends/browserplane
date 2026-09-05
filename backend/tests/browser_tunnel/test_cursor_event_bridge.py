@@ -5,13 +5,13 @@ from typing import cast
 import pytest
 from cdpify import CDPSession
 
-from browsertunnel.application import CursorChanged, CursorStyle
-from browsertunnel.infrastructure.cursor_event_bridge import (
+from backend.browser_tunnel.application import CursorChanged, CursorStyle
+from backend.browser_tunnel.infrastructure.cursor_event_bridge import (
     BINDING_NAME,
     ISOLATED_WORLD,
     CursorEventBridge,
 )
-from browsertunnel.infrastructure.events import EventBus
+from backend.browser_tunnel.infrastructure.events import EventBus
 
 
 class FakePage:
