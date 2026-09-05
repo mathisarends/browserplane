@@ -4,16 +4,23 @@ version = "0.1.0"
 description = "Workspace root for the browsertunnel Python backends."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["browsertunnel", "control-plane", "data-plane", "generated-clients"]
+dependencies = [
+    "browsertunnel",
+    "control-plane",
+    "data-plane",
+    "gateway",
+    "generated-clients",
+]
 
 [tool.uv.sources]
 browsertunnel = { workspace = true }
 control-plane = { workspace = true }
 data-plane = { workspace = true }
+gateway = { workspace = true }
 generated-clients = { workspace = true }
 
 [tool.uv.workspace]
-members = ["browsertunnel", "control-plane", "data-plane", "generated"]
+members = ["browsertunnel", "control-plane", "data-plane", "gateway", "generated"]
 
 [dependency-groups]
 dev = [
@@ -47,7 +54,13 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["browsertunnel", "control_plane", "data_plane", "generated"]
+known-first-party = [
+    "browsertunnel",
+    "control_plane",
+    "data_plane",
+    "gateway",
+    "generated",
+]
 
 [tool.pytest.ini_options]
 testpaths = [
@@ -55,15 +68,22 @@ testpaths = [
     "control-plane/tests",
     "data-plane/tests",
     "frontend/tests",
+    "gateway/tests",
     "generated/tests",
 ]
 pythonpath = ["."]
 
 [tool.coverage.run]
-source = ["browsertunnel/src", "control-plane/src", "data-plane/src"]
+source = [
+    "browsertunnel/src",
+    "control-plane/src",
+    "data-plane/src",
+    "gateway/src",
+]
 omit = [
     "browsertunnel/tests/*",
     "control-plane/tests/*",
     "data-plane/tests/*",
+    "gateway/tests/*",
     ".venv/*",
 ]
