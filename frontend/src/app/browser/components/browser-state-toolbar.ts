@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { BrowserSession } from "../services/browser-session";
 import { BrowserStateVault } from "../services/browser-state-vault";
 
-type Operation = "capture" | "mount";
+type StateKind = "browser" | "authentication";
+type Operation = `${StateKind}-${"capture" | "mount"}`;
 type Notice = { readonly tone: "success" | "error"; readonly text: string };
 
 @Component({
@@ -16,7 +17,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
         (click)="toggle()"
       >
         <i class="state-dot" [attr.data-state]="session.connection()" aria-hidden="true"></i>
-        <span>State · {{ selectedSnapshot()?.name ?? "Default" }}</span>
+        <span>Saved states</span>
         <svg viewBox="0 0 16 16" aria-hidden="true" [class.open]="expanded()">
           <path d="m5 6 3 3 3-3" />
         </svg>
@@ -25,11 +26,11 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       <span class="bar-status" [attr.data-tone]="notice()?.tone">
         @if (operation()) {
           <i class="spinner" aria-hidden="true"></i
-          >{{ operation() === "capture" ? "Saving" : "Mounting" }}
+          >{{ operation()?.endsWith("capture") ? "Saving" : "Mounting" }}
         } @else if (notice(); as currentNotice) {
           {{ currentNotice.text }}
         } @else {
-          {{ vault.snapshots().length }} saved
+          {{ savedCount() }} saved
         }
       </span>
     </div>
@@ -38,8 +39,8 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       <section class="state-popover" aria-label="Manage browser state">
         <header>
           <span>
-            <strong>Browser State</strong>
-            <small>Authentication, tabs, and scroll position · saved for this browser</small>
+            <strong>Saved states</strong>
+            <small>Restore browsing and sign-in data independently.</small>
           </span>
           <button
             class="close-button"
@@ -53,54 +54,106 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
           </button>
         </header>
 
-        <div class="state-actions">
-          <button
-            class="capture-button"
-            type="button"
-            [disabled]="!session.sessionId() || !!operation()"
-            (click)="capture()"
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 3.5v7.6m0 0 3.2-3.1M10 11.1 6.8 8" />
-              <path d="M4.5 14.2v2.3h11v-2.3" />
-            </svg>
-            Save state
-          </button>
+        <div class="state-grid">
+          <article class="state-card browser-card">
+            <div class="card-heading">
+              <span class="state-icon" aria-hidden="true">B</span>
+              <span
+                ><strong>Browser State</strong><small>Tabs, active page, and scroll</small></span
+              >
+              <span class="state-count">{{ vault.browserSnapshots().length }}</span>
+            </div>
+            <div class="state-actions">
+              <button
+                type="button"
+                [disabled]="!session.sessionId() || !!operation()"
+                (click)="capture('browser')"
+              >
+                Save
+              </button>
+              <label class="snapshot-picker">
+                <span class="visually-hidden">Select browser state</span>
+                <select
+                  [value]="selectedBrowserId()"
+                  [attr.data-empty]="!selectedBrowserId()"
+                  [disabled]="!vault.browserSnapshots().length || !!operation()"
+                  (change)="selectedBrowserId.set($any($event.target).value)"
+                >
+                  <option value="">
+                    {{ vault.browserSnapshots().length ? "Select browser state" : "None saved" }}
+                  </option>
+                  @for (snapshot of vault.browserSnapshots(); track snapshot.id) {
+                    <option [value]="snapshot.id">
+                      {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
+                    </option>
+                  }
+                </select>
+                <svg class="picker-chevron" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="m5 6.5 3 3 3-3" />
+                </svg>
+              </label>
+              <button
+                class="mount-button"
+                type="button"
+                [disabled]="!session.sessionId() || !selectedBrowserId() || !!operation()"
+                (click)="mount('browser')"
+              >
+                Mount
+              </button>
+            </div>
+          </article>
 
-          <label class="snapshot-picker">
-            <span class="visually-hidden">Select saved snapshot</span>
-            <select
-              [value]="selectedSnapshotId()"
-              [attr.data-empty]="!selectedSnapshotId()"
-              [disabled]="vault.snapshots().length === 0 || !!operation()"
-              (change)="selectedSnapshotId.set($any($event.target).value)"
-            >
-              <option value="">
-                {{ vault.snapshots().length ? "Select snapshot" : "No saved snapshots" }}
-              </option>
-              @for (snapshot of vault.snapshots(); track snapshot.id) {
-                <option [value]="snapshot.id">
-                  {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
-                </option>
-              }
-            </select>
-            <svg class="picker-chevron" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="m5 6.5 3 3 3-3" />
-            </svg>
-          </label>
-
-          <button
-            class="mount-button"
-            type="button"
-            [disabled]="!session.sessionId() || !selectedSnapshotId() || !!operation()"
-            (click)="mount()"
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M10 11.1V3.5m0 0 3.2 3.1M10 3.5 6.8 6.6" />
-              <path d="M4.5 14.2v2.3h11v-2.3" />
-            </svg>
-            Mount
-          </button>
+          <article class="state-card authentication-card">
+            <div class="card-heading">
+              <span class="state-icon" aria-hidden="true">A</span>
+              <span
+                ><strong>Authentication State</strong><small>Cookies and local storage</small></span
+              >
+              <span class="state-count">{{ vault.authenticationSnapshots().length }}</span>
+            </div>
+            <div class="state-actions">
+              <button
+                type="button"
+                [disabled]="!session.sessionId() || !!operation()"
+                (click)="capture('authentication')"
+              >
+                Save
+              </button>
+              <label class="snapshot-picker">
+                <span class="visually-hidden">Select authentication state</span>
+                <select
+                  [value]="selectedAuthenticationId()"
+                  [attr.data-empty]="!selectedAuthenticationId()"
+                  [disabled]="!vault.authenticationSnapshots().length || !!operation()"
+                  (change)="selectedAuthenticationId.set($any($event.target).value)"
+                >
+                  <option value="">
+                    {{
+                      vault.authenticationSnapshots().length
+                        ? "Select authentication"
+                        : "None saved"
+                    }}
+                  </option>
+                  @for (snapshot of vault.authenticationSnapshots(); track snapshot.id) {
+                    <option [value]="snapshot.id">
+                      {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
+                    </option>
+                  }
+                </select>
+                <svg class="picker-chevron" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="m5 6.5 3 3 3-3" />
+                </svg>
+              </label>
+              <button
+                class="mount-button"
+                type="button"
+                [disabled]="!session.sessionId() || !selectedAuthenticationId() || !!operation()"
+                (click)="mount('authentication')"
+              >
+                Mount
+              </button>
+            </div>
+          </article>
         </div>
 
         @if (notice(); as currentNotice) {
@@ -267,6 +320,64 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
     .close-button:hover {
       color: #f1f2f4;
       background: #2b2d34;
+    }
+    .state-grid {
+      display: grid;
+      gap: 9px;
+    }
+    .state-card {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      background: #191b20;
+      border: 1px solid #2e3037;
+      border-radius: 10px;
+    }
+    .browser-card {
+      border-left: 2px solid #668de0;
+    }
+    .authentication-card {
+      border-left: 2px solid #b184d6;
+    }
+    .card-heading {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 9px;
+      align-items: center;
+    }
+    .card-heading > span:nth-child(2) {
+      display: grid;
+      gap: 2px;
+    }
+    .card-heading small {
+      color: #6f747d;
+      font-size: 0.62rem;
+    }
+    .state-icon {
+      display: grid;
+      place-items: center;
+      width: 25px;
+      height: 25px;
+      color: #a9c2f5;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 700;
+      background: #202b42;
+      border-radius: 7px;
+    }
+    .authentication-card .state-icon {
+      color: #d2afea;
+      background: #30243a;
+    }
+    .state-count {
+      min-width: 22px;
+      padding: 3px 6px;
+      color: #858a93;
+      font-family: var(--font-mono);
+      font-size: 0.61rem;
+      text-align: center;
+      background: #22242a;
+      border-radius: 999px;
     }
     .state-actions {
       display: grid;
@@ -484,10 +595,11 @@ export class BrowserStateToolbar {
   protected readonly vault = inject(BrowserStateVault);
   protected readonly expanded = signal(false);
   protected readonly operation = signal<Operation | undefined>(undefined);
-  protected readonly selectedSnapshotId = signal("");
+  protected readonly selectedBrowserId = signal("");
+  protected readonly selectedAuthenticationId = signal("");
   protected readonly notice = signal<Notice | undefined>(undefined);
-  protected readonly selectedSnapshot = computed(() =>
-    this.vault.snapshots().find(({ id }) => id === this.selectedSnapshotId()),
+  protected readonly savedCount = computed(
+    () => this.vault.browserSnapshots().length + this.vault.authenticationSnapshots().length,
   );
   protected readonly sourceLabel = computed(
     () => this.session.browserId() ?? `Session ${this.position().toString().padStart(2, "0")}`,
@@ -497,14 +609,18 @@ export class BrowserStateToolbar {
     this.expanded.update((value) => !value);
   }
 
-  protected async capture(): Promise<void> {
+  protected async capture(kind: StateKind): Promise<void> {
     const sessionId = this.session.sessionId();
     if (!sessionId) return;
-    this.operation.set("capture");
+    this.operation.set(`${kind}-capture`);
     this.notice.set(undefined);
     try {
-      const snapshot = await this.vault.capture(sessionId, this.sourceLabel());
-      this.selectedSnapshotId.set(snapshot.id);
+      const snapshot =
+        kind === "browser"
+          ? await this.vault.captureBrowser(sessionId, this.sourceLabel())
+          : await this.vault.captureAuthentication(sessionId, this.sourceLabel());
+      if (kind === "browser") this.selectedBrowserId.set(snapshot.id);
+      else this.selectedAuthenticationId.set(snapshot.id);
       this.notice.set({ tone: "success", text: `${snapshot.name} saved` });
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
@@ -513,17 +629,20 @@ export class BrowserStateToolbar {
     }
   }
 
-  protected async mount(): Promise<void> {
+  protected async mount(kind: StateKind): Promise<void> {
     const sessionId = this.session.sessionId();
-    const snapshotId = this.selectedSnapshotId();
+    const snapshotId =
+      kind === "browser" ? this.selectedBrowserId() : this.selectedAuthenticationId();
     if (!sessionId || !snapshotId) return;
-    this.operation.set("mount");
+    this.operation.set(`${kind}-mount`);
     this.notice.set(undefined);
     try {
-      const snapshot = await this.vault.mount(sessionId, snapshotId);
-      await this.session.refreshTabs();
+      const snapshot =
+        kind === "browser"
+          ? await this.vault.mountBrowser(sessionId, snapshotId)
+          : await this.vault.mountAuthentication(sessionId, snapshotId);
+      if (kind === "browser") await this.session.refreshTabs();
       this.notice.set({ tone: "success", text: `${snapshot.name} mounted` });
-      this.expanded.set(false);
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {
