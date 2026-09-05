@@ -35,7 +35,9 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BrowserTunnelClient;
   private screencast?: WebSocket;
-  private readonly sessionState = signal<SessionResponse | undefined>(undefined);
+  private readonly sessionState = signal<SessionResponse | undefined>(
+    undefined,
+  );
   private readonly tabsState = signal<readonly TabResult[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
@@ -78,8 +80,15 @@ export class BrowserSession {
       });
       if (response.status !== 201) throw new Error(openSessionError(response));
       const session = response.data;
+      // A session that was just opened is active, so it carries both paths;
+      // a suspended one holds no browser and leaves them empty.
+      if (!session.tunnel_path || !session.screencast_path) {
+        throw new Error("Die Session hält keinen Browser");
+      }
       this.sessionState.set(session);
-      this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
+      this.transport = new WebSocketRpcTransport(
+        socketUrl(session.tunnel_path),
+      );
       this.client = new BrowserTunnelClient(this.transport);
       await this.transport.connect();
       await this.connectScreencast(socketUrl(session.screencast_path));

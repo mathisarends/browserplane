@@ -1,0 +1,31 @@
+from abc import ABC, abstractmethod
+from uuid import UUID
+
+from backend.features.browsers.application.models import Browser
+from backend.features.sessions.application.models import (
+    BrowserStateDocument,
+    SuspendedSession,
+)
+
+
+class SuspendedSessionRepository(ABC):
+    """Persistence contract for sessions that currently hold no browser."""
+
+    @abstractmethod
+    async def save(self, *, suspended: SuspendedSession) -> SuspendedSession: ...
+
+    @abstractmethod
+    async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None: ...
+
+    @abstractmethod
+    async def delete(self, *, session_id: UUID) -> None: ...
+
+
+class BrowserStateGateway(ABC):
+    """Reads and writes a browser's state through its worker."""
+
+    @abstractmethod
+    async def capture(self, browser: Browser) -> BrowserStateDocument: ...
+
+    @abstractmethod
+    async def mount(self, browser: Browser, state: BrowserStateDocument) -> None: ...

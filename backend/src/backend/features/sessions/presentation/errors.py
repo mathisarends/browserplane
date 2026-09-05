@@ -9,7 +9,10 @@ from backend.features.browsers.application.exceptions import (
 )
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
+    BrowserStateTransferException,
     NoBrowserAvailableException,
+    SessionNotActiveException,
+    SessionNotSuspendedException,
 )
 from backend.presentation.api_errors import ApiErrorSpec
 from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
@@ -21,6 +24,18 @@ class SessionNotFoundError(ApiErrorResponse):
 
 class NoBrowserAvailableError(ApiErrorResponse):
     code: Literal[ApiErrorCode.NO_BROWSER_AVAILABLE]
+
+
+class SessionNotActiveError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.SESSION_NOT_ACTIVE]
+
+
+class SessionNotSuspendedError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.SESSION_NOT_SUSPENDED]
+
+
+class BrowserStateTransferFailedError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED]
 
 
 # An expired lease is dropped on access, so it reaches the edge as "not found",
@@ -46,4 +61,34 @@ NO_BROWSER_AVAILABLE = ApiErrorSpec(
     description="No browser is currently available",
 )
 
-API_ERRORS = (SESSION_NOT_FOUND, NO_BROWSER_AVAILABLE)
+SESSION_NOT_ACTIVE = ApiErrorSpec(
+    exceptions=(SessionNotActiveException,),
+    status_code=status.HTTP_409_CONFLICT,
+    code=ApiErrorCode.SESSION_NOT_ACTIVE,
+    response_model=SessionNotActiveError,
+    description="Session is suspended and holds no browser",
+)
+SESSION_NOT_SUSPENDED = ApiErrorSpec(
+    exceptions=(SessionNotSuspendedException,),
+    status_code=status.HTTP_409_CONFLICT,
+    code=ApiErrorCode.SESSION_NOT_SUSPENDED,
+    response_model=SessionNotSuspendedError,
+    description="Session is not suspended",
+)
+# Suspending without a readable state would hand back a browser we can never
+# reconstruct, so the caller has to know it did not happen.
+BROWSER_STATE_TRANSFER_FAILED = ApiErrorSpec(
+    exceptions=(BrowserStateTransferException,),
+    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+    code=ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED,
+    response_model=BrowserStateTransferFailedError,
+    description="Could not transfer the browser state",
+)
+
+API_ERRORS = (
+    SESSION_NOT_FOUND,
+    NO_BROWSER_AVAILABLE,
+    SESSION_NOT_ACTIVE,
+    SESSION_NOT_SUSPENDED,
+    BROWSER_STATE_TRANSFER_FAILED,
+)

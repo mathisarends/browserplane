@@ -5,12 +5,16 @@
  * OpenAPI spec version: 0.1.0
  */
 import type {
+  BrowserStateTransferFailedError,
   HTTPValidationError,
   Health200,
   NoBrowserAvailableError,
   OpenSessionRequest,
   Readiness200,
+  ResumeSessionRequest,
+  SessionNotActiveError,
   SessionNotFoundError,
+  SessionNotSuspendedError,
   SessionResponse,
 } from "./models";
 
@@ -252,4 +256,152 @@ export const closeSession = async (
     status: res.status,
     headers: res.headers,
   } as closeSessionResponse;
+};
+
+export type suspendSessionResponse200 = {
+  data: SessionResponse;
+  status: 200;
+};
+
+export type suspendSessionResponse404 = {
+  data: SessionNotFoundError;
+  status: 404;
+};
+
+export type suspendSessionResponse409 = {
+  data: SessionNotActiveError;
+  status: 409;
+};
+
+export type suspendSessionResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type suspendSessionResponse503 = {
+  data: BrowserStateTransferFailedError;
+  status: 503;
+};
+
+export type suspendSessionResponseSuccess = suspendSessionResponse200 & {
+  headers: Headers;
+};
+export type suspendSessionResponseError = (
+  | suspendSessionResponse404
+  | suspendSessionResponse409
+  | suspendSessionResponse422
+  | suspendSessionResponse503
+) & {
+  headers: Headers;
+};
+
+export type suspendSessionResponse =
+  suspendSessionResponseSuccess | suspendSessionResponseError;
+
+export const getSuspendSessionUrl = (sessionId: string) => {
+  return `/api/v1/sessions/${sessionId}/suspend`;
+};
+
+/**
+ * Park a session: store what its browser holds and free the browser.
+ * @summary Suspend Session
+ */
+export const suspendSession = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<suspendSessionResponse> => {
+  const res = await fetch(getSuspendSessionUrl(sessionId), {
+    ...options,
+    method: "POST",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: suspendSessionResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as suspendSessionResponse;
+};
+
+export type resumeSessionResponse200 = {
+  data: SessionResponse;
+  status: 200;
+};
+
+export type resumeSessionResponse404 = {
+  data: SessionNotFoundError;
+  status: 404;
+};
+
+export type resumeSessionResponse409 = {
+  data: SessionNotSuspendedError;
+  status: 409;
+};
+
+export type resumeSessionResponse422 = {
+  data: HTTPValidationError;
+  status: 422;
+};
+
+export type resumeSessionResponse503 = {
+  data: NoBrowserAvailableError | BrowserStateTransferFailedError;
+  status: 503;
+};
+
+export type resumeSessionResponseSuccess = resumeSessionResponse200 & {
+  headers: Headers;
+};
+export type resumeSessionResponseError = (
+  | resumeSessionResponse404
+  | resumeSessionResponse409
+  | resumeSessionResponse422
+  | resumeSessionResponse503
+) & {
+  headers: Headers;
+};
+
+export type resumeSessionResponse =
+  resumeSessionResponseSuccess | resumeSessionResponseError;
+
+export const getResumeSessionUrl = (sessionId: string) => {
+  return `/api/v1/sessions/${sessionId}/resume`;
+};
+
+/**
+ * Mount a parked session onto whichever browser is free now.
+ * @summary Resume Session
+ */
+export const resumeSession = async (
+  sessionId: string,
+  resumeSessionRequest: ResumeSessionRequest,
+  options?: RequestInit,
+): Promise<resumeSessionResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+  const res = await fetch(getResumeSessionUrl(sessionId), {
+    ...options,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getHeaders(options?.headers),
+    },
+    body: JSON.stringify(resumeSessionRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resumeSessionResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as resumeSessionResponse;
 };

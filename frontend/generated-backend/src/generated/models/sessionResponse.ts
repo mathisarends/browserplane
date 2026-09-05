@@ -4,19 +4,23 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
+import type { SessionStatus } from "./sessionStatus";
 
 /**
  * A session plus the backend paths that carry its live traffic.
  *
  * The paths are backend-relative on purpose: the frontend never learns the
- * address of a browsertunnel or data-plane worker.
+ * address of a browsertunnel or data-plane worker. A suspended session holds
+ * no browser, so it has neither a browser id nor live paths until it is
+ * resumed; ``expires_at`` then says how long it can still be picked up.
  */
 export interface SessionResponse {
   id: string;
-  browser_id: string;
+  status: SessionStatus;
   owner_id: string;
   expires_at: string;
   created_at: string;
-  tunnel_path: string;
-  screencast_path: string;
+  browser_id?: string | null;
+  tunnel_path?: string | null;
+  screencast_path?: string | null;
 }

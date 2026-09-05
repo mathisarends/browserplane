@@ -16,6 +16,10 @@ class BackendSettings(BaseSettings):
 
     database_url: str = "postgresql+asyncpg://browser:browser@127.0.0.1:5432/browser"
 
+    # A suspended session costs a row, not a browser, so it may wait for a
+    # human far longer than a lease on a running browser ever should.
+    suspended_session_ttl_seconds: int = 86_400
+
     browser_1_data_plane_url: str = "http://127.0.0.1:8011"
     browser_1_tunnel_url: str = "ws://127.0.0.1:8021/api/v1/browser/ws"
     browser_1_screencast_url: str = (

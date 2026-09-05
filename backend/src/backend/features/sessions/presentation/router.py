@@ -10,15 +10,22 @@ from fastapi import APIRouter, WebSocket, status
 
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.leases.application.exceptions import LeaseNotFoundException
+from backend.features.sessions.application.exceptions import (
+    SessionNotActiveException,
+)
 from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
+    BROWSER_STATE_TRANSFER_FAILED,
     NO_BROWSER_AVAILABLE,
+    SESSION_NOT_ACTIVE,
     SESSION_NOT_FOUND,
+    SESSION_NOT_SUSPENDED,
 )
 from backend.features.sessions.presentation.mapper import to_session_response
 from backend.features.sessions.presentation.schemas import (
     OpenSessionRequest,
+    ResumeSessionRequest,
     SessionResponse,
 )
 from backend.presentation.api_errors import api_error_responses
@@ -52,6 +59,47 @@ async def get_session(
     session_id: UUID, service: FromDishka[SessionService]
 ) -> SessionResponse:
     session = await service.get(session_id)
+    return to_session_response(session)
+
+
+@session_router.post(
+    "/sessions/{session_id}/suspend",
+    response_model=SessionResponse,
+    operation_id="suspend_session",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def suspend_session(
+    session_id: UUID, service: FromDishka[SessionService]
+) -> SessionResponse:
+    """Park a session: store what its browser holds and free the browser."""
+    suspended = await service.suspend(session_id)
+    return to_session_response(suspended)
+
+
+@session_router.post(
+    "/sessions/{session_id}/resume",
+    response_model=SessionResponse,
+    operation_id="resume_session",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_SUSPENDED,
+        NO_BROWSER_AVAILABLE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def resume_session(
+    session_id: UUID,
+    request: ResumeSessionRequest,
+    service: FromDishka[SessionService],
+) -> SessionResponse:
+    """Mount a parked session onto whichever browser is free now."""
+    session = await service.resume(
+        session_id, ttl=timedelta(seconds=request.ttl_seconds)
+    )
     return to_session_response(session)
 
 
@@ -121,7 +169,7 @@ async def _resolve(
     try:
         async with _session_service(container) as service:
             return await resolve(service)
-    except LeaseNotFoundException, BrowserNotFoundException:
+    except LeaseNotFoundException, BrowserNotFoundException, SessionNotActiveException:
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")
         return None

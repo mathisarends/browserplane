@@ -9,6 +9,10 @@ from backend.features.browsers.application.ports import (
 from backend.features.browsers.provider import BrowserProvider
 from backend.features.health.presentation.router import health_router
 from backend.features.leases.provider import LeaseProvider
+from backend.features.sessions.application.ports import (
+    BrowserStateGateway,
+    SuspendedSessionRepository,
+)
 from backend.features.sessions.presentation.errors import (
     API_ERRORS as SESSION_API_ERRORS,
 )
@@ -27,6 +31,8 @@ ROUTERS = (health_router, session_router)
 def create_app(
     provisioner: BrowserProvisioner | None = None,
     repository: BrowserRepository | None = None,
+    suspensions: SuspendedSessionRepository | None = None,
+    browser_state: BrowserStateGateway | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
     for router in ROUTERS:
@@ -37,7 +43,7 @@ def create_app(
         DatabaseProvider(),
         BrowserProvider(provisioner, repository),
         LeaseProvider(),
-        SessionProvider(),
+        SessionProvider(suspensions, browser_state),
     )
     setup_dishka(container, app)
     return app

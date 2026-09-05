@@ -15,13 +15,20 @@ class LeaseService:
         self._store = store
         self._lock = asyncio.Lock()
 
-    async def create(self, browser_id: UUID, owner_id: UUID, ttl: timedelta) -> Lease:
+    async def create(
+        self,
+        browser_id: UUID,
+        owner_id: UUID,
+        ttl: timedelta,
+        lease_id: UUID | None = None,
+    ) -> Lease:
+        """Claim a browser, optionally under an id the caller already handed out."""
         async with self._lock:
             await self._expire()
             await self._allocator.reserve(browser_id)
             now = datetime.now(UTC)
             lease = Lease(
-                id=uuid4(),
+                id=lease_id or uuid4(),
                 browser_id=browser_id,
                 owner_id=owner_id,
                 expires_at=now + ttl,

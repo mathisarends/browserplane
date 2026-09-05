@@ -5,12 +5,17 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./browserStateTransferFailedError";
 export * from "./health200";
 export * from "./hTTPValidationError";
 export * from "./noBrowserAvailableError";
 export * from "./openSessionRequest";
 export * from "./readiness200";
+export * from "./resumeSessionRequest";
+export * from "./sessionNotActiveError";
 export * from "./sessionNotFoundError";
+export * from "./sessionNotSuspendedError";
 export * from "./sessionResponse";
+export * from "./sessionStatus";
 export * from "./validationError";
 export * from "./validationErrorCtx";
