@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
 from cdpify import Client
@@ -42,7 +42,7 @@ class CdpFrameStream(FrameStream):
         return self._cdp_url
 
     @asynccontextmanager
-    async def subscribe(self) -> AsyncIterator[AsyncGenerator[bytes]]:
+    async def subscribe(self) -> AsyncGenerator[AsyncGenerator[bytes]]:
         """Join the browser's raw frame stream."""
         subscriber = await self._join()
         frames = subscriber.frames()

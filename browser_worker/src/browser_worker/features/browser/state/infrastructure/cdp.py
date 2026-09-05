@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
 from contextlib import asynccontextmanager, suppress
 from functools import partial
 from typing import Any
@@ -297,7 +297,7 @@ async def _restore_origin(client: Client, origin: BrowserOriginState) -> None:
 async def _loaded_origin(
     client: Client,
     origin: str,
-) -> AsyncIterator[CDPSession]:
+) -> AsyncGenerator[CDPSession]:
     created = await client.target.create_target(url=_BLANK_URL, background=True)
     try:
         async with _attached(client, created.target_id) as session:
@@ -425,7 +425,7 @@ async def _activate(client: Client, target_id: str) -> None:
 
 
 @asynccontextmanager
-async def _attached(client: Client, target_id: str) -> AsyncIterator[CDPSession]:
+async def _attached(client: Client, target_id: str) -> AsyncGenerator[CDPSession]:
     """Attach to a target for one operation and detach again afterwards."""
     attached = await client.target.attach_to_target(target_id=target_id, flatten=True)
     session = client.session(attached.session_id)
