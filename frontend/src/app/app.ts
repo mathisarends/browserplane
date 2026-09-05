@@ -18,9 +18,6 @@ import { BrowserPanel } from "./browser/browser-panel";
               [attr.aria-pressed]="viewMode() === 'focus'"
               (click)="setView('focus')"
             >
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <rect x="3" y="4" width="14" height="12" rx="2" />
-              </svg>
               Fokus
             </button>
             <button
@@ -28,22 +25,9 @@ import { BrowserPanel } from "./browser/browser-panel";
               [attr.aria-pressed]="viewMode() === 'grid'"
               (click)="setView('grid')"
             >
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <rect x="3" y="3" width="5.5" height="5.5" rx="1" />
-                <rect x="11.5" y="3" width="5.5" height="5.5" rx="1" />
-                <rect x="3" y="11.5" width="5.5" height="5.5" rx="1" />
-                <rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1" />
-              </svg>
               Kacheln
             </button>
           </div>
-          <span class="view-status">
-            @if (viewMode() === "focus") {
-              Session {{ activeIndex() + 1 }} von {{ ownerIds.length }}
-            } @else {
-              {{ ownerIds.length }} Sessions im Überblick
-            }
-          </span>
         </header>
 
         <div class="browser-gallery">
@@ -63,6 +47,21 @@ import { BrowserPanel } from "./browser/browser-panel";
               @for (ownerId of ownerIds; track ownerId; let index = $index) {
                 <app-browser-panel [ownerId]="ownerId" [position]="index + 1" />
               }
+              @if (viewMode() === "grid") {
+                <section class="browser-create-tile" aria-label="Neuen Browser erstellen">
+                  <button type="button">
+                    <span class="create-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M12 5v14M5 12h14" />
+                      </svg>
+                    </span>
+                    <span class="create-copy">
+                      <strong>Neuen Browser erstellen</strong>
+                      <small>Weitere Browser-Session hinzufügen</small>
+                    </span>
+                  </button>
+                </section>
+              }
             </div>
           </div>
 
@@ -75,22 +74,20 @@ import { BrowserPanel } from "./browser/browser-panel";
             >
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
             </button>
+
+            <nav class="gallery-dots" aria-label="Browser auswählen">
+              @for (ownerId of ownerIds; track ownerId; let index = $index) {
+                <button
+                  type="button"
+                  [class.active]="activeIndex() === index"
+                  [attr.aria-label]="'Browser ' + (index + 1) + ' anzeigen'"
+                  [attr.aria-current]="activeIndex() === index ? 'true' : null"
+                  (click)="show(index)"
+                ></button>
+              }
+            </nav>
           }
         </div>
-
-        @if (viewMode() === "focus") {
-          <nav class="gallery-dots" aria-label="Browser auswählen">
-            @for (ownerId of ownerIds; track ownerId; let index = $index) {
-              <button
-                type="button"
-                [class.active]="activeIndex() === index"
-                [attr.aria-label]="'Browser ' + (index + 1) + ' anzeigen'"
-                [attr.aria-current]="activeIndex() === index ? 'true' : null"
-                (click)="show(index)"
-              ></button>
-            }
-          </nav>
-        }
       </main>
     </div>
   `,
@@ -108,32 +105,34 @@ import { BrowserPanel } from "./browser/browser-panel";
     }
     .view-toolbar {
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 12px;
-      padding-inline: 4px;
+      margin-bottom: 14px;
     }
     .view-switcher {
       display: inline-flex;
-      gap: 3px;
-      padding: 3px;
-      background: #10141b;
-      border: 1px solid #252d3a;
-      border-radius: 10px;
+      width: 216px;
+      padding: 2px;
+      background: #191a1d;
+      border: 1px solid #2b2d31;
+      border-radius: 999px;
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 3%),
+        0 8px 24px rgb(0 0 0 / 18%);
     }
     .view-switcher button {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      min-height: 34px;
-      padding: 0 12px;
-      color: #7f8a9b;
-      font-size: 0.78rem;
+      justify-content: center;
+      flex: 1;
+      min-height: 31px;
+      padding: 0 16px;
+      color: #a8acb4;
+      font-size: 0.8rem;
       font-weight: 600;
       background: transparent;
       border: 0;
-      border-radius: 7px;
+      border-radius: 999px;
       cursor: pointer;
       transition:
         color 180ms ease,
@@ -141,34 +140,21 @@ import { BrowserPanel } from "./browser/browser-panel";
         box-shadow 180ms ease;
     }
     .view-switcher button[aria-pressed="true"] {
-      color: #edf2fb;
-      background: #252c37;
-      box-shadow: 0 2px 8px rgb(0 0 0 / 22%);
+      color: #f4f5f7;
+      background: #282a2e;
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 4%),
+        0 1px 4px rgb(0 0 0 / 28%);
     }
     .view-switcher button:hover:not([aria-pressed="true"]) {
-      color: #c4ccda;
-      background: #171c24;
+      color: #d7d9de;
     }
     .view-switcher button:focus-visible,
     .gallery-arrow:focus-visible,
-    .gallery-dots button:focus-visible {
+    .gallery-dots button:focus-visible,
+    .browser-create-tile button:focus-visible {
       outline: 2px solid #79a4ff;
       outline-offset: 2px;
-    }
-    .view-switcher svg {
-      width: 16px;
-      height: 16px;
-      fill: none;
-      stroke: currentcolor;
-      stroke-width: 1.5;
-    }
-    .view-status {
-      color: #707b8d;
-      font:
-        0.7rem/1 ui-monospace,
-        SFMono-Regular,
-        Consolas,
-        monospace;
     }
     .browser-gallery {
       position: relative;
@@ -232,11 +218,22 @@ import { BrowserPanel } from "./browser/browser-panel";
       stroke-linejoin: round;
     }
     .gallery-dots {
+      position: absolute;
+      z-index: 10;
+      bottom: 49px;
+      left: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 7px;
-      min-height: 30px;
+      min-height: 26px;
+      padding: 0 11px;
+      background: rgb(12 16 22 / 76%);
+      border: 1px solid rgb(68 79 96 / 58%);
+      border-radius: 999px;
+      box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+      backdrop-filter: blur(10px);
+      transform: translateX(-50%);
     }
     .gallery-dots button {
       width: 7px;
@@ -263,6 +260,66 @@ import { BrowserPanel } from "./browser/browser-panel";
       gap: clamp(14px, 1.5vw, 22px);
       transform: none !important;
       animation: grid-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .browser-create-tile {
+      display: grid;
+      min-width: 0;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      background: rgb(17 21 28 / 55%);
+      border: 1px dashed #354052;
+      border-radius: 14px;
+    }
+    .browser-create-tile button {
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 32px;
+      color: #7f8da3;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      transition:
+        color 180ms ease,
+        background 180ms ease;
+    }
+    .browser-create-tile button:hover {
+      color: #b9c7dc;
+      background: rgb(102 145 235 / 5%);
+    }
+    .create-icon {
+      display: grid;
+      place-items: center;
+      width: 52px;
+      height: 52px;
+      color: #8eacf0;
+      background: rgb(83 123 209 / 10%);
+      border: 1px solid rgb(102 145 235 / 24%);
+      border-radius: 14px;
+    }
+    .create-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentcolor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+    }
+    .create-copy {
+      display: grid;
+      gap: 6px;
+      text-align: center;
+    }
+    .create-copy strong {
+      color: inherit;
+      font-size: 0.86rem;
+      font-weight: 650;
+    }
+    .create-copy small {
+      color: #647186;
+      font-size: 0.7rem;
     }
     .browser-stage[data-view="focus"] .gallery-viewport {
       animation: focus-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -294,15 +351,8 @@ import { BrowserPanel } from "./browser/browser-panel";
       .view-toolbar {
         margin-bottom: 8px;
       }
-      .view-status {
-        display: none;
-      }
       .view-switcher {
-        width: 100%;
-      }
-      .view-switcher button {
-        flex: 1;
-        justify-content: center;
+        width: 208px;
       }
       .gallery-arrow {
         width: 36px;
@@ -315,6 +365,9 @@ import { BrowserPanel } from "./browser/browser-panel";
       .gallery-arrow.next {
         right: 6px;
       }
+      .gallery-dots {
+        bottom: 45px;
+      }
       .browser-stage[data-view="grid"] .browser-track {
         grid-template-columns: minmax(0, 1fr);
         gap: 14px;
@@ -324,7 +377,8 @@ import { BrowserPanel } from "./browser/browser-panel";
       .browser-track,
       .view-switcher button,
       .gallery-arrow,
-      .gallery-dots button {
+      .gallery-dots button,
+      .browser-create-tile button {
         transition: none;
       }
       .browser-stage[data-view] .gallery-viewport,
