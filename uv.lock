@@ -6,7 +6,7 @@ requires-python = ">=3.14"
 members = [
     "backend",
     "browsertunnel-workspace",
-    "data-plane",
+    "browser-worker",
     "generated-clients",
 ]
 
@@ -151,7 +151,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "backend" },
-    { name = "data-plane" },
+    { name = "browser-worker" },
     { name = "generated-clients" },
 ]
 
@@ -170,7 +170,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "backend", editable = "backend" },
-    { name = "data-plane", editable = "data-plane" },
+    { name = "browser-worker", editable = "browser_worker" },
     { name = "generated-clients", editable = "generated" },
 ]
 
@@ -309,9 +309,9 @@ wheels = [
 ]
 
 [[package]]
-name = "data-plane"
+name = "browser-worker"
 version = "0.1.0"
-source = { editable = "data-plane" }
+source = { editable = "browser_worker" }
 dependencies = [
     { name = "cdpify", extra = ["websocket"] },
     { name = "dishka" },

@@ -16,10 +16,10 @@ class BrowserState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class BrowserSlot:
-    """A fixed browser id on one internal data-plane worker."""
+    """A fixed browser id on one internal browser worker."""
 
     id: UUID
-    data_plane_url: str
+    browser_worker_url: str
 
     @property
     def cdp_url(self) -> str:
@@ -34,7 +34,7 @@ class BrowserSlot:
         return f"{self.screencast_url}/fmp4"
 
     def _websocket_url(self, stream: str) -> str:
-        parsed = urlsplit(self.data_plane_url)
+        parsed = urlsplit(self.browser_worker_url)
         scheme = "wss" if parsed.scheme == "https" else "ws"
         base_path = parsed.path.rstrip("/")
         return urlunsplit(

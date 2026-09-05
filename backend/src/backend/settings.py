@@ -22,17 +22,17 @@ class BackendSettings(BaseSettings):
     browser_width: int = 1600
     browser_height: int = 900
 
-    browser_1_data_plane_url: str = "http://127.0.0.1:8011"
-    browser_2_data_plane_url: str = "http://127.0.0.1:8012"
+    browser_worker_1_url: str = "http://127.0.0.1:8011"
+    browser_worker_2_url: str = "http://127.0.0.1:8012"
 
     def slots(self) -> tuple[BrowserSlot, BrowserSlot]:
         return (
             BrowserSlot(
                 UUID("00000000-0000-0000-0000-000000000001"),
-                self.browser_1_data_plane_url,
+                self.browser_worker_1_url,
             ),
             BrowserSlot(
                 UUID("00000000-0000-0000-0000-000000000002"),
-                self.browser_2_data_plane_url,
+                self.browser_worker_2_url,
             ),
         )

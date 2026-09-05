@@ -34,7 +34,7 @@ class BrowserModel(DatabaseModel, table=True):
 
     __tablename__ = "browsers"
 
-    data_plane_url: str
+    browser_worker_url: str
     # Stored as plain text: the set of states still moves, and a native enum
     # type would need a migration for every new member.
     state: BrowserState = Field(sa_column=Column(String, nullable=False))
@@ -51,7 +51,7 @@ class SuspendedSessionModel(DatabaseModel, table=True):
         nullable=False,
         index=True,
     )
-    # Kept as separate opaque data-plane documents: authentication can be
+    # Kept as separate opaque browser-worker documents: authentication can be
     # reused without also restoring a suspended browser's tabs (and vice versa).
     authentication_state: dict[str, Any] = Field(
         sa_column=Column(JSONB, nullable=False)

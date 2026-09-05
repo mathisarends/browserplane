@@ -12,7 +12,7 @@ from backend.features.recordings.presentation.errors import (
     RECORDING_TRANSFER_FAILED,
 )
 from backend.presentation.api_errors import api_error_responses
-from generated.data_plane import RecordingResponse
+from generated.browser_worker import RecordingResponse
 
 recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 

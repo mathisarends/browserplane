@@ -9,7 +9,7 @@ from backend.features.leases.application.models import Lease
 
 type AuthenticationStateDocument = dict[str, Any]
 type BrowserStateDocument = dict[str, Any]
-"""Captured state documents, exactly as the data plane hands them over.
+"""Captured state documents, exactly as the browser worker hands them over.
 
 The backend does not model the payloads: their shapes are owned by the data
 plane's authentication and browser-state schemas and travel back there

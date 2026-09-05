@@ -6,8 +6,8 @@ from backend.features.browsers.application.ports import (
     BrowserRepository,
 )
 from backend.features.browsers.application.service import BrowserService
-from backend.features.browsers.infrastructure.data_plane_provisioner import (
-    DataPlaneBrowserProvisioner,
+from backend.features.browsers.infrastructure.browser_worker_provisioner import (
+    BrowserWorkerProvisioner,
 )
 from backend.features.browsers.infrastructure.repository import SqlBrowserRepository
 from backend.settings import BackendSettings
@@ -25,7 +25,7 @@ class BrowserProvider(Provider):
 
     @provide(scope=Scope.APP, provides=BrowserProvisioner)
     def provisioner(self, settings: BackendSettings) -> BrowserProvisioner:
-        return self._provisioner or DataPlaneBrowserProvisioner(settings)
+        return self._provisioner or BrowserWorkerProvisioner(settings)
 
     @provide(scope=Scope.REQUEST, provides=BrowserRepository)
     def repository(self, session: AsyncSession) -> BrowserRepository:

@@ -7,10 +7,10 @@ from the infrastructure layer:
 ```python
 import httpx
 
-from generated.data_plane import CreateBrowserRequest, GeneratedDataPlaneClient
+from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
 
 async with httpx.AsyncClient() as http:
-    client = GeneratedDataPlaneClient(http, base_url)
+    client = GeneratedBrowserWorkerClient(http, base_url)
     browser = await client.create_browser(CreateBrowserRequest(id=browser_id))
 ```
 

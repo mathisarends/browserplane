@@ -4,7 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from backend.features.sessions.application.models import SessionStatus
-from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
+from generated.browser_worker import AuthenticationStateSchema, BrowserStateSchema
 
 
 class OpenSessionRequest(BaseModel):
@@ -48,7 +48,7 @@ class SessionResponse(BaseModel):
     """A session plus the backend paths that carry its live traffic.
 
     The paths are backend-relative on purpose: the frontend never learns the
-    address of a data-plane worker. A suspended session holds
+    address of a browser worker. A suspended session holds
     no browser, so it has neither a browser id nor live paths until it is
     resumed; ``expires_at`` then says how long it can still be picked up.
     """

@@ -1,7 +1,7 @@
 # Browserplane
 
 Mirrors a real Chromium tab into a web page. The backend drives the tab over
-the Chrome DevTools Protocol and replays viewer input; the data plane streams
+the Chrome DevTools Protocol and replays viewer input; the browser worker streams
 JPEG frames through the backend to a `<canvas>`.
 
 Learning project: no auth, no rate limiting.
@@ -40,7 +40,7 @@ CDP into a CSS cursor in the frontend (it is not part of the frame stream).
                                      internal HTTP/CDP/WS │        │ SQL
                                                           ▼        ▼
                                     ┌──────────────────────┐  ┌──────────┐
-                                    │      Data Plane      │  │ Postgres │
+                                    │      Browser Worker      │  │ Postgres │
                                     │  worker per Chromium │  └──────────┘
                                     │  lifecycle · CDP ·   │
                                     │  screencast · state  │
@@ -66,13 +66,13 @@ it.
 state documents live in Postgres, and completed recording files are persisted
 to object storage by the backend.
 
-**Data Plane** (`data-plane/`) — one worker per Chromium: lifecycle, CDP,
+**Browser Worker** (`browser_worker/`) — one worker per Chromium: lifecycle, CDP,
 screencast, state capture, recording capture, health and capacity. It streams
 completed recording segments to the backend and has no object-storage
-credentials. Reachable only via `BACKEND_BROWSER_*_DATA_PLANE_URL`.
+credentials. Reachable only via `BACKEND_BROWSER_*_BROWSER_WORKER_URL`.
 
 Live traffic uses two transports: the backend WebSocket for JSON-RPC and
-tab/navigation/cursor state, a data-plane WebSocket for binary JPEG frames.
+tab/navigation/cursor state, a browser worker WebSocket for binary JPEG frames.
 
 ## Tunneled events
 
@@ -102,7 +102,7 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Postgres, MinIO, migrations, backend and data-plane workers
+# Postgres, MinIO, migrations, backend and browser workers
 docker compose up --build
 
 # Frontend on http://localhost:5173
@@ -121,7 +121,7 @@ uv run ruff format . # format
 ```
 
 After the backend stops a recording, it streams each completed segment from the
-data plane into the `recordings/` prefix of the S3-compatible
+browser worker into the `recordings/` prefix of the S3-compatible
 `browser-recordings` bucket. MinIO exposes its S3 API at
 `http://localhost:9000` and its object browser/admin console at
 `http://localhost:9001`. Development credentials default to
@@ -134,7 +134,7 @@ to port 8000.
 Generated clients: `frontend/generated` (browser JSON-RPC, from OpenRPC),
 `frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev)
 from `schemas/backend-openapi.json`), and the uv workspace package
-`generated/` (typed Python client for the data-plane API). `npm run
+`generated/` (typed Python client for the browser worker API). `npm run
 check:generated` and `./scripts/generate_http_clients.sh --check` flag a stale
 one.
 
@@ -158,7 +158,7 @@ stored separately.
 - `ws://127.0.0.1:8000/api/v1/sessions/{session_id}/tunnel` — JSON-RPC 2.0
 - JSON Schema: `/api/v1/browser/schema.json`
 - OpenRPC: `/api/v1/browser/openrpc.json`
-- Data-plane frames: `/api/v1/browser/{browser_id}/screencast`
+- Browser worker frames: `/api/v1/browser/{browser_id}/screencast`
 
 ```json
 {
@@ -173,8 +173,8 @@ Server-pushed events arrive as `browser.event`; `params.type` tells frames
 apart from tab/navigation state and crashed/detached targets.
 
 The view is configured through `BACKEND_BROWSER_WIDTH` and
-`BACKEND_BROWSER_HEIGHT`; Chromium lifecycle settings (`DATA_PLANE_EXECUTABLE`,
-`DATA_PLANE_HEADLESS`, `DATA_PLANE_CAPACITY`, `DATA_PLANE_STARTUP_TIMEOUT`)
+`BACKEND_BROWSER_HEIGHT`; Chromium lifecycle settings (`BROWSER_WORKER_EXECUTABLE`,
+`BROWSER_WORKER_HEADLESS`, `BROWSER_WORKER_CAPACITY`, `BROWSER_WORKER_STARTUP_TIMEOUT`)
 belong to the worker.
 
 Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.

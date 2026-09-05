@@ -25,7 +25,7 @@ class OpenAPITarget:
 
 TARGETS = (
     OpenAPITarget(package="backend", app="backend.app"),
-    OpenAPITarget(package="data_plane", app="data_plane.app"),
+    OpenAPITarget(package="browser_worker", app="browser_worker.app"),
 )
 
 

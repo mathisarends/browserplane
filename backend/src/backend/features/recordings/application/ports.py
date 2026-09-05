@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from uuid import UUID
 
 from backend.features.browsers.application.models import Browser
-from generated.data_plane import RecordingResponse
+from generated.browser_worker import RecordingResponse
 
 
 class RecordingGateway(ABC):

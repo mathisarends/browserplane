@@ -6,7 +6,7 @@ from backend.features.browsers.application.models import Browser, BrowserSlot
 
 
 class BrowserProvisioner(ABC):
-    """Owns the browser lifecycle on the data plane."""
+    """Owns the browser lifecycle on the browser worker."""
 
     @abstractmethod
     async def provision(self) -> Sequence[BrowserSlot]: ...

@@ -68,7 +68,7 @@ class BrowserService:
     async def destroy(self, browser_id: UUID) -> Browser:
         """Tear the browser process down. The slot survives, empty, until restarted."""
         browser = await self.get(browser_id)
-        async with self._data_plane(browser.slot):
+        async with self._browser_worker(browser.slot):
             await self._provisioner.stop(browser.slot)
         browser.state = BrowserState.STOPPED
         logger.info("Browser destroyed browser_id=%s", browser.id)
@@ -77,7 +77,7 @@ class BrowserService:
     async def restart(self, browser_id: UUID) -> Browser:
         """Put a fresh browser process behind a slot, whatever state it was in."""
         browser = await self.get(browser_id)
-        async with self._data_plane(browser.slot):
+        async with self._browser_worker(browser.slot):
             # Stopping first keeps a restart idempotent: a worker refuses a
             # second browser, but takes a new one once the old process is gone.
             await self._provisioner.stop(browser.slot)
@@ -107,7 +107,7 @@ class BrowserService:
             await self._repository.save(browser=browser)
 
     @asynccontextmanager
-    async def _data_plane(self, slot: BrowserSlot) -> AsyncIterator[None]:
+    async def _browser_worker(self, slot: BrowserSlot) -> AsyncIterator[None]:
         """Report a worker that will not cooperate in the pool's own terms."""
         try:
             yield
@@ -117,7 +117,7 @@ class BrowserService:
             logger.warning(
                 "Browser provisioning failed browser_id=%s worker=%s error=%s",
                 slot.id,
-                slot.data_plane_url,
+                slot.browser_worker_url,
                 error,
             )
             raise BrowserProvisioningException() from error

@@ -46,7 +46,7 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
 )
 from backend.presentation.api_errors import api_error_responses
-from generated.data_plane import (
+from generated.browser_worker import (
     AuthenticationStateSchema,
     BrowserStateSchema,
     DownloadResponse,

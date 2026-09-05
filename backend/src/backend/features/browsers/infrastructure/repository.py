@@ -21,7 +21,7 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
         return Browser(
             slot=BrowserSlot(
                 id=model.id,
-                data_plane_url=model.data_plane_url,
+                browser_worker_url=model.browser_worker_url,
             ),
             created_at=model.created_at,
             state=BrowserState(model.state),
@@ -31,7 +31,7 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
         return BrowserModel(
             id=entity.id,
             created_at=entity.created_at,
-            data_plane_url=entity.slot.data_plane_url,
+            browser_worker_url=entity.slot.browser_worker_url,
             state=entity.state,
         )
 

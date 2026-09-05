@@ -1,9 +1,9 @@
-x-data-plane-environment: &data-plane-environment
+x-browser-worker-environment: &browser-worker-environment
   PORT: 8000
 
-x-data-plane: &data-plane
-  image: browser-provisioner-data-plane:local
-  environment: *data-plane-environment
+x-browser-worker: &browser-worker
+  image: browser-provisioner-browser-worker:local
+  environment: *browser-worker-environment
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
     interval: 2s
@@ -90,24 +90,24 @@ services:
       postgres:
         condition: service_healthy
 
-  data-plane-1:
-    <<: *data-plane
+  browser-worker-1:
+    <<: *browser-worker
     build:
       context: .
-      dockerfile: data-plane/Dockerfile
+      dockerfile: browser_worker/Dockerfile
     ports:
       - "8011:8000"
     environment:
-      <<: *data-plane-environment
-      DATA_PLANE_PUBLIC_BASE_URL: ws://localhost:8011
+      <<: *browser-worker-environment
+      BROWSER_WORKER_PUBLIC_BASE_URL: ws://localhost:8011
 
-  data-plane-2:
-    <<: *data-plane
+  browser-worker-2:
+    <<: *browser-worker
     ports:
       - "8012:8000"
     environment:
-      <<: *data-plane-environment
-      DATA_PLANE_PUBLIC_BASE_URL: ws://localhost:8012
+      <<: *browser-worker-environment
+      BROWSER_WORKER_PUBLIC_BASE_URL: ws://localhost:8012
 
   backend:
     image: browser-provisioner-backend:local
@@ -124,14 +124,14 @@ services:
       - BUCKET_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
       - BUCKET_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
       - BUCKET_PREFIX=recordings
-      # Only internal data-plane addresses are configured. RPC and live-traffic
+      # Only internal browser-worker addresses are configured. RPC and live-traffic
       # endpoints exposed to the frontend belong to the backend itself.
-      - BACKEND_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
-      - BACKEND_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
+      - BACKEND_BROWSER_WORKER_1_URL=http://browser-worker-1:8000
+      - BACKEND_BROWSER_WORKER_2_URL=http://browser-worker-2:8000
     depends_on:
-      data-plane-1:
+      browser-worker-1:
         condition: service_healthy
-      data-plane-2:
+      browser-worker-2:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully

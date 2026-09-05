@@ -41,5 +41,5 @@ node_modules/
 dist/
 .angular/
 
-# Data-plane runtime files
+# Browser-worker runtime files
 workspace/

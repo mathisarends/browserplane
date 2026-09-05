@@ -2,7 +2,7 @@ from uuid import UUID
 
 from backend.features.browsers.application.service import BrowserService
 from backend.features.recordings.application.ports import RecordingGateway
-from generated.data_plane import RecordingResponse
+from generated.browser_worker import RecordingResponse
 
 
 class RecordingService:

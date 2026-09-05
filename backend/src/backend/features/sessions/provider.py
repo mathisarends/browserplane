@@ -13,8 +13,8 @@ from backend.features.sessions.application.ports import (
     SuspendedSessionRepository,
 )
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.infrastructure.data_plane_gateway import (
-    DataPlaneBrowserStateGateway,
+from backend.features.sessions.infrastructure.browser_worker_gateway import (
+    BrowserWorkerStateGateway,
 )
 from backend.features.sessions.infrastructure.repository import (
     SqlAuthenticationStateSnapshotRepository,
@@ -44,7 +44,7 @@ class SessionProvider(Provider):
 
     @provide(scope=Scope.APP, provides=BrowserStateGateway)
     def browser_state(self) -> BrowserStateGateway:
-        return self._browser_state or DataPlaneBrowserStateGateway()
+        return self._browser_state or BrowserWorkerStateGateway()
 
     @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
     def snapshots(self, session: AsyncSession) -> BrowserStateSnapshotRepository:

@@ -11,5 +11,5 @@ cd "$ROOT"
 
 uv run python scripts/export_openapi_schemas.py
 
-uv run httpxgen schemas/data_plane-openapi.json generated/src/generated/data_plane \
-  --package-name generated.data_plane "$@"
+uv run httpxgen schemas/browser_worker-openapi.json generated/src/generated/browser_worker \
+  --package-name generated.browser_worker "$@"

@@ -6,17 +6,17 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "backend",
-    "data-plane",
+    "browser-worker",
     "generated-clients",
 ]
 
 [tool.uv.sources]
 backend = { workspace = true }
-data-plane = { workspace = true }
+browser-worker = { workspace = true }
 generated-clients = { workspace = true }
 
 [tool.uv.workspace]
-members = ["backend", "data-plane", "generated"]
+members = ["backend", "browser_worker", "generated"]
 
 [dependency-groups]
 dev = [
@@ -52,26 +52,27 @@ select = [
 [tool.ruff.lint.isort]
 known-first-party = [
     "backend",
-    "data_plane",
+    "browser_worker",
     "generated",
 ]
 
 [tool.pytest.ini_options]
 testpaths = [
     "backend/tests",
-    "data-plane/tests",
+    "browser_worker/tests",
     "frontend/tests",
     "generated/tests",
 ]
-pythonpath = ["."]
+pythonpath = [".", "browser_worker"]
 
 [tool.coverage.run]
+branch = true
 source = [
     "backend/src",
-    "data-plane/src",
+    "browser_worker/src",
 ]
 omit = [
     "backend/tests/*",
-    "data-plane/tests/*",
+    "browser_worker/tests/*",
     ".venv/*",
 ]

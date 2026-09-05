@@ -12,7 +12,7 @@ import type { ConnectionState } from "../services/browser-session";
       <span class="connection-badge" [attr.data-state]="connection()">
         <i aria-hidden="true"></i>{{ connectionLabel() }}
       </span>
-      <span class="plane-label">Data Plane</span>
+      <span class="plane-label">Browser Worker</span>
     </div>
   `,
   styles: `

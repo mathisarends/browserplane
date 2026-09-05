@@ -7,7 +7,7 @@ mit `503 no_browser_available` antwortet. Das bedeutet zunächst nur, dass das
 Backend keinen Browser mit dem logischen Zustand `READY` findet. Es beweist
 nicht, dass tatsächlich noch funktionierende Chromium-Prozesse laufen.
 
-Im aktuellen Aufbau gibt es zwei feste Browser-Slots. Jeder Data-Plane-Worker
+Im aktuellen Aufbau gibt es zwei feste Browser-Slots. Jeder Browser Worker
 hält genau einen Chromium-Prozess. Das Backend verwaltet dazu die Zustände
 `READY`, `LEASED` und `FAILED` in Postgres und die zugehörigen Leases nur im
 Arbeitsspeicher.
@@ -43,7 +43,7 @@ beschriebenen Verhaltens.
 ### 2. Eine Session-Freigabe recycelt Chromium nicht
 
 `LeaseService.release()` ruft derzeit nur `BrowserService.release()` auf. Das
-setzt den Datenbankstatus von `LEASED` auf `READY`. Der Data-Plane-Browser wird
+setzt den Datenbankstatus von `LEASED` auf `READY`. Der Browser-Worker-Browser wird
 dabei weder geschlossen noch zurückgesetzt.
 
 Damit können zwischen zwei Sessions unter anderem Tabs, Cookies, Cache,
@@ -64,7 +64,7 @@ bestehen bleiben.
 
 ### 4. Healthchecks prüfen nicht die Browser-Funktionsfähigkeit
 
-Die Data-Plane-Endpunkte `/health` und `/readiness` liefern aktuell immer `OK`.
+Die Browser-Worker-Endpunkte `/health` und `/readiness` liefern aktuell immer `OK`.
 Sie prüfen weder, ob Chromium lebt, noch ob der CDP-Endpunkt antwortet. Ein
 Worker kann deshalb für Docker und Backend gesund aussehen, obwohl sein Browser
 abgestürzt oder unbenutzbar ist.
@@ -133,10 +133,10 @@ Stattdessen:
 
 1. Slot auf `RECYCLING` setzen, sodass er nicht neu vergeben werden kann.
 2. Aktive Proxies, Screencasts und Recordings für diesen Browser schließen.
-3. Im Data Plane `DELETE /browser` ausführen.
+3. Im Browser Worker `DELETE /browser` ausführen.
 4. Verifizieren, dass der alte Prozess beendet ist.
 5. Temporäres Profil entfernen.
-6. Im Data Plane mit derselben stabilen Slot-ID einen neuen Browser erstellen.
+6. Im Browser Worker mit derselben stabilen Slot-ID einen neuen Browser erstellen.
 7. CDP mit einer kurzen Probe testen.
 8. Erst dann den Slot auf `READY` setzen.
 
@@ -154,7 +154,7 @@ Alle Release-Ursachen verwenden diesen einen Ablauf:
 
 ### Priorität 1: robuste Prozessbaum-Beendigung
 
-Der Data Plane sollte Chromium in einer eigenen Prozessgruppe starten.
+Der Browser Worker sollte Chromium in einer eigenen Prozessgruppe starten.
 
 - Unter Linux: neue Session/Prozessgruppe (`start_new_session=True`) und beim
   Stoppen zuerst `SIGTERM`, danach mit Timeout `SIGKILL` an die gesamte Gruppe.
@@ -184,7 +184,7 @@ Lease-Tabelle benötigt mindestens:
 Beim Backend-Start läuft eine Reconciliation:
 
 1. Abgelaufene Leases als freizugeben markieren.
-2. Jeden konfigurierten Data-Plane-Slot inspizieren.
+2. Jeden konfigurierten Browser-Worker-Slot inspizieren.
 3. Unbekannte oder nicht erreichbare Browser recyceln.
 4. DB-Zustand und tatsächlichen Worker-Zustand angleichen.
 5. Nur erfolgreich geprüfte Slots auf `READY` setzen.
@@ -202,12 +202,12 @@ den Browser prüfen:
 - antwortet der CDP-Endpunkt innerhalb eines kurzen Timeouts;
 - stimmt die gemeldete Browser-ID mit dem Slot überein.
 
-Ein Data-Plane-Watchdog kann zusätzlich das Ende des Chromium-Prozesses
+Ein Browser-Worker-Watchdog kann zusätzlich das Ende des Chromium-Prozesses
 beobachten. Bei unerwartetem Exit setzt er den internen Zustand sofort zurück
 und meldet den Slot als nicht bereit. Das Backend markiert ihn `FAILED` und
 stößt Re-Provisioning an.
 
-Der Docker-Healthcheck für den Data Plane sollte `/readiness` statt `/health`
+Der Docker-Healthcheck für den Browser Worker sollte `/readiness` statt `/health`
 verwenden, sofern ein automatischer Container-Restart gewünscht ist. Dazu passt
 eine Restart-Policy wie `restart: unless-stopped`. Der interne Recovery-Pfad
 bleibt trotzdem nötig, damit nicht jeder Browserfehler den ganzen Container
@@ -276,13 +276,13 @@ Browser-Erschöpfung nicht direkt.
   canceln/abwarten.
 - Bei 503 den vollständigen Pool-/Lease-Zustand loggen.
 - `init: true`, eine Stop-Grace-Period und eine Restart-Policy für die
-  Data-Plane-Container ergänzen.
+  Browser-Worker-Container ergänzen.
 
 ### Schritt 2: korrektes Session-Cleanup
 
 - Zustand `RECYCLING` ergänzen.
 - Zentralen idempotenten Release-/Recycle-Use-Case bauen.
-- Data-Plane-Browser bei Release wirklich destroyen und neu erstellen.
+- Browser-Worker-Browser bei Release wirklich destroyen und neu erstellen.
 - Prozessgruppen-Cleanup und CDP-Readiness implementieren.
 
 ### Schritt 3: Crash Recovery
@@ -290,7 +290,7 @@ Browser-Erschöpfung nicht direkt.
 - LeaseStore nach Postgres migrieren.
 - Allocate/Reserve transaktional machen.
 - Startup-Reconciliation und Retry mit begrenztem Backoff ergänzen.
-- Data-Plane-Watchdog für unerwartete Chromium-Exits hinzufügen.
+- Browser-Worker-Watchdog für unerwartete Chromium-Exits hinzufügen.
 
 ### Schritt 4: Betriebsreife
 
@@ -311,7 +311,7 @@ Entsprechend dem frühen Projektstadium genügen zunächst wenige Smoke-Szenarie
    `READY` vergeben und anschließend automatisch wiederhergestellt.
 4. Ein Backend-Neustart bei aktiven/verwaisten Leases reconciliert den Pool.
 5. Nach wiederholtem Create/Delete bleiben weder Chromium-Kindprozesse noch
-   temporäre `data-plane-*`-Profile zurück.
+   temporäre `browser-worker-*`-Profile zurück.
 
 Keine umfangreichen Payload- oder Statuscode-Vertragstests sind dafür nötig;
 ein kleiner Lifecycle-Smoke-Test plus bestehende Lint-, Typ- und Startprüfungen

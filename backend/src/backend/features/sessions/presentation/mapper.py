@@ -14,7 +14,7 @@ from backend.features.sessions.presentation.schemas import (
     OwnerSessionsResponse,
     SessionResponse,
 )
-from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
+from generated.browser_worker import AuthenticationStateSchema, BrowserStateSchema
 
 SESSION_PATH = "/api/v1/sessions"
 
