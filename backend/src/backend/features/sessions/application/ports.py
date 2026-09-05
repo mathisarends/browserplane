@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import timedelta
 from uuid import UUID
 
-from gateway.features.sessions.application.models import (
+from backend.features.sessions.application.models import (
     BrowserEndpoints,
     BrowserSummary,
     Lease,

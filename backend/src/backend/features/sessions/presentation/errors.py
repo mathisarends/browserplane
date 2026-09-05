@@ -2,13 +2,13 @@ from typing import Literal
 
 from fastapi import status
 
-from gateway.features.sessions.application.exceptions import (
+from backend.features.sessions.application.exceptions import (
     NoBrowserAvailableException,
     SessionExpiredException,
     SessionNotFoundException,
 )
-from gateway.presentation.api_errors import ApiErrorSpec
-from gateway.presentation.errors import ApiErrorCode, ApiErrorResponse
+from backend.presentation.api_errors import ApiErrorSpec
+from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
 
 
 class SessionNotFoundError(ApiErrorResponse):

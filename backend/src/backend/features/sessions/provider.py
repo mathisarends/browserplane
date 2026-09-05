@@ -1,16 +1,16 @@
 from dishka import Provider, Scope, provide
 
-from gateway.features.sessions.application.ports import BrowserCatalog, LeaseBroker
-from gateway.features.sessions.application.service import SessionService
-from gateway.features.sessions.infrastructure.in_memory_control_plane import (
+from backend.features.sessions.application.ports import BrowserCatalog, LeaseBroker
+from backend.features.sessions.application.service import SessionService
+from backend.features.sessions.infrastructure.in_memory_control_plane import (
     InMemoryControlPlane,
 )
-from gateway.settings import GatewaySettings
+from backend.settings import BackendSettings
 
 
 class SessionProvider(Provider):
     @provide(scope=Scope.APP)
-    def upstream(self, settings: GatewaySettings) -> InMemoryControlPlane:
+    def upstream(self, settings: BackendSettings) -> InMemoryControlPlane:
         return InMemoryControlPlane(settings)
 
     @provide(scope=Scope.APP, provides=BrowserCatalog)

@@ -5,7 +5,7 @@ from uuid import UUID
 
 @dataclass(frozen=True, slots=True)
 class BrowserSummary:
-    """What the gateway needs to know about a browser to pick one."""
+    """What the backend needs to know about a browser to pick one."""
 
     id: UUID
     is_available: bool

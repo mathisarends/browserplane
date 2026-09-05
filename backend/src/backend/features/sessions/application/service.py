@@ -1,11 +1,11 @@
 from datetime import timedelta
 from uuid import UUID
 
-from gateway.features.sessions.application.exceptions import (
+from backend.features.sessions.application.exceptions import (
     NoBrowserAvailableException,
 )
-from gateway.features.sessions.application.models import Session
-from gateway.features.sessions.application.ports import BrowserCatalog, LeaseBroker
+from backend.features.sessions.application.models import Session
+from backend.features.sessions.application.ports import BrowserCatalog, LeaseBroker
 
 
 class SessionService:

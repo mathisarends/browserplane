@@ -2,27 +2,27 @@ from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from gateway.features.sessions.application.exceptions import (
+from backend.features.sessions.application.exceptions import (
     SessionExpiredException,
     SessionNotFoundException,
 )
-from gateway.features.sessions.application.models import (
+from backend.features.sessions.application.models import (
     BrowserEndpoints,
     BrowserSummary,
     Lease,
 )
-from gateway.features.sessions.application.ports import BrowserCatalog, LeaseBroker
-from gateway.settings import GatewaySettings
+from backend.features.sessions.application.ports import BrowserCatalog, LeaseBroker
+from backend.settings import BackendSettings
 
 
 class InMemoryControlPlane(BrowserCatalog, LeaseBroker):
-    """Stand-in for the control plane so the gateway runs on its own.
+    """Stand-in for the control plane so the backend runs on its own.
 
     Replaced by an adapter over the generated control-plane client; the ports it
     implements are what that adapter has to satisfy.
     """
 
-    def __init__(self, settings: GatewaySettings) -> None:
+    def __init__(self, settings: BackendSettings) -> None:
         self._endpoints = {
             endpoints.browser_id: endpoints for endpoints in settings.endpoints()
         }

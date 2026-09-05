@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field
 
-from gateway.presentation.errors import ApiErrorCode, ApiErrorResponse
+from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
 
 
 @dataclass(frozen=True, slots=True)

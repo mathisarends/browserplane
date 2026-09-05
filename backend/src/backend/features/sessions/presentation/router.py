@@ -5,21 +5,21 @@ from uuid import UUID
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, status
 
-from gateway.exceptions import GatewayException
-from gateway.features.sessions.application.service import SessionService
-from gateway.features.sessions.infrastructure.websocket_proxy import proxy_stream
-from gateway.features.sessions.presentation.errors import (
+from backend.exceptions import BackendException
+from backend.features.sessions.application.service import SessionService
+from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
+from backend.features.sessions.presentation.errors import (
     NO_BROWSER_AVAILABLE,
     SESSION_EXPIRED,
     SESSION_NOT_FOUND,
 )
-from gateway.features.sessions.presentation.mapper import to_session_response
-from gateway.features.sessions.presentation.schemas import (
+from backend.features.sessions.presentation.mapper import to_session_response
+from backend.features.sessions.presentation.schemas import (
     OpenSessionRequest,
     SessionResponse,
 )
-from gateway.presentation.api_errors import api_error_responses
-from gateway.presentation.upstream_errors import UPSTREAM_UNAVAILABLE
+from backend.presentation.api_errors import api_error_responses
+from backend.presentation.upstream_errors import UPSTREAM_UNAVAILABLE
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
 
@@ -91,7 +91,7 @@ async def _resolve(websocket: WebSocket, pending: Awaitable[str]) -> str | None:
     """Await an upstream URL, closing the socket with the domain failure reason."""
     try:
         return await pending
-    except GatewayException as error:
+    except BackendException as error:
         await websocket.accept()
         await websocket.close(code=1008, reason=error.message)
         return None

@@ -1,4 +1,4 @@
-class GatewayException(Exception):
+class BackendException(Exception):
     """Application failure that carries a client-safe message."""
 
     message = "Unexpected error"
@@ -8,7 +8,7 @@ class GatewayException(Exception):
         super().__init__(self.message)
 
 
-class UpstreamUnavailableException(GatewayException):
+class UpstreamUnavailableException(BackendException):
     """An internal plane could not be reached or answered unintelligibly."""
 
     message = "Upstream service unavailable"

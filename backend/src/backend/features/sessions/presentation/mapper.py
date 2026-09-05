@@ -1,5 +1,5 @@
-from gateway.features.sessions.application.models import Session
-from gateway.features.sessions.presentation.schemas import SessionResponse
+from backend.features.sessions.application.models import Session
+from backend.features.sessions.presentation.schemas import SessionResponse
 
 SESSION_PATH = "/api/v1/sessions"
 

@@ -10,9 +10,9 @@ class OpenSessionRequest(BaseModel):
 
 
 class SessionResponse(BaseModel):
-    """A session plus the gateway paths that carry its live traffic.
+    """A session plus the backend paths that carry its live traffic.
 
-    The paths are gateway-relative on purpose: the frontend never learns the
+    The paths are backend-relative on purpose: the frontend never learns the
     address of a browsertunnel or data-plane worker.
     """
 

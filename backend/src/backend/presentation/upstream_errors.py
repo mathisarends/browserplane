@@ -2,9 +2,9 @@ from typing import Literal
 
 from fastapi import status
 
-from gateway.exceptions import UpstreamUnavailableException
-from gateway.presentation.api_errors import ApiErrorSpec
-from gateway.presentation.errors import ApiErrorCode, ApiErrorResponse
+from backend.exceptions import UpstreamUnavailableException
+from backend.presentation.api_errors import ApiErrorSpec
+from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
 
 
 class UpstreamUnavailableError(ApiErrorResponse):

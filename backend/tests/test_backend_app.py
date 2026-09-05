@@ -1,9 +1,9 @@
 from fastapi.testclient import TestClient
 
-from gateway.app import create_app
+from backend.app import create_app
 
 
-def test_gateway_serves_a_session_lifecycle() -> None:
+def test_backend_serves_a_session_lifecycle() -> None:
     owner_id = "11111111-1111-1111-1111-111111111111"
     with TestClient(create_app()) as client:
         assert client.get("/api/v1/health").status_code == 200

@@ -2,12 +2,12 @@ from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from gateway.features.sessions.application.models import BrowserEndpoints
+from backend.features.sessions.application.models import BrowserEndpoints
 
 
-class GatewaySettings(BaseSettings):
+class BackendSettings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="GATEWAY_",
+        env_prefix="BACKEND_",
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
@@ -17,7 +17,7 @@ class GatewaySettings(BaseSettings):
     control_plane_url: str = "http://127.0.0.1:8000"
 
     # Placeholder topology for the in-memory upstream; drops out once the
-    # gateway talks to the control plane through the generated client.
+    # backend talks to the control plane through the generated client.
     browser_1_tunnel_url: str = "ws://127.0.0.1:8021/api/v1/browser/ws"
     browser_1_screencast_url: str = (
         "ws://127.0.0.1:8011/api/v1/browser/"
