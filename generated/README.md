@@ -29,9 +29,14 @@ imported.
 ## Regenerating
 
 ```bash
-uv run python scripts/generate_http_clients.py          # rewrite the clients
-uv run python scripts/generate_http_clients.py --check  # fail if out of date
+./scripts/generate_http_clients.sh          # rewrite the clients
+./scripts/generate_http_clients.sh --check  # fail if out of date
 ```
+
+The script exports each FastAPI app's OpenAPI document to `schemas/*.json`
+(`scripts/export_openapi_schemas.py` — httpxgen has no notion of a FastAPI
+app, so this part stays Python) and then runs the `httpxgen` CLI directly
+against those files.
 
 Never edit the files under `src/generated/<api>/` by hand — change the FastAPI
 routers or schemas and regenerate. Failed requests raise `generated.<api>.ApiError`.

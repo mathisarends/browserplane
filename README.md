@@ -80,7 +80,7 @@ sh scripts/start-backend.sh
 
 uv run python -m browsertunnel.schema_export # write JSON Schema and OpenRPC into schemas/
 (cd frontend && npm run generate:rpc) # regenerate schemas and the TypeScript RPC client
-uv run python scripts/generate_http_clients.py # regenerate the Python HTTP clients
+./scripts/generate_http_clients.sh # regenerate the Python HTTP clients
 uv run pytest        # tests
 uv run ruff check .  # lint
 uv run ruff format . # format
@@ -98,7 +98,7 @@ The typed Python clients for the control-plane and data-plane HTTP APIs are
 rendered from their OpenAPI documents into the uv workspace package
 `generated/`, so the infrastructure layer imports
 `generated.data_plane` instead of hand-writing requests.
-`uv run python scripts/generate_http_clients.py --check` flags a stale client.
+`./scripts/generate_http_clients.sh --check` flags a stale client.
 
 ## Backend protocol
 
