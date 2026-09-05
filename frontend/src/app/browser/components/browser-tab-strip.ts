@@ -6,7 +6,7 @@ import type { BrowserTabState } from "../services/browser-session";
   template: `
     <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="tabs">
-      <div class="tab-list" role="tablist" aria-label="Browser-Tabs">
+      <div class="tab-list" role="tablist" aria-label="Browser tabs">
         @for (tab of tabs(); track tab.id) {
           <div
             class="browser-tab"
@@ -27,11 +27,11 @@ import type { BrowserTabState } from "../services/browser-session";
                 />
               }
             </span>
-            <span>{{ tab.title || "Neuer Tab" }}</span>
+            <span>{{ tab.title || "New tab" }}</span>
             <button
               type="button"
               class="close-tab"
-              [attr.aria-label]="(tab.title || 'Neuer Tab') + ' schließen'"
+              [attr.aria-label]="'Close ' + (tab.title || 'new tab')"
               (click)="$event.stopPropagation(); close.emit(tab.id)"
             >
               ×
@@ -39,7 +39,7 @@ import type { BrowserTabState } from "../services/browser-session";
           </div>
         }
       </div>
-      <button class="new-tab" type="button" aria-label="Neuen Tab öffnen" (click)="create.emit()">
+      <button class="new-tab" type="button" aria-label="Open new tab" (click)="create.emit()">
         +
       </button>
     </div>

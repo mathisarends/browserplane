@@ -8,7 +8,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
 @Component({
   selector: "app-browser-state-toolbar",
   template: `
-    <div class="state-bar" aria-label="Browserzustand">
+    <div class="state-bar" aria-label="Browser state">
       <button
         class="state-trigger"
         type="button"
@@ -25,26 +25,26 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       <span class="bar-status" [attr.data-tone]="notice()?.tone">
         @if (operation()) {
           <i class="spinner" aria-hidden="true"></i
-          >{{ operation() === "capture" ? "Speichert" : "Mountet" }}
+          >{{ operation() === "capture" ? "Saving" : "Mounting" }}
         } @else if (notice(); as currentNotice) {
           {{ currentNotice.text }}
         } @else {
-          {{ vault.snapshots().length }} gespeichert
+          {{ vault.snapshots().length }} saved
         }
       </span>
     </div>
 
     @if (expanded()) {
-      <section class="state-popover" aria-label="Browser State verwalten">
+      <section class="state-popover" aria-label="Manage browser state">
         <header>
           <span>
             <strong>Browser State</strong>
-            <small>Authentication, Tabs und Scrollposition · dauerhaft in diesem Browser</small>
+            <small>Authentication, tabs, and scroll position · saved for this browser</small>
           </span>
           <button
             class="close-button"
             type="button"
-            aria-label="Browser-State-Menü schließen"
+            aria-label="Close browser state menu"
             (click)="expanded.set(false)"
           >
             ×
@@ -62,17 +62,17 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
               <path d="M10 3v9m0 0 3-3m-3 3L7 9" />
               <path d="M4 14v2h12v-2" />
             </svg>
-            Zustand sichern
+            Save state
           </button>
 
           <label class="snapshot-picker">
-            <span class="visually-hidden">Gespeicherten Snapshot auswählen</span>
+            <span class="visually-hidden">Select saved snapshot</span>
             <select
               [value]="selectedSnapshotId()"
               [disabled]="vault.snapshots().length === 0 || !!operation()"
               (change)="selectedSnapshotId.set($any($event.target).value)"
             >
-              <option value="">Snapshot auswählen</option>
+              <option value="">Select snapshot</option>
               @for (snapshot of vault.snapshots(); track snapshot.id) {
                 <option [value]="snapshot.id">
                   {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
@@ -91,7 +91,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
               <path d="M10 17V8m0 0 3 3m-3-3-3 3" />
               <path d="M4 6V4h12v2" />
             </svg>
-            Mounten
+            Mount
           </button>
         </div>
 
@@ -417,7 +417,7 @@ export class BrowserStateToolbar {
     try {
       const snapshot = await this.vault.capture(sessionId, this.sourceLabel());
       this.selectedSnapshotId.set(snapshot.id);
-      this.notice.set({ tone: "success", text: `${snapshot.name} gespeichert` });
+      this.notice.set({ tone: "success", text: `${snapshot.name} saved` });
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {
@@ -434,7 +434,7 @@ export class BrowserStateToolbar {
     try {
       const snapshot = await this.vault.mount(sessionId, snapshotId);
       await this.session.refreshTabs();
-      this.notice.set({ tone: "success", text: `${snapshot.name} gemountet` });
+      this.notice.set({ tone: "success", text: `${snapshot.name} mounted` });
       this.expanded.set(false);
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
@@ -444,12 +444,12 @@ export class BrowserStateToolbar {
   }
 
   protected snapshotTime(timestamp: string): string {
-    return new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(
+    return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(
       new Date(timestamp),
     );
   }
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Browserzustand konnte nicht übertragen werden";
+  return error instanceof Error ? error.message : "Browser state could not be transferred";
 }

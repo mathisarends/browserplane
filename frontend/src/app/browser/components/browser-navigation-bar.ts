@@ -11,10 +11,10 @@ import type { NavigationState } from "../services/browser-session";
 @Component({
   selector: "app-browser-navigation-bar",
   template: `
-    <nav class="navigation-controls" aria-label="Seitennavigation">
+    <nav class="navigation-controls" aria-label="Page navigation">
       <button
         type="button"
-        aria-label="Zurück"
+        aria-label="Back"
         [disabled]="!navigation()?.canGoBack"
         (click)="back.emit()"
       >
@@ -22,7 +22,7 @@ import type { NavigationState } from "../services/browser-session";
       </button>
       <button
         type="button"
-        aria-label="Vor"
+        aria-label="Forward"
         [disabled]="!navigation()?.canGoForward"
         (click)="forward.emit()"
       >
@@ -33,7 +33,7 @@ import type { NavigationState } from "../services/browser-session";
         [disabled]="!hasActiveTab()"
         (click)="reloadOrStop.emit()"
         [attr.data-loading]="navigation()?.loading ?? false"
-        [attr.aria-label]="navigation()?.loading ? 'Laden abbrechen' : 'Neu laden'"
+        [attr.aria-label]="navigation()?.loading ? 'Stop loading' : 'Reload'"
       >
         <svg class="reload-icon" viewBox="0 0 20 20" aria-hidden="true">
           <path d="M15.3 7.1A6 6 0 1 0 16 10" />
@@ -43,17 +43,17 @@ import type { NavigationState } from "../services/browser-session";
       </button>
     </nav>
     <form class="address-form" (submit)="$event.preventDefault(); navigate.emit()">
-      <label class="visually-hidden" [for]="ownerId() + '-url'">URL</label>
+      <label class="visually-hidden" [for]="ownerId() + '-url'">Search or enter address</label>
       <input
         #addressInput
         [id]="ownerId() + '-url'"
         name="url"
         type="text"
-        inputmode="url"
+        inputmode="search"
         [value]="address()"
         (input)="addressChange.emit($any($event.target).value)"
-        placeholder="URL eingeben"
-        autocomplete="url"
+        placeholder="Search DuckDuckGo or enter address"
+        autocomplete="off"
         spellcheck="false"
       />
     </form>

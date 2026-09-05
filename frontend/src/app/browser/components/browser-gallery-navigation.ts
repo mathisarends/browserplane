@@ -6,7 +6,7 @@ import { ChangeDetectionStrategy, Component, input, output } from "@angular/core
     <button
       class="gallery-arrow previous"
       type="button"
-      aria-label="Vorherigen Browser anzeigen"
+      aria-label="Show previous browser"
       (click)="previous.emit()"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
@@ -14,17 +14,17 @@ import { ChangeDetectionStrategy, Component, input, output } from "@angular/core
     <button
       class="gallery-arrow next"
       type="button"
-      aria-label="Nächsten Browser anzeigen"
+      aria-label="Show next browser"
       (click)="next.emit()"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
     </button>
-    <nav class="gallery-dots" aria-label="Browser auswählen">
+    <nav class="gallery-dots" aria-label="Select browser">
       @for (item of items(); track item; let index = $index) {
         <button
           type="button"
           [class.active]="activeIndex() === index"
-          [attr.aria-label]="'Browser ' + (index + 1) + ' anzeigen'"
+          [attr.aria-label]="'Show browser ' + (index + 1)"
           [attr.aria-current]="activeIndex() === index ? 'true' : null"
           (click)="show.emit(index)"
         ></button>

@@ -21,7 +21,7 @@ import { BrowserTabStrip } from "./browser-tab-strip";
   imports: [BrowserCanvas, BrowserNavigationBar, BrowserStateToolbar, BrowserTabStrip],
   providers: [BrowserSession],
   template: `
-    <section class="browser-panel" [attr.aria-label]="label() + ' Vorschau'">
+    <section class="browser-panel" [attr.aria-label]="label() + ' preview'">
       <header class="browser-chrome">
         <app-browser-tab-strip
           [tabs]="session.tabs()"
@@ -88,7 +88,7 @@ export class BrowserPanel implements OnInit, OnDestroy {
   readonly position = input.required<number>();
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
-  protected readonly label = computed(() => this.session.browserId() ?? "Keine Session");
+  protected readonly label = computed(() => this.session.browserId() ?? "No session");
   private readonly navigationBar = viewChild<BrowserNavigationBar>("navigationBar");
 
   constructor() {

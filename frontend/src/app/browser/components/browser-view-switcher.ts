@@ -6,20 +6,20 @@ export type BrowserViewMode = "focus" | "grid";
   selector: "app-browser-view-switcher",
   template: `
     <header>
-      <div role="group" aria-label="Browser-Ansicht">
+      <div role="group" aria-label="Browser view">
         <button
           type="button"
           [attr.aria-pressed]="viewMode() === 'focus'"
           (click)="viewModeChange.emit('focus')"
         >
-          Fokus
+          Focus
         </button>
         <button
           type="button"
           [attr.aria-pressed]="viewMode() === 'grid'"
           (click)="viewModeChange.emit('grid')"
         >
-          Kacheln
+          Grid
         </button>
       </div>
     </header>

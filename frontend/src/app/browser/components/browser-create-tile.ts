@@ -3,14 +3,14 @@ import { ChangeDetectionStrategy, Component, output } from "@angular/core";
 @Component({
   selector: "app-browser-create-tile",
   template: `
-    <section aria-label="Neuen Browser erstellen">
+    <section aria-label="Create a new browser">
       <button type="button" (click)="create.emit()">
         <span class="create-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
         </span>
         <span class="create-copy">
-          <strong>Neuen Browser erstellen</strong>
-          <small>Weitere Browser-Session hinzufügen</small>
+          <strong>Create a new browser</strong>
+          <small>Add another browser session</small>
         </span>
       </button>
     </section>

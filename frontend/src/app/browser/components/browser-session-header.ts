@@ -8,7 +8,7 @@ import type { ConnectionState } from "../services/browser-session";
       <span class="session-index">Session {{ paddedPosition() }}</span>
       <strong [title]="label()">{{ label() }}</strong>
     </div>
-    <div class="session-tools" aria-label="Session-Metadaten und künftige Werkzeuge">
+    <div class="session-tools" aria-label="Session metadata and future tools">
       <span class="connection-badge" [attr.data-state]="connection()">
         <i aria-hidden="true"></i>{{ connectionLabel() }}
       </span>
@@ -126,7 +126,7 @@ export class BrowserSessionHeader {
       case "connected":
         return "Live";
       case "connecting":
-        return "Verbindet";
+        return "Connecting";
       default:
         return "Offline";
     }

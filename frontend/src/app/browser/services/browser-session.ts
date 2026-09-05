@@ -33,6 +33,7 @@ export type ConnectionState = "connecting" | "connected" | "disconnected";
  * closes, so this covers a session whose socket never came up at all.
  */
 const SESSION_TTL_SECONDS = 600;
+const DUCKDUCKGO_SEARCH_URL = "https://duckduckgo.com/?q=";
 
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
@@ -66,12 +67,12 @@ export class BrowserSession {
   });
   readonly status = computed(() => {
     const error = this.error();
-    if (error) return `Fehler · ${error}`;
-    if (this.connection() === "connecting") return "Verbindung wird aufgebaut";
-    if (this.connection() === "disconnected") return "Nicht verbunden";
+    if (error) return `Error · ${error}`;
+    if (this.connection() === "connecting") return "Connecting";
+    if (this.connection() === "disconnected") return "Not connected";
     const tab = this.activeTab();
-    if (!tab) return "Stream wartet";
-    return `${tab.title || "Neuer Tab"} · ${this.navigation()?.loading ? "lädt" : "verbunden"}`;
+    if (!tab) return "Stream waiting";
+    return `${tab.title || "New tab"} · ${this.navigation()?.loading ? "loading" : "connected"}`;
   });
 
   async connect(ownerId: string): Promise<void> {
@@ -87,7 +88,7 @@ export class BrowserSession {
       // A session that was just opened is active, so it carries both paths;
       // a suspended one holds no browser and leaves them empty.
       if (!session.tunnel_path || !session.screencast_path) {
-        throw new Error("Die Session hält keinen Browser");
+        throw new Error("The session does not contain a browser");
       }
       this.sessionState.set(session);
       this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
@@ -121,7 +122,7 @@ export class BrowserSession {
   }
 
   navigate(value: string): Promise<void> {
-    const url = /^[a-z][a-z\d+.-]*:/i.test(value) ? value : `https://${value}`;
+    const url = resolveNavigationTarget(value);
     return this.run((client) => client.browser.nav.navigate({ url }));
   }
 
@@ -194,7 +195,7 @@ export class BrowserSession {
     if (!this.client) {
       // Input keeps arriving after a failed connect; don't let its aftermath
       // overwrite the error that actually explains the missing connection.
-      if (!this.error()) this.reportError("RPC-Verbindung ist nicht verfügbar");
+      if (!this.error()) this.reportError("RPC connection is unavailable");
       return;
     }
     try {
@@ -247,7 +248,7 @@ export class BrowserSession {
         if (event.error) this.errorState.set(event.error);
         break;
       case "browser.targetCrashed":
-        this.errorState.set(`Browser abgestürzt · ${event.status}`);
+        this.errorState.set(`Browser crashed · ${event.status}`);
         break;
       case "browser.targetDetached":
         break;
@@ -259,14 +260,12 @@ export class BrowserSession {
     this.screencast = socket;
     await new Promise<void>((resolve, reject) => {
       socket.addEventListener("open", () => resolve(), { once: true });
-      socket.addEventListener(
-        "error",
-        () => reject(new Error("Screencast-Verbindung fehlgeschlagen")),
-        { once: true },
-      );
+      socket.addEventListener("error", () => reject(new Error("Screencast connection failed")), {
+        once: true,
+      });
       socket.addEventListener(
         "close",
-        () => reject(new Error("Screencast-Verbindung wurde getrennt")),
+        () => reject(new Error("Screencast connection was disconnected")),
         { once: true },
       );
     });
@@ -277,9 +276,38 @@ export class BrowserSession {
     });
     socket.addEventListener("close", () => {
       if (socket === this.screencast) {
-        this.reportError("Screencast-Verbindung wurde getrennt");
+        this.reportError("Screencast connection was disconnected");
       }
     });
+  }
+}
+
+/** Resolve address-bar input like a browser omnibox would. */
+export function resolveNavigationTarget(value: string): string {
+  const input = value.trim();
+
+  if (isLikelyAddress(input)) {
+    return input.startsWith("//") ? `https:${input}` : `https://${input}`;
+  }
+
+  if (/^[a-z][a-z\d+.-]*:/i.test(input)) return input;
+
+  return `${DUCKDUCKGO_SEARCH_URL}${encodeURIComponent(input)}`;
+}
+
+function isLikelyAddress(value: string): boolean {
+  if (!value || /\s/.test(value)) return false;
+
+  try {
+    const url = new URL(value.startsWith("//") ? `https:${value}` : `https://${value}`);
+    const hostname = url.hostname.toLowerCase();
+    return (
+      !url.username &&
+      !url.password &&
+      (hostname === "localhost" || hostname.includes(".") || /^\[[\da-f:]+\]$/i.test(hostname))
+    );
+  } catch {
+    return false;
   }
 }
 
@@ -292,5 +320,5 @@ function socketUrl(path: string): URL {
 
 function openSessionError(response: openSessionResponse): string {
   if (response.status === 503) return response.data.message;
-  return `Session konnte nicht geöffnet werden (${response.status})`;
+  return `Session could not be opened (${response.status})`;
 }
