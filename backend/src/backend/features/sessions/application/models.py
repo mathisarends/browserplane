@@ -68,3 +68,16 @@ class SuspendedSession:
 
     def is_expired(self, now: datetime) -> bool:
         return self.expires_at <= now
+
+
+@dataclass(frozen=True, slots=True)
+class BrowserStateSnapshot:
+    """A named, reusable browser state persisted independently of a session."""
+
+    id: UUID
+    owner_id: UUID
+    name: str
+    source_browser: str
+    authentication_state: AuthenticationStateDocument
+    browser_state: BrowserStateDocument
+    created_at: datetime

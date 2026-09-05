@@ -5,6 +5,7 @@ from backend.features.browsers.application.models import Browser
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
+    BrowserStateSnapshot,
     SuspendedSession,
 )
 
@@ -42,3 +43,13 @@ class BrowserStateGateway(ABC):
     async def mount_browser(
         self, browser: Browser, state: BrowserStateDocument
     ) -> None: ...
+
+
+class BrowserStateSnapshotRepository(ABC):
+    """Persistence contract for reusable, named browser states."""
+
+    @abstractmethod
+    async def save(self, *, snapshot: BrowserStateSnapshot) -> BrowserStateSnapshot: ...
+
+    @abstractmethod
+    async def list_all(self) -> tuple[BrowserStateSnapshot, ...]: ...

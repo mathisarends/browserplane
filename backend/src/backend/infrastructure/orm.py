@@ -57,3 +57,17 @@ class SuspendedSessionModel(DatabaseModel, table=True):
         sa_column=Column(JSONB, nullable=False)
     )
     browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+
+
+class BrowserStateSnapshotModel(DatabaseModel, table=True):
+    """A reusable browser state captured explicitly by a user."""
+
+    __tablename__ = "browser_state_snapshots"
+
+    owner_id: UUID = Field(index=True)
+    name: str
+    source_browser: str
+    authentication_state: dict[str, Any] = Field(
+        sa_column=Column(JSONB, nullable=False)
+    )
+    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))

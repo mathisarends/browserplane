@@ -24,8 +24,13 @@ from backend.features.sessions.presentation.errors import (
     SESSION_NOT_FOUND,
     SESSION_NOT_SUSPENDED,
 )
-from backend.features.sessions.presentation.mapper import to_session_response
+from backend.features.sessions.presentation.mapper import (
+    to_browser_state_snapshot_response,
+    to_session_response,
+)
 from backend.features.sessions.presentation.schemas import (
+    BrowserStateSnapshotResponse,
+    CaptureBrowserStateSnapshotRequest,
     OpenSessionRequest,
     ResumeSessionRequest,
     SessionResponse,
@@ -155,6 +160,44 @@ async def mount_session_browser_state(
         session_id, state.model_dump(mode="json", by_alias=True)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@session_router.get(
+    "/browser-state-snapshots",
+    response_model=list[BrowserStateSnapshotResponse],
+    operation_id="list_browser_state_snapshots",
+)
+async def list_browser_state_snapshots(
+    response: Response,
+    service: FromDishka[SessionService],
+) -> list[BrowserStateSnapshotResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    snapshots = await service.list_snapshots()
+    return [to_browser_state_snapshot_response(snapshot) for snapshot in snapshots]
+
+
+@session_router.post(
+    "/sessions/{session_id}/browser-state-snapshots",
+    response_model=BrowserStateSnapshotResponse,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="capture_browser_state_snapshot",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def capture_browser_state_snapshot(
+    session_id: UUID,
+    request: CaptureBrowserStateSnapshotRequest,
+    service: FromDishka[SessionService],
+) -> BrowserStateSnapshotResponse:
+    snapshot = await service.capture_snapshot(
+        session_id,
+        name=request.name,
+        source_browser=request.source_browser,
+    )
+    return to_browser_state_snapshot_response(snapshot)
 
 
 @session_router.post(

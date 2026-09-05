@@ -2,7 +2,7 @@ import asyncio
 import logging
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from backend.features.browsers.application.models import Browser
 from backend.features.browsers.application.service import BrowserService
@@ -16,11 +16,13 @@ from backend.features.sessions.application.exceptions import (
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
+    BrowserStateSnapshot,
     Session,
     SuspendedSession,
 )
 from backend.features.sessions.application.ports import (
     BrowserStateGateway,
+    BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
 
@@ -35,12 +37,14 @@ class SessionService:
         browsers: BrowserService,
         leases: LeaseService,
         suspensions: SuspendedSessionRepository,
+        snapshots: BrowserStateSnapshotRepository,
         browser_state: BrowserStateGateway,
         suspension_ttl: timedelta,
     ) -> None:
         self._browsers = browsers
         self._leases = leases
         self._suspensions = suspensions
+        self._snapshots = snapshots
         self._browser_state = browser_state
         self._suspension_ttl = suspension_ttl
 
@@ -110,6 +114,29 @@ class SessionService:
     ) -> None:
         session = await self._active_session(session_id)
         await self._browser_state.mount_browser(session.browser, state)
+
+    async def capture_snapshot(
+        self, session_id: UUID, *, name: str, source_browser: str
+    ) -> BrowserStateSnapshot:
+        session = await self._active_session(session_id)
+        authentication_state, browser_state = await asyncio.gather(
+            self._browser_state.capture_authentication(session.browser),
+            self._browser_state.capture_browser(session.browser),
+        )
+        return await self._snapshots.save(
+            snapshot=BrowserStateSnapshot(
+                id=uuid4(),
+                owner_id=session.lease.owner_id,
+                name=name,
+                source_browser=source_browser,
+                authentication_state=authentication_state,
+                browser_state=browser_state,
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    async def list_snapshots(self) -> tuple[BrowserStateSnapshot, ...]:
+        return await self._snapshots.list_all()
 
     async def suspend(self, session_id: UUID) -> SuspendedSession:
         """Store what the browser holds and give the browser back to the pool.

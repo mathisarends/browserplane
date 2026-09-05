@@ -12,6 +12,7 @@ from backend.features.health.presentation.router import health_router
 from backend.features.leases.provider import LeaseProvider
 from backend.features.sessions.application.ports import (
     BrowserStateGateway,
+    BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
 from backend.features.sessions.presentation.errors import (
@@ -35,6 +36,7 @@ def create_app(
     repository: BrowserRepository | None = None,
     suspensions: SuspendedSessionRepository | None = None,
     browser_state: BrowserStateGateway | None = None,
+    snapshots: BrowserStateSnapshotRepository | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
     install_request_logging(app)
@@ -46,7 +48,7 @@ def create_app(
         DatabaseProvider(),
         BrowserProvider(provisioner, repository),
         LeaseProvider(),
-        SessionProvider(suspensions, browser_state),
+        SessionProvider(suspensions, browser_state, snapshots),
     )
     setup_dishka(container, app)
     return app

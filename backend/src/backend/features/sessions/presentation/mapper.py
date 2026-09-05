@@ -1,9 +1,14 @@
 from backend.features.sessions.application.models import (
+    BrowserStateSnapshot,
     Session,
     SessionStatus,
     SuspendedSession,
 )
-from backend.features.sessions.presentation.schemas import SessionResponse
+from backend.features.sessions.presentation.schemas import (
+    BrowserStateSnapshotResponse,
+    SessionResponse,
+)
+from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
 
 SESSION_PATH = "/api/v1/sessions"
 
@@ -30,4 +35,19 @@ def _to_suspended_response(suspended: SuspendedSession) -> SessionResponse:
         owner_id=suspended.owner_id,
         expires_at=suspended.expires_at,
         created_at=suspended.created_at,
+    )
+
+
+def to_browser_state_snapshot_response(
+    snapshot: BrowserStateSnapshot,
+) -> BrowserStateSnapshotResponse:
+    return BrowserStateSnapshotResponse(
+        id=snapshot.id,
+        name=snapshot.name,
+        source_browser=snapshot.source_browser,
+        created_at=snapshot.created_at,
+        authentication_state=AuthenticationStateSchema.model_validate(
+            snapshot.authentication_state
+        ),
+        browser_state=BrowserStateSchema.model_validate(snapshot.browser_state),
     )

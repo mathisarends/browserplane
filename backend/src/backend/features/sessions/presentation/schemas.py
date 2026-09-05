@@ -18,6 +18,20 @@ class ResumeSessionRequest(BaseModel):
     ttl_seconds: int = Field(default=300, gt=0, le=86_400)
 
 
+class CaptureBrowserStateSnapshotRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    source_browser: str = Field(min_length=1, max_length=200)
+
+
+class BrowserStateSnapshotResponse(BaseModel):
+    id: UUID
+    name: str
+    source_browser: str
+    created_at: datetime
+    authentication_state: AuthenticationStateSchema
+    browser_state: BrowserStateSchema
+
+
 class SessionResponse(BaseModel):
     """A session plus the backend paths that carry its live traffic.
 

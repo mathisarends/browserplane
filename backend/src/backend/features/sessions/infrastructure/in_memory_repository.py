@@ -1,7 +1,13 @@
 from uuid import UUID
 
-from backend.features.sessions.application.models import SuspendedSession
-from backend.features.sessions.application.ports import SuspendedSessionRepository
+from backend.features.sessions.application.models import (
+    BrowserStateSnapshot,
+    SuspendedSession,
+)
+from backend.features.sessions.application.ports import (
+    BrowserStateSnapshotRepository,
+    SuspendedSessionRepository,
+)
 
 
 class InMemorySuspendedSessionRepository(SuspendedSessionRepository):
@@ -19,3 +25,21 @@ class InMemorySuspendedSessionRepository(SuspendedSessionRepository):
 
     async def delete(self, *, session_id: UUID) -> None:
         self._suspended.pop(session_id, None)
+
+
+class InMemoryBrowserStateSnapshotRepository(BrowserStateSnapshotRepository):
+    def __init__(self) -> None:
+        self._snapshots: dict[UUID, BrowserStateSnapshot] = {}
+
+    async def save(self, *, snapshot: BrowserStateSnapshot) -> BrowserStateSnapshot:
+        self._snapshots[snapshot.id] = snapshot
+        return snapshot
+
+    async def list_all(self) -> tuple[BrowserStateSnapshot, ...]:
+        return tuple(
+            sorted(
+                self._snapshots.values(),
+                key=lambda snapshot: snapshot.created_at,
+                reverse=True,
+            )
+        )
