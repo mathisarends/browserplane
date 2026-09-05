@@ -49,8 +49,8 @@ import type { BrowserTabState } from "../services/browser-session";
       display: flex;
       align-items: flex-end;
       gap: 10px;
-      height: 42px;
-      padding: 7px 12px 0 14px;
+      height: 38px;
+      padding: 4px 12px 0 14px;
       background: #17191e;
     }
     .window-controls {
@@ -184,8 +184,8 @@ import type { BrowserTabState } from "../services/browser-session";
     @media (max-width: 580px) {
       :host {
         gap: 6px;
-        height: 39px;
-        padding: 6px 8px 0 10px;
+        height: 36px;
+        padding: 4px 8px 0 10px;
       }
       .window-controls {
         flex-basis: 43px;

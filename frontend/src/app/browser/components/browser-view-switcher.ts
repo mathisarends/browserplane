@@ -32,7 +32,7 @@ export type BrowserViewMode = "focus" | "grid";
       display: flex;
       justify-content: center;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: clamp(14px, 1.6vw, 26px);
     }
     div {
       display: inline-flex;
@@ -80,7 +80,7 @@ export type BrowserViewMode = "focus" | "grid";
     }
     @media (max-width: 580px) {
       header {
-        margin-bottom: 6px;
+        margin-bottom: 12px;
       }
       div {
         width: 208px;
