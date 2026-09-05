@@ -18,6 +18,14 @@ plane learns to capture one more thing.
 """
 
 
+@dataclass(frozen=True, slots=True)
+class Download:
+    id: str
+    filename: str
+    url: str
+    size: int
+
+
 class SessionStatus(StrEnum):
     """Whether a session currently holds a browser."""
 

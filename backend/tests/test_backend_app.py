@@ -11,6 +11,7 @@ from backend.features.browsers.infrastructure.in_memory_repository import (
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
+    Download,
 )
 from backend.features.sessions.application.ports import BrowserStateGateway
 from backend.features.sessions.infrastructure.in_memory_repository import (
@@ -79,6 +80,15 @@ class FakeBrowserStateGateway(BrowserStateGateway):
     ) -> None:
         self.mounted_browser = state
 
+    async def list_downloads(self, browser: Browser) -> tuple[Download, ...]:
+        return ()
+
+    async def clear_downloads(self, browser: Browser) -> None:
+        return None
+
+    async def download_file(self, browser: Browser, download_id: str) -> bytes:
+        raise AssertionError("No fake download exists")
+
 
 def test_backend_serves_a_session_lifecycle() -> None:
     state = FakeBrowserStateGateway()
@@ -122,6 +132,10 @@ def test_backend_serves_a_session_lifecycle() -> None:
         browser_state = client.get(f"/api/v1/sessions/{session['id']}/browser-state")
         assert browser_state.status_code == 200
         assert browser_state.json()["tabs"][0]["url"].endswith("/inbox")
+        downloads = client.get(f"/api/v1/sessions/{session['id']}/downloads")
+        assert downloads.status_code == 200
+        assert downloads.headers["cache-control"] == "no-store"
+        assert downloads.json() == []
         assert session["browser_id"] == str(UUID(int=1))
         assert session["tunnel_path"] == f"/api/v1/sessions/{session['id']}/tunnel"
 

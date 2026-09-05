@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator, Callable, Coroutine
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from dishka import AsyncContainer, Scope
@@ -20,6 +21,7 @@ from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
     BROWSER_STATE_TRANSFER_FAILED,
+    DOWNLOAD_NOT_FOUND,
     NO_BROWSER_AVAILABLE,
     SESSION_NOT_ACTIVE,
     SESSION_NOT_FOUND,
@@ -44,7 +46,11 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
 )
 from backend.presentation.api_errors import api_error_responses
-from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
+from generated.data_plane import (
+    AuthenticationStateSchema,
+    BrowserStateSchema,
+    DownloadResponse,
+)
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
 logger = logging.getLogger(__name__)
@@ -190,6 +196,61 @@ async def mount_session_browser_state(
         session_id, state.model_dump(mode="json", by_alias=True)
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@session_router.get(
+    "/sessions/{session_id}/downloads",
+    operation_id="list_session_downloads",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def list_session_downloads(
+    session_id: UUID,
+    response: Response,
+    service: FromDishka[SessionService],
+) -> list[DownloadResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    return await service.list_downloads(session_id)
+
+
+@session_router.get(
+    "/sessions/{session_id}/downloads/{download_id}/file",
+    operation_id="download_session_file",
+    responses={
+        200: {
+            "content": {
+                "application/octet-stream": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+            "description": "Downloaded file",
+        },
+        **api_error_responses(
+            SESSION_NOT_FOUND,
+            BROWSER_NOT_FOUND,
+            SESSION_NOT_ACTIVE,
+            DOWNLOAD_NOT_FOUND,
+            BROWSER_STATE_TRANSFER_FAILED,
+        ),
+    },
+)
+async def download_session_file(
+    session_id: UUID,
+    download_id: str,
+    service: FromDishka[SessionService],
+) -> Response:
+    filename, content = await service.download_file(session_id, download_id)
+    return Response(
+        content=content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"
+        },
+    )
 
 
 @session_router.get(

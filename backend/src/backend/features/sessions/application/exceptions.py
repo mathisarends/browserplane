@@ -15,3 +15,7 @@ class SessionNotSuspendedException(BackendException):
 
 class BrowserStateTransferException(BackendException):
     message = "Could not transfer the browser state"
+
+
+class DownloadNotFoundException(BackendException):
+    message = "Download not found"

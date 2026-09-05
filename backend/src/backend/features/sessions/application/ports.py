@@ -7,6 +7,7 @@ from backend.features.sessions.application.models import (
     AuthenticationStateSnapshot,
     BrowserStateDocument,
     BrowserStateSnapshot,
+    Download,
     SuspendedSession,
 )
 
@@ -48,6 +49,15 @@ class BrowserStateGateway(ABC):
     async def mount_browser(
         self, browser: Browser, state: BrowserStateDocument
     ) -> None: ...
+
+    @abstractmethod
+    async def list_downloads(self, browser: Browser) -> tuple[Download, ...]: ...
+
+    @abstractmethod
+    async def clear_downloads(self, browser: Browser) -> None: ...
+
+    @abstractmethod
+    async def download_file(self, browser: Browser, download_id: str) -> bytes: ...
 
 
 class BrowserStateSnapshotRepository(ABC):

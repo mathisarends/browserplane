@@ -9,6 +9,7 @@ from backend.features.browsers.application.exceptions import (
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
     BrowserStateTransferException,
+    DownloadNotFoundException,
     NoBrowserAvailableException,
     SessionNotActiveException,
     SessionNotSuspendedException,
@@ -35,6 +36,10 @@ class SessionNotSuspendedError(ApiErrorResponse):
 
 class BrowserStateTransferFailedError(ApiErrorResponse):
     code: Literal[ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED]
+
+
+class DownloadNotFoundError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.DOWNLOAD_NOT_FOUND]
 
 
 # An expired lease is dropped on access, so it reaches the edge as "not found".
@@ -83,6 +88,13 @@ BROWSER_STATE_TRANSFER_FAILED = ApiErrorSpec(
     response_model=BrowserStateTransferFailedError,
     description="Could not transfer the browser state",
 )
+DOWNLOAD_NOT_FOUND = ApiErrorSpec(
+    exceptions=(DownloadNotFoundException,),
+    status_code=status.HTTP_404_NOT_FOUND,
+    code=ApiErrorCode.DOWNLOAD_NOT_FOUND,
+    response_model=DownloadNotFoundError,
+    description="Download not found",
+)
 
 API_ERRORS = (
     SESSION_NOT_FOUND,
@@ -90,4 +102,5 @@ API_ERRORS = (
     SESSION_NOT_ACTIVE,
     SESSION_NOT_SUSPENDED,
     BROWSER_STATE_TRANSFER_FAILED,
+    DOWNLOAD_NOT_FOUND,
 )

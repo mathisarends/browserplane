@@ -9,6 +9,7 @@ from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.exceptions import (
+    DownloadNotFoundException,
     NoBrowserAvailableException,
     SessionNotActiveException,
     SessionNotSuspendedException,
@@ -18,6 +19,7 @@ from backend.features.sessions.application.models import (
     AuthenticationStateSnapshot,
     BrowserStateDocument,
     BrowserStateSnapshot,
+    Download,
     Session,
     SuspendedSession,
 )
@@ -62,6 +64,7 @@ class SessionService:
         browser = await self._pick_available_browser()
         lease = await self._leases.create(browser.id, owner_id, ttl)
         try:
+            await self._browser_state.clear_downloads(browser)
             if authentication_state is not None:
                 await self._browser_state.mount_authentication(
                     browser, authentication_state
@@ -145,6 +148,21 @@ class SessionService:
         session = await self._active_session(session_id)
         await self._browser_state.mount_browser(session.browser, state)
 
+    async def list_downloads(self, session_id: UUID) -> tuple[Download, ...]:
+        session = await self._active_session(session_id)
+        return await self._browser_state.list_downloads(session.browser)
+
+    async def download_file(
+        self, session_id: UUID, download_id: str
+    ) -> tuple[str, bytes]:
+        session = await self._active_session(session_id)
+        downloads = await self._browser_state.list_downloads(session.browser)
+        download = next((item for item in downloads if item.id == download_id), None)
+        if download is None:
+            raise DownloadNotFoundException()
+        content = await self._browser_state.download_file(session.browser, download_id)
+        return download.filename, content
+
     async def capture_browser_snapshot(
         self, session_id: UUID, *, name: str, source_browser: str
     ) -> BrowserStateSnapshot:
@@ -227,6 +245,7 @@ class SessionService:
             lease_id=suspended.id,
         )
         try:
+            await self._browser_state.clear_downloads(browser)
             # Authentication must be present before restored tabs navigate.
             await self._browser_state.mount_authentication(
                 browser, suspended.authentication_state
