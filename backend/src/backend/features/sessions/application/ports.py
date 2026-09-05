@@ -4,6 +4,7 @@ from uuid import UUID
 from backend.features.browsers.application.models import Browser
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
+    AuthenticationStateSnapshot,
     BrowserStateDocument,
     BrowserStateSnapshot,
     SuspendedSession,
@@ -57,3 +58,15 @@ class BrowserStateSnapshotRepository(ABC):
 
     @abstractmethod
     async def list_all(self) -> tuple[BrowserStateSnapshot, ...]: ...
+
+
+class AuthenticationStateSnapshotRepository(ABC):
+    """Persistence contract for reusable, named authentication states."""
+
+    @abstractmethod
+    async def save(
+        self, *, snapshot: AuthenticationStateSnapshot
+    ) -> AuthenticationStateSnapshot: ...
+
+    @abstractmethod
+    async def list_all(self) -> tuple[AuthenticationStateSnapshot, ...]: ...

@@ -1,10 +1,12 @@
 from backend.features.sessions.application.models import (
+    AuthenticationStateSnapshot,
     BrowserStateSnapshot,
     Session,
     SessionStatus,
     SuspendedSession,
 )
 from backend.features.sessions.presentation.schemas import (
+    AuthenticationStateSnapshotResponse,
     BrowserStateSnapshotResponse,
     OpenSessionResponse,
     SessionResponse,
@@ -56,8 +58,19 @@ def to_browser_state_snapshot_response(
         name=snapshot.name,
         source_browser=snapshot.source_browser,
         created_at=snapshot.created_at,
+        browser_state=BrowserStateSchema.model_validate(snapshot.browser_state),
+    )
+
+
+def to_authentication_state_snapshot_response(
+    snapshot: AuthenticationStateSnapshot,
+) -> AuthenticationStateSnapshotResponse:
+    return AuthenticationStateSnapshotResponse(
+        id=snapshot.id,
+        name=snapshot.name,
+        source_browser=snapshot.source_browser,
+        created_at=snapshot.created_at,
         authentication_state=AuthenticationStateSchema.model_validate(
             snapshot.authentication_state
         ),
-        browser_state=BrowserStateSchema.model_validate(snapshot.browser_state),
     )

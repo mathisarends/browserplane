@@ -14,6 +14,8 @@ from backend.features.sessions.application.models import (
 )
 from backend.features.sessions.application.ports import BrowserStateGateway
 from backend.features.sessions.infrastructure.in_memory_repository import (
+    InMemoryAuthenticationStateSnapshotRepository,
+    InMemoryBrowserStateSnapshotRepository,
     InMemorySuspendedSessionRepository,
 )
 
@@ -212,3 +214,34 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
         assert state.mounted_authentication == {"cookies": [], "origins": []}
         assert state.mounted_browser is not None
         assert state.mounted_browser["tabs"][0]["url"] == "https://example.com/inbox"
+
+
+def test_saved_browser_and_authentication_states_are_independent() -> None:
+    app = create_app(
+        FakeProvisioner(),
+        InMemoryBrowserRepository(),
+        InMemorySuspendedSessionRepository(),
+        FakeBrowserStateGateway(),
+        InMemoryBrowserStateSnapshotRepository(),
+        InMemoryAuthenticationStateSnapshotRepository(),
+    )
+    with TestClient(app) as client:
+        session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
+        request = {"name": "Work", "source_browser": "Browser 01"}
+
+        browser = client.post(
+            f"/api/v1/sessions/{session['id']}/browser-state-snapshots",
+            json=request,
+        )
+        authentication = client.post(
+            f"/api/v1/sessions/{session['id']}/authentication-state-snapshots",
+            json=request,
+        )
+
+        assert browser.status_code == authentication.status_code == 201
+        assert "authentication_state" not in browser.json()
+        assert "browser_state" not in authentication.json()
+        assert len(client.get("/api/v1/browser-state-snapshots").json()) == 1
+        auth_list = client.get("/api/v1/authentication-state-snapshots")
+        assert auth_list.headers["cache-control"] == "no-store"
+        assert len(auth_list.json()) == 1

@@ -1,10 +1,12 @@
 from uuid import UUID
 
 from backend.features.sessions.application.models import (
+    AuthenticationStateSnapshot,
     BrowserStateSnapshot,
     SuspendedSession,
 )
 from backend.features.sessions.application.ports import (
+    AuthenticationStateSnapshotRepository,
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
@@ -45,6 +47,28 @@ class InMemoryBrowserStateSnapshotRepository(BrowserStateSnapshotRepository):
         return snapshot
 
     async def list_all(self) -> tuple[BrowserStateSnapshot, ...]:
+        return tuple(
+            sorted(
+                self._snapshots.values(),
+                key=lambda snapshot: snapshot.created_at,
+                reverse=True,
+            )
+        )
+
+
+class InMemoryAuthenticationStateSnapshotRepository(
+    AuthenticationStateSnapshotRepository
+):
+    def __init__(self) -> None:
+        self._snapshots: dict[UUID, AuthenticationStateSnapshot] = {}
+
+    async def save(
+        self, *, snapshot: AuthenticationStateSnapshot
+    ) -> AuthenticationStateSnapshot:
+        self._snapshots[snapshot.id] = snapshot
+        return snapshot
+
+    async def list_all(self) -> tuple[AuthenticationStateSnapshot, ...]:
         return tuple(
             sorted(
                 self._snapshots.values(),

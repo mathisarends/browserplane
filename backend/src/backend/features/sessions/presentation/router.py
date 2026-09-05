@@ -26,12 +26,15 @@ from backend.features.sessions.presentation.errors import (
     SESSION_NOT_SUSPENDED,
 )
 from backend.features.sessions.presentation.mapper import (
+    to_authentication_state_snapshot_response,
     to_browser_state_snapshot_response,
     to_open_session_response,
     to_session_response,
 )
 from backend.features.sessions.presentation.schemas import (
+    AuthenticationStateSnapshotResponse,
     BrowserStateSnapshotResponse,
+    CaptureAuthenticationStateSnapshotRequest,
     CaptureBrowserStateSnapshotRequest,
     OpenSessionRequest,
     OpenSessionResponse,
@@ -202,12 +205,51 @@ async def capture_browser_state_snapshot(
     request: CaptureBrowserStateSnapshotRequest,
     service: FromDishka[SessionService],
 ) -> BrowserStateSnapshotResponse:
-    snapshot = await service.capture_snapshot(
+    snapshot = await service.capture_browser_snapshot(
         session_id,
         name=request.name,
         source_browser=request.source_browser,
     )
     return to_browser_state_snapshot_response(snapshot)
+
+
+@session_router.get(
+    "/authentication-state-snapshots",
+    response_model=list[AuthenticationStateSnapshotResponse],
+    operation_id="list_authentication_state_snapshots",
+)
+async def list_authentication_state_snapshots(
+    response: Response,
+    service: FromDishka[SessionService],
+) -> list[AuthenticationStateSnapshotResponse]:
+    response.headers["Cache-Control"] = "no-store"
+    snapshots = await service.list_authentication_snapshots()
+    return [to_authentication_state_snapshot_response(item) for item in snapshots]
+
+
+@session_router.post(
+    "/sessions/{session_id}/authentication-state-snapshots",
+    response_model=AuthenticationStateSnapshotResponse,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="capture_authentication_state_snapshot",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def capture_authentication_state_snapshot(
+    session_id: UUID,
+    request: CaptureAuthenticationStateSnapshotRequest,
+    service: FromDishka[SessionService],
+) -> AuthenticationStateSnapshotResponse:
+    snapshot = await service.capture_authentication_snapshot(
+        session_id,
+        name=request.name,
+        source_browser=request.source_browser,
+    )
+    return to_authentication_state_snapshot_response(snapshot)
 
 
 @session_router.post(

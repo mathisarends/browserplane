@@ -7,6 +7,7 @@ from backend.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.ports import (
+    AuthenticationStateSnapshotRepository,
     BrowserStateGateway,
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
@@ -16,6 +17,7 @@ from backend.features.sessions.infrastructure.data_plane_gateway import (
     DataPlaneBrowserStateGateway,
 )
 from backend.features.sessions.infrastructure.repository import (
+    SqlAuthenticationStateSnapshotRepository,
     SqlBrowserStateSnapshotRepository,
     SqlSuspendedSessionRepository,
 )
@@ -28,11 +30,13 @@ class SessionProvider(Provider):
         suspensions: SuspendedSessionRepository | None = None,
         browser_state: BrowserStateGateway | None = None,
         snapshots: BrowserStateSnapshotRepository | None = None,
+        authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
     ) -> None:
         super().__init__()
         self._suspensions = suspensions
         self._browser_state = browser_state
         self._snapshots = snapshots
+        self._authentication_snapshots = authentication_snapshots
 
     @provide(scope=Scope.REQUEST, provides=SuspendedSessionRepository)
     def suspensions(self, session: AsyncSession) -> SuspendedSessionRepository:
@@ -45,6 +49,15 @@ class SessionProvider(Provider):
     @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
     def snapshots(self, session: AsyncSession) -> BrowserStateSnapshotRepository:
         return self._snapshots or SqlBrowserStateSnapshotRepository(session)
+
+    @provide(scope=Scope.REQUEST, provides=AuthenticationStateSnapshotRepository)
+    def authentication_snapshots(
+        self, session: AsyncSession
+    ) -> AuthenticationStateSnapshotRepository:
+        return (
+            self._authentication_snapshots
+            or SqlAuthenticationStateSnapshotRepository(session)
+        )
 
     @provide(scope=Scope.APP)
     def browser_tunnel(self, settings: BackendSettings) -> BrowserTunnel:
@@ -60,6 +73,7 @@ class SessionProvider(Provider):
         leases: LeaseService,
         suspensions: SuspendedSessionRepository,
         snapshots: BrowserStateSnapshotRepository,
+        authentication_snapshots: AuthenticationStateSnapshotRepository,
         browser_state: BrowserStateGateway,
         settings: BackendSettings,
     ) -> SessionService:
@@ -68,6 +82,7 @@ class SessionProvider(Provider):
             leases,
             suspensions,
             snapshots,
+            authentication_snapshots,
             browser_state,
             timedelta(seconds=settings.suspended_session_ttl_seconds),
         )

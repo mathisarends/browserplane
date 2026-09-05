@@ -60,9 +60,20 @@ class SuspendedSessionModel(DatabaseModel, table=True):
 
 
 class BrowserStateSnapshotModel(DatabaseModel, table=True):
-    """A reusable browser state captured explicitly by a user."""
+    """Reusable tabs and UI state captured explicitly by a user."""
 
     __tablename__ = "browser_state_snapshots"
+
+    owner_id: UUID = Field(index=True)
+    name: str
+    source_browser: str
+    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+
+
+class AuthenticationStateSnapshotModel(DatabaseModel, table=True):
+    """Reusable cookies and origin storage captured explicitly by a user."""
+
+    __tablename__ = "authentication_state_snapshots"
 
     owner_id: UUID = Field(index=True)
     name: str
@@ -70,4 +81,3 @@ class BrowserStateSnapshotModel(DatabaseModel, table=True):
     authentication_state: dict[str, Any] = Field(
         sa_column=Column(JSONB, nullable=False)
     )
-    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))

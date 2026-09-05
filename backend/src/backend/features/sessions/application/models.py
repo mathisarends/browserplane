@@ -76,12 +76,23 @@ class SuspendedSession:
 
 @dataclass(frozen=True, slots=True)
 class BrowserStateSnapshot:
-    """A named, reusable browser state persisted independently of a session."""
+    """Named, reusable tabs and UI state persisted independently of a session."""
+
+    id: UUID
+    owner_id: UUID
+    name: str
+    source_browser: str
+    browser_state: BrowserStateDocument
+    created_at: datetime
+
+
+@dataclass(frozen=True, slots=True)
+class AuthenticationStateSnapshot:
+    """Named, reusable cookies and storage persisted independently of tabs."""
 
     id: UUID
     owner_id: UUID
     name: str
     source_browser: str
     authentication_state: AuthenticationStateDocument
-    browser_state: BrowserStateDocument
     created_at: datetime
