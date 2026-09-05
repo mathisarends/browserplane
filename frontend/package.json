@@ -3,27 +3,35 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "generated"
+    "generated",
+    "generated-backend"
   ],
   "scripts": {
-    "predev": "npm run generate:rpc",
+    "predev": "npm run generate",
     "dev": "ng serve --proxy-config proxy.conf.json",
-    "build": "npm run check:client && ng build",
+    "build": "npm run check:clients && ng build",
     "preview": "ng serve --configuration production --proxy-config proxy.conf.json",
+    "generate": "npm run generate:rpc && npm run generate:api",
     "generate:rpc": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
-    "check:generated": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
-    "check:client": "npm run check --workspace @browsertunnel/browser-rpc-client"
+    "generate:api": "uv run python ../scripts/export_openapi_schemas.py && orval && prettier --write generated-backend/src/generated",
+    "check:generated": "npm run check:rpc && npm run check:api",
+    "check:rpc": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
+    "check:api": "npm run generate:api && git diff --quiet -- generated-backend/src/generated",
+    "check:clients": "npm run check --workspaces --if-present"
   },
   "dependencies": {
     "@angular/common": "^20.3.0",
     "@angular/core": "^20.3.0",
     "@angular/platform-browser": "^20.3.0",
+    "@browsertunnel/backend-client": "*",
     "@browsertunnel/browser-rpc-client": "*",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@angular/build": "^20.3.0",
     "@angular/cli": "^20.3.0",
+    "orval": "^8.28.1",
+    "prettier": "^3.9.6",
     "typescript": "~5.9.2"
   }
 }

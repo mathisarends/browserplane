@@ -22,10 +22,15 @@ not part of the video stream.
 ## Architecture
 
 ```text
-Frontend ── JSON-RPC commands/state ──▶ BrowserTunnel ── raw CDP ──▶ Data Plane
-    │                                                                      │
-    └──────────── binary JPEG screencast WebSocket ◀───────────────────────┘
+                        ┌── JSON-RPC commands/state ──▶ BrowserTunnel ──┐
+Frontend ──▶ Backend ───┤                                          raw CDP
+                        └── binary JPEG screencast ◀──────────────── Data Plane
 ```
+
+The frontend only ever talks to the backend. It opens a session
+(`POST /api/v1/sessions`), which leases a browser from the pool and answers
+with two backend-relative paths; the backend relays those WebSockets to the
+BrowserTunnel and data-plane workers, so their addresses stay internal.
 
 - The tab's screencast comes in frame by frame and gets drawn straight onto
   the canvas. No iframe, no embedded browser engine.
@@ -70,8 +75,8 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Start the backend (sets up dependencies and .env on demand)
-sh scripts/start-backend.sh
+# Start the backend, the browser pool and the tunnels
+docker compose up --build
 
 # Start the frontend
 (cd frontend && npm run dev)
@@ -79,7 +84,7 @@ sh scripts/start-backend.sh
 # Then open in a browser: http://localhost:5173
 
 uv run python -m browsertunnel.schema_export # write JSON Schema and OpenRPC into schemas/
-(cd frontend && npm run generate:rpc) # regenerate schemas and the TypeScript RPC client
+(cd frontend && npm run generate) # regenerate schemas and both TypeScript clients
 ./scripts/generate_http_clients.sh # regenerate the Python HTTP clients
 uv run pytest        # tests
 uv run ruff check .  # lint
@@ -89,12 +94,17 @@ uv run ruff format . # format
 
 The frontend can also just be started with `npm run dev` from `frontend/` after
 `npm install`.
-`predev` regenerates schemas and the RPC client first. Vite hot-reloads on
-HTML/CSS/TS changes and proxies `/api` to the backend on port 8000. The
-generated client lives in the workspace package `frontend/generated`;
+`predev` regenerates the schemas and both clients first. Vite hot-reloads on
+HTML/CSS/TS changes and proxies `/api` to the backend on port 8000.
+
+Two generated TypeScript clients live in npm workspace packages:
+`frontend/generated` holds the BrowserTunnel JSON-RPC client rendered from the
+OpenRPC document, and `frontend/generated-backend` holds the backend HTTP
+client that [orval](https://orval.dev) renders from
+`schemas/backend-openapi.json` (see `frontend/orval.config.ts`).
 `npm run check:generated` (from `frontend/`) flags a stale one.
 
-The typed Python clients for the control-plane and data-plane HTTP APIs are
+The typed Python clients for the data-plane and control-plane HTTP APIs are
 rendered from their OpenAPI documents into the uv workspace package
 `generated/`, so the infrastructure layer imports
 `generated.data_plane` instead of hand-writing requests.

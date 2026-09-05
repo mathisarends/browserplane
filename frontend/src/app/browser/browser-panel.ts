@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -18,10 +19,10 @@ import { BrowserSession } from "./browser-session";
   imports: [BrowserCanvas],
   providers: [BrowserSession],
   template: `
-    <section class="browser-panel" [attr.aria-label]="browserId() + ' Vorschau'">
+    <section class="browser-panel" [attr.aria-label]="label() + ' Vorschau'">
       <header class="browser-chrome">
         <div class="browser-heading">
-          <span>{{ browserId() }}</span><span class="plane-label">Data Plane</span>
+          <span>{{ label() }}</span><span class="plane-label">Data Plane</span>
         </div>
         <div class="tab-strip">
           <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -56,8 +57,8 @@ import { BrowserSession } from "./browser-session";
             </button>
           </nav>
           <form class="address-form" (submit)="$event.preventDefault(); navigate()">
-            <label class="visually-hidden" [for]="browserId() + '-url'">URL</label>
-            <input #addressInput [id]="browserId() + '-url'" name="url" type="text" inputmode="url"
+            <label class="visually-hidden" [for]="ownerId() + '-url'">URL</label>
+            <input #addressInput [id]="ownerId() + '-url'" name="url" type="text" inputmode="url"
               [value]="address()" (input)="updateAddress($event)" placeholder="URL eingeben"
               autocomplete="url" spellcheck="false" />
           </form>
@@ -70,12 +71,18 @@ import { BrowserSession } from "./browser-session";
       </footer>
     </section>
   `,
+  host: {
+    "(window:pagehide)": "session.release()",
+  },
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserPanel implements OnInit, OnDestroy {
-  readonly browserId = input.required<string>();
+  readonly ownerId = input.required<string>();
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
+  protected readonly label = computed(
+    () => this.session.browserId() ?? "Keine Session",
+  );
   private readonly addressInput = viewChild<ElementRef<HTMLInputElement>>("addressInput");
 
   constructor() {
@@ -83,7 +90,7 @@ export class BrowserPanel implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.session.connect(this.browserId());
+    void this.session.connect(this.ownerId());
   }
 
   ngOnDestroy(): void {

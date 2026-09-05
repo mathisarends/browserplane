@@ -24,6 +24,7 @@ class OpenAPITarget:
 
 
 TARGETS = (
+    OpenAPITarget(package="backend", app="backend.app"),
     OpenAPITarget(package="data_plane", app="data_plane.app"),
     OpenAPITarget(package="control_plane", app="control_plane.app"),
 )

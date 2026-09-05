@@ -6,16 +6,18 @@ import { BrowserPanel } from "./browser/browser-panel";
   imports: [BrowserPanel],
   template: `
     <main class="workspace">
-      @for (browserId of browserIds; track browserId) {
-        <app-browser-panel [browserId]="browserId" />
+      @for (ownerId of ownerIds; track ownerId) {
+        <app-browser-panel [ownerId]="ownerId" />
       }
     </main>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
-  protected readonly browserIds = [
-    "00000000-0000-0000-0000-000000000001",
-    "00000000-0000-0000-0000-000000000002",
+  // One owner per panel: the backend leases whichever browser is free, so the
+  // frontend no longer knows or names the browsers behind it.
+  protected readonly ownerIds = [
+    crypto.randomUUID(),
+    crypto.randomUUID(),
   ] as const;
 }

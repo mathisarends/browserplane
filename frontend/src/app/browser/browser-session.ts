@@ -1,5 +1,11 @@
 import { computed, Injectable, signal } from "@angular/core";
 import {
+  closeSession,
+  openSession,
+  type openSessionResponse,
+  type SessionResponse,
+} from "@browsertunnel/backend-client";
+import {
   BrowserTunnelClient,
   WebSocketRpcTransport,
   type BrowserEvent,
@@ -17,10 +23,8 @@ interface NavigationState {
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
 
-interface BrowserResponse {
-  readonly websocket_url: string;
-  readonly screencast_url: string;
-}
+/** Long enough that a workspace outlives a browsing session without renewal. */
+const SESSION_TTL_SECONDS = 3600;
 
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
@@ -28,6 +32,7 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BrowserTunnelClient;
   private screencast?: WebSocket;
+  private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly TabResult[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
@@ -40,6 +45,7 @@ export class BrowserSession {
   readonly error = this.errorState.asReadonly();
   readonly frame = this.frameState.asReadonly();
   readonly cursor = this.cursorState.asReadonly();
+  readonly browserId = computed(() => this.sessionState()?.browser_id);
   readonly activeTab = computed(() => this.tabs().find((tab) => tab.active));
   readonly activeUrl = computed(() => {
     const url = this.activeTab()?.url;
@@ -59,24 +65,21 @@ export class BrowserSession {
     return `${tab.title || "Neuer Tab"} · ${this.navigation()?.loading ? "lädt" : "verbunden"}`;
   });
 
-  async connect(browserId: string): Promise<void> {
+  async connect(ownerId: string): Promise<void> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
     try {
-      const response = await fetch(`/api/v1/browsers/${browserId}`);
-      if (!response.ok) {
-        throw new Error(
-          `Browser-Metadaten konnten nicht geladen werden (${response.status})`,
-        );
-      }
-      const browser = (await response.json()) as BrowserResponse;
-      const url = new URL(browser.websocket_url, window.location.href);
-      this.transport = new WebSocketRpcTransport(url);
+      const response = await openSession({
+        owner_id: ownerId,
+        ttl_seconds: SESSION_TTL_SECONDS,
+      });
+      if (response.status !== 201) throw new Error(openSessionError(response));
+      const session = response.data;
+      this.sessionState.set(session);
+      this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
       this.client = new BrowserTunnelClient(this.transport);
       await this.transport.connect();
-      await this.connectScreencast(
-        new URL(browser.screencast_url, window.location.href),
-      );
+      await this.connectScreencast(socketUrl(session.screencast_path));
       this.connectionState.set("connected");
       void this.receiveNotifications();
       this.tabsState.set((await this.client.browser.tab.list()).tabs);
@@ -90,12 +93,17 @@ export class BrowserSession {
     this.connectionState.set("disconnected");
     const client = this.client;
     const screencast = this.screencast;
+    const session = this.sessionState();
     this.client = undefined;
     this.transport = undefined;
     this.screencast = undefined;
+    this.sessionState.set(undefined);
     this.frameState.set(undefined);
     screencast?.close();
     await client?.close().catch(() => undefined);
+    // The lease would expire on its own, but releasing it hands the browser
+    // back to the pool right away.
+    if (session) await closeSession(session.id).catch(() => undefined);
   }
 
   navigate(value: string): Promise<void> {
@@ -160,6 +168,15 @@ export class BrowserSession {
       const { text } = await client.browser.clipboard.copy();
       if (text) await navigator.clipboard.writeText(text);
     });
+  }
+
+  /**
+   * Release the lease on a page unload, where the regular teardown cannot run.
+   * `keepalive` keeps the request alive past the document.
+   */
+  release(): void {
+    const session = this.sessionState();
+    if (session) void closeSession(session.id, { keepalive: true });
   }
 
   reportError(error: unknown): void {
@@ -252,4 +269,16 @@ export class BrowserSession {
       }
     });
   }
+}
+
+/** Turn a backend-relative live-traffic path into a WebSocket URL. */
+function socketUrl(path: string): URL {
+  const url = new URL(path, window.location.href);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url;
+}
+
+function openSessionError(response: openSessionResponse): string {
+  if (response.status === 503) return response.data.message;
+  return `Session konnte nicht geöffnet werden (${response.status})`;
 }

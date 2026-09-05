@@ -33,20 +33,22 @@ services:
       - PORT=8000
       - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8012
 
-  control-plane:
+  backend:
     build:
       context: .
-      dockerfile: control-plane/Dockerfile
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
-      - CONTROL_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
-      - CONTROL_BROWSER_1_TUNNEL_URL=ws://localhost:8021/api/v1/browser/ws
-      - CONTROL_BROWSER_1_SCREENCAST_URL=ws://localhost:8011/api/v1/browser/00000000-0000-0000-0000-000000000001/screencast
-      - CONTROL_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
-      - CONTROL_BROWSER_2_TUNNEL_URL=ws://localhost:8022/api/v1/browser/ws
-      - CONTROL_BROWSER_2_SCREENCAST_URL=ws://localhost:8012/api/v1/browser/00000000-0000-0000-0000-000000000002/screencast
+      # The backend relays the live traffic itself, so these addresses stay on
+      # the compose network and never reach the frontend.
+      - BACKEND_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
+      - BACKEND_BROWSER_1_TUNNEL_URL=ws://browser-tunnel-1:8000/api/v1/browser/ws
+      - BACKEND_BROWSER_1_SCREENCAST_URL=ws://data-plane-1:8000/api/v1/browser/00000000-0000-0000-0000-000000000001/screencast
+      - BACKEND_BROWSER_2_DATA_PLANE_URL=http://data-plane-2:8000
+      - BACKEND_BROWSER_2_TUNNEL_URL=ws://browser-tunnel-2:8000/api/v1/browser/ws
+      - BACKEND_BROWSER_2_SCREENCAST_URL=ws://data-plane-2:8000/api/v1/browser/00000000-0000-0000-0000-000000000002/screencast
     depends_on:
       data-plane-1:
         condition: service_healthy
@@ -69,7 +71,7 @@ services:
       - PORT=8000
       - BROWSER_CDP_URL=ws://data-plane-1:8000/api/v1/browser/00000000-0000-0000-0000-000000000001/cdp
     depends_on:
-      control-plane:
+      backend:
         condition: service_healthy
 
   browser-tunnel-2:
@@ -80,5 +82,5 @@ services:
       - PORT=8000
       - BROWSER_CDP_URL=ws://data-plane-2:8000/api/v1/browser/00000000-0000-0000-0000-000000000002/cdp
     depends_on:
-      control-plane:
+      backend:
         condition: service_healthy
