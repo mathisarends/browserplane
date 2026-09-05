@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component } from "@angular/core";
-import { BrowserLayout } from "./browser/layouts/browser-layout";
+import { AppShell } from "./shell/app-shell";
 
 @Component({
   selector: "app-root",
-  imports: [BrowserLayout],
-  template: `<app-browser-layout />`,
+  imports: [AppShell],
+  template: `<app-shell />`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {}

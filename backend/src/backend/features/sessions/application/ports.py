@@ -20,6 +20,10 @@ class SuspendedSessionRepository(ABC):
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None: ...
 
     @abstractmethod
+    async def list_all(self) -> tuple[SuspendedSession, ...]:
+        """Everything parked right now, newest first."""
+
+    @abstractmethod
     async def delete(self, *, session_id: UUID) -> None: ...
 
 

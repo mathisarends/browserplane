@@ -23,6 +23,15 @@ class InMemorySuspendedSessionRepository(SuspendedSessionRepository):
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None:
         return self._suspended.get(session_id)
 
+    async def list_all(self) -> tuple[SuspendedSession, ...]:
+        return tuple(
+            sorted(
+                self._suspended.values(),
+                key=lambda suspended: suspended.created_at,
+                reverse=True,
+            )
+        )
+
     async def delete(self, *, session_id: UUID) -> None:
         self._suspended.pop(session_id, None)
 

@@ -4,7 +4,6 @@ from fastapi import status
 
 from backend.features.browsers.application.exceptions import (
     BrowserCapacityExhaustedException,
-    BrowserNotFoundException,
     BrowserUnavailableException,
 )
 from backend.features.leases.application.exceptions import LeaseNotFoundException
@@ -38,10 +37,10 @@ class BrowserStateTransferFailedError(ApiErrorResponse):
     code: Literal[ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED]
 
 
-# An expired lease is dropped on access, so it reaches the edge as "not found",
-# and a lease whose browser vanished leaves nothing to hand the client either.
+# An expired lease is dropped on access, so it reaches the edge as "not found".
+# A lease whose browser vanished answers with the pool's own BROWSER_NOT_FOUND.
 SESSION_NOT_FOUND = ApiErrorSpec(
-    exceptions=(LeaseNotFoundException, BrowserNotFoundException),
+    exceptions=(LeaseNotFoundException,),
     status_code=status.HTTP_404_NOT_FOUND,
     code=ApiErrorCode.SESSION_NOT_FOUND,
     response_model=SessionNotFoundError,

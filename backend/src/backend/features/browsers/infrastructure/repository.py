@@ -48,6 +48,11 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None:
         return await self.find_by_id(browser_id)
 
+    async def list_all(self) -> tuple[Browser, ...]:
+        statement = select(BrowserModel).order_by(col(BrowserModel.created_at))
+        models = (await self._session.scalars(statement)).all()
+        return tuple(self.to_domain(model) for model in models)
+
     async def find_available(self) -> Browser | None:
         statement = (
             select(BrowserModel)

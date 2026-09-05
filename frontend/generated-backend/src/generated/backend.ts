@@ -6,6 +6,8 @@
  */
 import type {
   AuthenticationStateSchema,
+  BrowserNotFoundError,
+  BrowserProvisioningFailedError,
   BrowserStateSchema,
   BrowserStateSnapshotResponse,
   BrowserStateTransferFailedError,
@@ -14,6 +16,7 @@ import type {
   Health200,
   NoBrowserAvailableError,
   OpenSessionRequest,
+  PooledBrowserResponse,
   Readiness200,
   ResumeSessionRequest,
   SessionNotActiveError,
@@ -176,7 +179,7 @@ export type getSessionResponse200 = {
 }
 
 export type getSessionResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -286,7 +289,7 @@ export type captureSessionAuthenticationStateResponse200 = {
 }
 
 export type captureSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -351,7 +354,7 @@ export type mountSessionAuthenticationStateResponse204 = {
 }
 
 export type mountSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -423,7 +426,7 @@ export type captureSessionBrowserStateResponse200 = {
 }
 
 export type captureSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -488,7 +491,7 @@ export type mountSessionBrowserStateResponse204 = {
 }
 
 export type mountSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -603,7 +606,7 @@ export type captureBrowserStateSnapshotResponse201 = {
 }
 
 export type captureBrowserStateSnapshotResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -675,7 +678,7 @@ export type suspendSessionResponse200 = {
 }
 
 export type suspendSessionResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -741,7 +744,7 @@ export type resumeSessionResponse200 = {
 }
 
 export type resumeSessionResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
@@ -804,6 +807,223 @@ const res = await fetch(getResumeSessionUrl(sessionId),
 
   const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as resumeSessionResponse
+}
+
+
+
+export type listPooledBrowsersResponse200 = {
+  data: PooledBrowserResponse[]
+  status: 200
+}
+
+export type listPooledBrowsersResponseSuccess = (listPooledBrowsersResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listPooledBrowsersResponse = (listPooledBrowsersResponseSuccess)
+
+export const getListPooledBrowsersUrl = () => {
+
+
+
+
+  return `/api/v1/admin/browsers`
+}
+
+/**
+ * The whole pool, including the browsers no session can be opened on.
+ * @summary List Pooled Browsers
+ */
+export const listPooledBrowsers = async ( options?: RequestInit): Promise<listPooledBrowsersResponse> => {
+
+  const res = await fetch(getListPooledBrowsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listPooledBrowsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listPooledBrowsersResponse
+}
+
+
+
+export type destroyPooledBrowserResponse200 = {
+  data: PooledBrowserResponse
+  status: 200
+}
+
+export type destroyPooledBrowserResponse404 = {
+  data: BrowserNotFoundError
+  status: 404
+}
+
+export type destroyPooledBrowserResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type destroyPooledBrowserResponse503 = {
+  data: BrowserProvisioningFailedError
+  status: 503
+}
+
+export type destroyPooledBrowserResponseSuccess = (destroyPooledBrowserResponse200) & {
+  headers: Headers;
+};
+export type destroyPooledBrowserResponseError = (destroyPooledBrowserResponse404 | destroyPooledBrowserResponse422 | destroyPooledBrowserResponse503) & {
+  headers: Headers;
+};
+
+export type destroyPooledBrowserResponse = (destroyPooledBrowserResponseSuccess | destroyPooledBrowserResponseError)
+
+export const getDestroyPooledBrowserUrl = (browserId: string,) => {
+
+
+
+
+  return `/api/v1/admin/browsers/${browserId}`
+}
+
+/**
+ * Stop the browser process. Its session, if any, is dropped with it.
+ * @summary Destroy Pooled Browser
+ */
+export const destroyPooledBrowser = async (browserId: string, options?: RequestInit): Promise<destroyPooledBrowserResponse> => {
+
+  const res = await fetch(getDestroyPooledBrowserUrl(browserId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: destroyPooledBrowserResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as destroyPooledBrowserResponse
+}
+
+
+
+export type restartPooledBrowserResponse200 = {
+  data: PooledBrowserResponse
+  status: 200
+}
+
+export type restartPooledBrowserResponse404 = {
+  data: BrowserNotFoundError
+  status: 404
+}
+
+export type restartPooledBrowserResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type restartPooledBrowserResponse503 = {
+  data: BrowserProvisioningFailedError
+  status: 503
+}
+
+export type restartPooledBrowserResponseSuccess = (restartPooledBrowserResponse200) & {
+  headers: Headers;
+};
+export type restartPooledBrowserResponseError = (restartPooledBrowserResponse404 | restartPooledBrowserResponse422 | restartPooledBrowserResponse503) & {
+  headers: Headers;
+};
+
+export type restartPooledBrowserResponse = (restartPooledBrowserResponseSuccess | restartPooledBrowserResponseError)
+
+export const getRestartPooledBrowserUrl = (browserId: string,) => {
+
+
+
+
+  return `/api/v1/admin/browsers/${browserId}/restart`
+}
+
+/**
+ * Put a fresh browser behind the slot and hand it back to the pool.
+ * @summary Restart Pooled Browser
+ */
+export const restartPooledBrowser = async (browserId: string, options?: RequestInit): Promise<restartPooledBrowserResponse> => {
+
+  const res = await fetch(getRestartPooledBrowserUrl(browserId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: restartPooledBrowserResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as restartPooledBrowserResponse
+}
+
+
+
+export type listSessionsResponse200 = {
+  data: SessionResponse[]
+  status: 200
+}
+
+export type listSessionsResponse404 = {
+  data: BrowserNotFoundError
+  status: 404
+}
+
+export type listSessionsResponseSuccess = (listSessionsResponse200) & {
+  headers: Headers;
+};
+export type listSessionsResponseError = (listSessionsResponse404) & {
+  headers: Headers;
+};
+
+export type listSessionsResponse = (listSessionsResponseSuccess | listSessionsResponseError)
+
+export const getListSessionsUrl = () => {
+
+
+
+
+  return `/api/v1/admin/sessions`
+}
+
+/**
+ * Active and suspended sessions in one list, newest first.
+ * @summary List Sessions
+ */
+export const listSessions = async ( options?: RequestInit): Promise<listSessionsResponse> => {
+
+  const res = await fetch(getListSessionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listSessionsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listSessionsResponse
 }
 
 

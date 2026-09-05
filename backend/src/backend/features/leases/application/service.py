@@ -47,6 +47,16 @@ class LeaseService:
             )
             return lease
 
+    async def list(self) -> tuple[Lease, ...]:
+        """Every lease still standing, newest first; expired ones are dropped."""
+        async with self._lock:
+            await self._expire()
+            return tuple(
+                sorted(
+                    self._store.list(), key=lambda lease: lease.created_at, reverse=True
+                )
+            )
+
     async def get(self, lease_id: UUID) -> Lease:
         async with self._lock:
             await self._expire()

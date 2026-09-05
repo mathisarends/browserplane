@@ -10,6 +10,7 @@ class BrowserState(StrEnum):
     READY = "ready"
     LEASED = "leased"
     STOPPING = "stopping"
+    STOPPED = "stopped"
     FAILED = "failed"
 
 

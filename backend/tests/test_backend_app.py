@@ -21,6 +21,10 @@ OWNER_ID = str(UUID(int=7))
 
 
 class FakeProvisioner(BrowserProvisioner):
+    def __init__(self) -> None:
+        self.started: list[UUID] = []
+        self.stopped: list[UUID] = []
+
     async def provision(self) -> tuple[BrowserSlot, ...]:
         return (
             BrowserSlot(
@@ -31,6 +35,12 @@ class FakeProvisioner(BrowserProvisioner):
 
     async def deprovision(self) -> None:
         pass
+
+    async def start(self, slot: BrowserSlot) -> None:
+        self.started.append(slot.id)
+
+    async def stop(self, slot: BrowserSlot) -> None:
+        self.stopped.append(slot.id)
 
 
 class FakeBrowserStateGateway(BrowserStateGateway):
@@ -127,6 +137,49 @@ def test_backend_serves_a_session_lifecycle() -> None:
         # Releasing the lease returned the browser to the pool.
         reopened = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})
         assert reopened.status_code == 201
+
+
+def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
+    provisioner = FakeProvisioner()
+    app = create_app(
+        provisioner,
+        InMemoryBrowserRepository(),
+        InMemorySuspendedSessionRepository(),
+        FakeBrowserStateGateway(),
+    )
+    with TestClient(app) as client:
+        session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
+
+        browsers = client.get("/api/v1/admin/browsers")
+        assert browsers.status_code == 200
+        assert browsers.json()[0]["state"] == "leased"
+        assert browsers.json()[0]["lease"]["session_id"] == session["id"]
+
+        sessions = client.get("/api/v1/admin/sessions")
+        assert sessions.status_code == 200
+        assert [entry["id"] for entry in sessions.json()] == [session["id"]]
+
+        destroyed = client.delete(f"/api/v1/admin/browsers/{session['browser_id']}")
+        assert destroyed.status_code == 200
+        assert destroyed.json()["state"] == "stopped"
+        assert provisioner.stopped == [UUID(int=1)]
+        # The browser is gone, so the session that sat on it is gone with it.
+        assert client.get("/api/v1/admin/sessions").json() == []
+
+        restarted = client.post(
+            f"/api/v1/admin/browsers/{session['browser_id']}/restart"
+        )
+        assert restarted.status_code == 200
+        assert restarted.json()["state"] == "ready"
+        assert provisioner.started == [UUID(int=1)]
+        assert (
+            client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).status_code
+            == 201
+        )
+
+        unknown = client.delete(f"/api/v1/admin/browsers/{UUID(int=99)}")
+        assert unknown.status_code == 404
+        assert unknown.json()["code"] == "browser_not_found"
 
 
 def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:

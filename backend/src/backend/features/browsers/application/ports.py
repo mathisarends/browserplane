@@ -14,6 +14,14 @@ class BrowserProvisioner(ABC):
     @abstractmethod
     async def deprovision(self) -> None: ...
 
+    @abstractmethod
+    async def start(self, slot: BrowserSlot) -> None:
+        """Bring one slot's browser process up, on its own worker."""
+
+    @abstractmethod
+    async def stop(self, slot: BrowserSlot) -> None:
+        """Tear one slot's browser process down; the slot itself stays."""
+
 
 class BrowserRepository(ABC):
     """Persistence contract for the browser pool."""
@@ -23,6 +31,10 @@ class BrowserRepository(ABC):
 
     @abstractmethod
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None: ...
+
+    @abstractmethod
+    async def list_all(self) -> tuple[Browser, ...]:
+        """The whole pool, oldest slot first, whatever state it is in."""
 
     @abstractmethod
     async def find_available(self) -> Browser | None:

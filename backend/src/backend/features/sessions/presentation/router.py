@@ -11,6 +11,7 @@ from fastapi import APIRouter, Response, WebSocket, status
 
 from backend.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
+from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
     SessionNotActiveException,
@@ -73,7 +74,7 @@ async def open_session(
     "/sessions/{session_id}",
     response_model=SessionResponse,
     operation_id="get_session",
-    responses=api_error_responses(SESSION_NOT_FOUND),
+    responses=api_error_responses(SESSION_NOT_FOUND, BROWSER_NOT_FOUND),
 )
 async def get_session(
     session_id: UUID, service: FromDishka[SessionService]
@@ -87,6 +88,7 @@ async def get_session(
     operation_id="capture_session_authentication_state",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -107,6 +109,7 @@ async def capture_session_authentication_state(
     operation_id="mount_session_authentication_state",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -127,6 +130,7 @@ async def mount_session_authentication_state(
     operation_id="capture_session_browser_state",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -147,6 +151,7 @@ async def capture_session_browser_state(
     operation_id="mount_session_browser_state",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -183,6 +188,7 @@ async def list_browser_state_snapshots(
     operation_id="capture_browser_state_snapshot",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -206,6 +212,7 @@ async def capture_browser_state_snapshot(
     operation_id="suspend_session",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
@@ -224,6 +231,7 @@ async def suspend_session(
     operation_id="resume_session",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
         SESSION_NOT_SUSPENDED,
         NO_BROWSER_AVAILABLE,
         BROWSER_STATE_TRANSFER_FAILED,

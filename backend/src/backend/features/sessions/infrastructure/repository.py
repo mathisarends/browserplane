@@ -49,6 +49,13 @@ class SqlSuspendedSessionRepository(
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None:
         return await self.find_by_id(session_id)
 
+    async def list_all(self) -> tuple[SuspendedSession, ...]:
+        statement = select(SuspendedSessionModel).order_by(
+            SuspendedSessionModel.created_at.desc()
+        )
+        models = (await self._session.scalars(statement)).all()
+        return tuple(self.to_domain(model) for model in models)
+
     async def delete(self, *, session_id: UUID) -> None:
         await self.delete_entity(session_id)
 

@@ -7,7 +7,11 @@
 
 export * from './authenticationStateSchema';
 export * from './browserCookieSchema';
+export * from './browserLeaseSummary';
+export * from './browserNotFoundError';
 export * from './browserOriginStateSchema';
+export * from './browserProvisioningFailedError';
+export * from './browserState';
 export * from './browserStateSchema';
 export * from './browserStateSnapshotResponse';
 export * from './browserStateTransferFailedError';
@@ -17,6 +21,7 @@ export * from './health200';
 export * from './hTTPValidationError';
 export * from './noBrowserAvailableError';
 export * from './openSessionRequest';
+export * from './pooledBrowserResponse';
 export * from './readiness200';
 export * from './resumeSessionRequest';
 export * from './scrollPositionSchema';

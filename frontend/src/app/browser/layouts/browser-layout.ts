@@ -1,53 +1,43 @@
-import { ChangeDetectionStrategy, Component, signal } from "@angular/core";
+import { ChangeDetectionStrategy, Component, input, signal } from "@angular/core";
 import { BrowserCreateTile } from "../components/browser-create-tile";
 import { BrowserGalleryNavigation } from "../components/browser-gallery-navigation";
 import { BrowserPanel } from "../components/browser-panel";
-import { BrowserViewSwitcher, type BrowserViewMode } from "../components/browser-view-switcher";
+
+/** The two ways the gallery can lay its sessions out. */
+export type BrowserViewMode = "grid" | "focus";
 
 @Component({
   selector: "app-browser-layout",
-  imports: [BrowserCreateTile, BrowserGalleryNavigation, BrowserPanel, BrowserViewSwitcher],
+  imports: [BrowserCreateTile, BrowserGalleryNavigation, BrowserPanel],
   template: `
-    <div class="app-shell">
-      <main
-        class="browser-stage"
-        [attr.data-view]="viewMode()"
-        aria-label="Remote Browser Sessions"
-      >
-        <app-browser-view-switcher [viewMode]="viewMode()" (viewModeChange)="setView($event)" />
-
-        <div class="browser-gallery">
-          <div class="gallery-viewport">
-            <div class="browser-track" [style.transform]="trackTransform()">
-              @for (ownerId of ownerIds; track ownerId; let index = $index) {
-                <app-browser-panel [ownerId]="ownerId" [position]="index + 1" />
-              }
-              @if (viewMode() === "grid") {
-                <app-browser-create-tile />
-              }
-            </div>
+    <main class="browser-stage" [attr.data-view]="view()" aria-label="Remote Browser Sessions">
+      <div class="browser-gallery">
+        <div class="gallery-viewport">
+          <div class="browser-track" [style.transform]="trackTransform()">
+            @for (ownerId of ownerIds; track ownerId; let index = $index) {
+              <app-browser-panel [ownerId]="ownerId" [position]="index + 1" />
+            }
+            @if (view() === "grid") {
+              <app-browser-create-tile />
+            }
           </div>
-
-          @if (viewMode() === "focus") {
-            <app-browser-gallery-navigation
-              [items]="ownerIds"
-              [activeIndex]="activeIndex()"
-              (previous)="previous()"
-              (next)="next()"
-              (show)="show($event)"
-            />
-          }
         </div>
-      </main>
-    </div>
+
+        @if (view() === "focus") {
+          <app-browser-gallery-navigation
+            [items]="ownerIds"
+            [activeIndex]="activeIndex()"
+            (previous)="previous()"
+            (next)="next()"
+            (show)="show($event)"
+          />
+        }
+      </div>
+    </main>
   `,
   styles: `
     :host {
       display: block;
-    }
-    .app-shell {
-      width: 100%;
-      padding: 6px clamp(10px, 1.4vw, 26px) clamp(16px, 2vw, 32px);
     }
     .browser-stage,
     .browser-gallery,
@@ -133,17 +123,14 @@ import { BrowserViewSwitcher, type BrowserViewMode } from "../components/browser
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserLayout {
+  readonly view = input.required<BrowserViewMode>();
   protected readonly ownerIds = [crypto.randomUUID(), crypto.randomUUID()] as const;
-  protected readonly viewMode = signal<BrowserViewMode>("focus");
   protected readonly activeIndex = signal(0);
 
   protected trackTransform(): string {
-    return this.viewMode() === "focus" ? `translateX(-${this.activeIndex() * 100}%)` : "none";
+    return this.view() === "focus" ? `translateX(-${this.activeIndex() * 100}%)` : "none";
   }
 
-  protected setView(mode: BrowserViewMode): void {
-    this.viewMode.set(mode);
-  }
   protected show(index: number): void {
     this.activeIndex.set(index);
   }

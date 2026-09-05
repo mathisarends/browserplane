@@ -1,26 +1,26 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
+import { APP_VIEWS, type AppView } from "./view-mode";
 
-export type BrowserViewMode = "focus" | "grid";
+const LABELS: Record<AppView, string> = {
+  grid: "Grid",
+  focus: "Focus",
+  admin: "Admin",
+};
 
 @Component({
-  selector: "app-browser-view-switcher",
+  selector: "app-shell-view-switcher",
   template: `
     <header>
-      <div role="group" aria-label="Browser view">
-        <button
-          type="button"
-          [attr.aria-pressed]="viewMode() === 'focus'"
-          (click)="viewModeChange.emit('focus')"
-        >
-          Focus
-        </button>
-        <button
-          type="button"
-          [attr.aria-pressed]="viewMode() === 'grid'"
-          (click)="viewModeChange.emit('grid')"
-        >
-          Grid
-        </button>
+      <div role="group" aria-label="Workspace view">
+        @for (option of views; track option) {
+          <button
+            type="button"
+            [attr.aria-pressed]="view() === option"
+            (click)="viewChange.emit(option)"
+          >
+            {{ label(option) }}
+          </button>
+        }
       </div>
     </header>
   `,
@@ -36,7 +36,7 @@ export type BrowserViewMode = "focus" | "grid";
     }
     div {
       display: inline-flex;
-      width: 216px;
+      width: 306px;
       padding: 2px;
       background: #191a1d;
       border: 1px solid #2b2d31;
@@ -83,7 +83,11 @@ export type BrowserViewMode = "focus" | "grid";
         margin-bottom: 12px;
       }
       div {
-        width: 208px;
+        width: 100%;
+        max-width: 306px;
+      }
+      button {
+        padding: 0 10px;
       }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -94,7 +98,12 @@ export type BrowserViewMode = "focus" | "grid";
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BrowserViewSwitcher {
-  readonly viewMode = input.required<BrowserViewMode>();
-  readonly viewModeChange = output<BrowserViewMode>();
+export class ShellViewSwitcher {
+  readonly view = input.required<AppView>();
+  readonly viewChange = output<AppView>();
+  protected readonly views = APP_VIEWS;
+
+  protected label(view: AppView): string {
+    return LABELS[view];
+  }
 }

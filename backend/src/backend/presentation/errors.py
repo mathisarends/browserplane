@@ -9,6 +9,8 @@ class ApiErrorCode(StrEnum):
     SESSION_NOT_ACTIVE = "session_not_active"
     SESSION_NOT_SUSPENDED = "session_not_suspended"
     BROWSER_STATE_TRANSFER_FAILED = "browser_state_transfer_failed"
+    BROWSER_NOT_FOUND = "browser_not_found"
+    BROWSER_PROVISIONING_FAILED = "browser_provisioning_failed"
 
 
 class ApiErrorResponse(BaseModel):

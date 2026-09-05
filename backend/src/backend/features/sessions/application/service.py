@@ -83,6 +83,20 @@ class SessionService:
         browser = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=browser)
 
+    async def list(self) -> tuple[Session | SuspendedSession, ...]:
+        """Every session the backend still holds, with a browser or parked."""
+        active = [
+            Session(lease=lease, browser=await self._browsers.get(lease.browser_id))
+            for lease in await self._leases.list()
+        ]
+        now = datetime.now(UTC)
+        parked = [
+            suspended
+            for suspended in await self._suspensions.list_all()
+            if not suspended.is_expired(now)
+        ]
+        return (*active, *parked)
+
     async def capture_authentication(
         self, session_id: UUID
     ) -> AuthenticationStateDocument:

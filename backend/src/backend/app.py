@@ -3,9 +3,14 @@ from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
 from backend.browser_tunnel.presentation import browser_rpc_router
+from backend.features.admin.presentation.router import admin_router
+from backend.features.admin.provider import AdminProvider
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
+)
+from backend.features.browsers.presentation.errors import (
+    API_ERRORS as BROWSER_API_ERRORS,
 )
 from backend.features.browsers.provider import BrowserProvider
 from backend.features.health.presentation.router import health_router
@@ -27,8 +32,8 @@ from backend.provider import SettingsProvider
 from backend.request_logging import install_request_logging
 
 API_PREFIX = "/api/v1"
-API_ERRORS = SESSION_API_ERRORS
-ROUTERS = (health_router, session_router, browser_rpc_router)
+API_ERRORS = SESSION_API_ERRORS + BROWSER_API_ERRORS
+ROUTERS = (health_router, session_router, admin_router, browser_rpc_router)
 
 
 def create_app(
@@ -49,6 +54,7 @@ def create_app(
         BrowserProvider(provisioner, repository),
         LeaseProvider(),
         SessionProvider(suspensions, browser_state, snapshots),
+        AdminProvider(),
     )
     setup_dishka(container, app)
     return app

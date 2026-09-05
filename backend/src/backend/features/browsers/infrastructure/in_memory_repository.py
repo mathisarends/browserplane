@@ -17,6 +17,9 @@ class InMemoryBrowserRepository(BrowserRepository):
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None:
         return self._browsers.get(browser_id)
 
+    async def list_all(self) -> tuple[Browser, ...]:
+        return tuple(sorted(self._browsers.values(), key=lambda b: b.created_at))
+
     async def find_available(self) -> Browser | None:
         return next((b for b in self._browsers.values() if b.is_available), None)
 

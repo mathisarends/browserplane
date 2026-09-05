@@ -17,16 +17,25 @@ class DataPlaneBrowserProvisioner(BrowserProvisioner):
 
     async def provision(self) -> Sequence[BrowserSlot]:
         slots = self._settings.slots()
-        async with AsyncClient() as http:
-            for slot in slots:
-                client = GeneratedDataPlaneClient(http, slot.data_plane_url)
-                await client.create_browser(CreateBrowserRequest(id=slot.id))
-                self._provisioned.append(slot)
+        for slot in slots:
+            await self.start(slot)
+            self._provisioned.append(slot)
         return slots
 
     async def deprovision(self) -> None:
-        async with AsyncClient() as http:
-            for slot in reversed(self._provisioned):
-                client = GeneratedDataPlaneClient(http, slot.data_plane_url)
-                await client.destroy_browser()
+        for slot in reversed(self._provisioned):
+            await self.stop(slot)
         self._provisioned.clear()
+
+    async def start(self, slot: BrowserSlot) -> None:
+        async with self._client(slot) as client:
+            await client.create_browser(CreateBrowserRequest(id=slot.id))
+
+    async def stop(self, slot: BrowserSlot) -> None:
+        async with self._client(slot) as client:
+            await client.destroy_browser()
+
+    def _client(self, slot: BrowserSlot) -> GeneratedDataPlaneClient:
+        # The generated client closes the transport it was handed, so one client
+        # per call keeps a single worker's failure from leaking a shared pool.
+        return GeneratedDataPlaneClient(AsyncClient(), slot.data_plane_url)
