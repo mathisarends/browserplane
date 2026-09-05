@@ -9,8 +9,8 @@ from backend.features.browsers.application.models import (
     BrowserState,
 )
 from backend.features.browsers.application.ports import BrowserRepository
-from backend.infrastructure.orm import BrowserModel
-from backend.infrastructure.repository import SqlRepository
+from backend.infrastructure.database.models import BrowserModel
+from backend.infrastructure.database.repository import SqlRepository
 
 
 class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserRepository):

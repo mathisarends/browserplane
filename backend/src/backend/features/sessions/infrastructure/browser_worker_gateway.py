@@ -13,7 +13,7 @@ from backend.features.sessions.application.models import (
     Download,
 )
 from backend.features.sessions.application.ports import BrowserStateGateway
-from backend.request_logging import current_request_id
+from backend.presentation.middleware import current_request_id
 from generated.browser_worker import (
     ApiError,
     AuthenticationStateSchema,

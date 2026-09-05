@@ -8,12 +8,16 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from backend.settings import BackendSettings
+from backend.infrastructure.database.settings import DatabaseSettings
 
 
 class DatabaseProvider(Provider):
     @provide(scope=Scope.APP)
-    async def engine(self, settings: BackendSettings) -> AsyncIterator[AsyncEngine]:
+    def settings(self) -> DatabaseSettings:
+        return DatabaseSettings()
+
+    @provide(scope=Scope.APP)
+    async def engine(self, settings: DatabaseSettings) -> AsyncIterator[AsyncEngine]:
         engine = create_async_engine(settings.database_url, pool_pre_ping=True)
         try:
             yield engine
@@ -28,7 +32,6 @@ class DatabaseProvider(Provider):
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
     ) -> AsyncIterator[AsyncSession]:
-        """The request owns the transaction; repositories only join it."""
         async with factory() as session:
             try:
                 yield session

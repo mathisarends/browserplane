@@ -21,7 +21,7 @@ from backend.features.sessions.infrastructure.repository import (
     SqlBrowserStateSnapshotRepository,
     SqlSuspendedSessionRepository,
 )
-from backend.settings import BackendSettings
+from backend.features.sessions.infrastructure.settings import SessionSettings
 
 
 class SessionProvider(Provider):
@@ -37,6 +37,10 @@ class SessionProvider(Provider):
         self._browser_state = browser_state
         self._snapshots = snapshots
         self._authentication_snapshots = authentication_snapshots
+
+    @provide(scope=Scope.APP)
+    def settings(self) -> SessionSettings:
+        return SessionSettings()
 
     @provide(scope=Scope.REQUEST, provides=SuspendedSessionRepository)
     def suspensions(self, session: AsyncSession) -> SuspendedSessionRepository:
@@ -60,7 +64,7 @@ class SessionProvider(Provider):
         )
 
     @provide(scope=Scope.APP)
-    def browser_tunnel(self, settings: BackendSettings) -> BrowserTunnel:
+    def browser_tunnel(self, settings: SessionSettings) -> BrowserTunnel:
         return BrowserTunnel(
             width=settings.browser_width,
             height=settings.browser_height,
@@ -75,7 +79,7 @@ class SessionProvider(Provider):
         snapshots: BrowserStateSnapshotRepository,
         authentication_snapshots: AuthenticationStateSnapshotRepository,
         browser_state: BrowserStateGateway,
-        settings: BackendSettings,
+        settings: SessionSettings,
     ) -> SessionService:
         return SessionService(
             browsers,

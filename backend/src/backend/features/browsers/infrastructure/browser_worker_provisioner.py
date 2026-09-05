@@ -4,14 +4,14 @@ from httpx2 import AsyncClient
 
 from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
-from backend.settings import BackendSettings
+from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
 
 
 class BrowserWorkerProvisioner(BrowserProvisioner):
     """Create one browser on each configured browser worker."""
 
-    def __init__(self, settings: BackendSettings) -> None:
+    def __init__(self, settings: BrowserPoolSettings) -> None:
         self._settings = settings
         self._provisioned: list[BrowserSlot] = []
 

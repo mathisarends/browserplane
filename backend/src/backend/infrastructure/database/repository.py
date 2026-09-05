@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.infrastructure.orm import DatabaseModel
+from backend.infrastructure.database.models import DatabaseModel
 
 
 class SqlRepository[ModelT: DatabaseModel, DomainT](ABC):

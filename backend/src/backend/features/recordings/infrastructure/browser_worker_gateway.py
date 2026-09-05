@@ -13,7 +13,7 @@ from backend.features.recordings.application.exceptions import (
 )
 from backend.features.recordings.application.ports import RecordingGateway
 from backend.infrastructure.bucket import Bucket, BucketObject
-from backend.request_logging import current_request_id
+from backend.presentation.middleware import current_request_id
 from generated.browser_worker import (
     ApiError,
     GeneratedBrowserWorkerClient,

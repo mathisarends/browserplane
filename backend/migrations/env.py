@@ -7,14 +7,14 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 from backend.infrastructure import orm  # noqa: F401  (registers the tables)
-from backend.settings import BackendSettings
+from backend.infrastructure.database.settings import DatabaseSettings
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 target_metadata = SQLModel.metadata
-database_url = BackendSettings().database_url
+database_url = DatabaseSettings().database_url
 
 
 def run_migrations_offline() -> None:

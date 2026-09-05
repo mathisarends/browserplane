@@ -13,12 +13,12 @@ from backend.features.sessions.application.ports import (
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
-from backend.infrastructure.orm import (
+from backend.infrastructure.database.models import (
     AuthenticationStateSnapshotModel,
     BrowserStateSnapshotModel,
     SuspendedSessionModel,
 )
-from backend.infrastructure.repository import SqlRepository
+from backend.infrastructure.database.repository import SqlRepository
 
 
 class SqlSuspendedSessionRepository(
