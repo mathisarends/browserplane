@@ -8,6 +8,7 @@ from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
 
+from backend.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
@@ -208,17 +209,20 @@ async def close_session(session_id: UUID, service: FromDishka[SessionService]) -
 @session_router.websocket("/sessions/{session_id}/tunnel")
 @inject
 async def session_tunnel(
-    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
+    session_id: UUID,
+    websocket: WebSocket,
+    container: FromDishka[AsyncContainer],
+    tunnel: FromDishka[BrowserTunnel],
 ) -> None:
-    upstream_url = await _resolve(
-        websocket, container, lambda service: service.upstream_tunnel_url(session_id)
+    cdp_url = await _resolve(
+        websocket, container, lambda service: service.upstream_cdp_url(session_id)
     )
-    if upstream_url is None:
+    if cdp_url is None:
         return
     # The control channel is the session: once it is gone, so is the frontend,
     # and the browser belongs back in the pool.
     try:
-        await proxy_stream(websocket, upstream_url, name="Browser tunnel")
+        await tunnel.serve(websocket, cdp_url)
     finally:
         async with _session_service(container) as service:
             await service.end(session_id)

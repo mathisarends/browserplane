@@ -1,13 +1,16 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
 
 import pyrpckit as rpc
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
+from starlette.websockets import WebSocketState
 
 from backend.browser_tunnel.application import Browser
+from backend.browser_tunnel.infrastructure.cdp_browser import CdpBrowser
 from backend.browser_tunnel.presentation.rpc import (
     BROWSER_EVENT_METHOD,
     BROWSER_PROTOCOL,
@@ -15,6 +18,9 @@ from backend.browser_tunnel.presentation.rpc import (
     browser_event,
     browser_rpc_methods,
 )
+from backend.browser_tunnel.settings import BrowserSettings
+
+logger = logging.getLogger(__name__)
 
 
 class BrowserSession:
@@ -74,11 +80,34 @@ class BrowserSession:
             )
 
 
-class BrowserSessionFactory:
-    """Bind the injected browser to the websocket of a single viewer."""
+class BrowserTunnel:
+    """Run the backend-owned RPC adapter against one internal CDP stream."""
 
-    def __init__(self, browser: Browser) -> None:
-        self._browser = browser
+    def __init__(self, *, width: int, height: int) -> None:
+        self._width = width
+        self._height = height
 
-    def create(self, websocket: WebSocket) -> BrowserSession:
-        return BrowserSession(websocket, self._browser)
+    async def serve(self, websocket: WebSocket, cdp_url: str) -> None:
+        browser = CdpBrowser(
+            BrowserSettings(
+                cdp_url=cdp_url,
+                width=self._width,
+                height=self._height,
+                _env_file=None,
+            )
+        )
+        try:
+            await browser.start()
+            await BrowserSession(websocket, browser).run()
+        except Exception as error:
+            # The internal CDP address must never leak into logs or close reasons.
+            logger.warning(
+                "Browser RPC session became unavailable (%s)", type(error).__name__
+            )
+            if websocket.application_state is WebSocketState.CONNECTING:
+                await websocket.accept()
+            if websocket.application_state is WebSocketState.CONNECTED:
+                with suppress(RuntimeError):
+                    await websocket.close(code=1011, reason="Browser unavailable")
+        finally:
+            await browser.stop()

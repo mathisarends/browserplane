@@ -1,6 +1,10 @@
 import logging
 
-from backend.browser_tunnel.application import BrowserInput, KeyEventType, MouseEventType
+from backend.browser_tunnel.application import (
+    BrowserInput,
+    KeyEventType,
+    MouseEventType,
+)
 from backend.browser_tunnel.infrastructure.cdp_browser.active_target import ActiveTarget
 from backend.browser_tunnel.infrastructure.cdp_browser.clipboard import (
     CdpClipboard,

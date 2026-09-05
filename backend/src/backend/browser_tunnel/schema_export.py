@@ -6,7 +6,7 @@ from .presentation.schemas import (
     browser_openrpc_schema,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SCHEMA_DIR = PROJECT_ROOT / "schemas"
 
 

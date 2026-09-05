@@ -61,6 +61,9 @@ export const health = async ( options?: RequestInit): Promise<healthResponse> =>
   const data: healthResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as healthResponse
 }
+
+
+
 export type readinessResponse200 = {
   data: Readiness200
   status: 200
@@ -685,3 +688,6 @@ const res = await fetch(getResumeSessionUrl(sessionId),
   const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as resumeSessionResponse
 }
+
+
+

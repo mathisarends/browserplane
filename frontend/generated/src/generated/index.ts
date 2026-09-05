@@ -2,4 +2,4 @@
 
 export { RpcMethod } from "./models";
 export type * from "./models";
-export { BrowserTunnelClient } from "./client";
+export { BackendBrowserClient } from "./client";

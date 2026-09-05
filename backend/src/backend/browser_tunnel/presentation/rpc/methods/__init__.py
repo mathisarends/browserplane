@@ -1,6 +1,7 @@
 import pyrpckit as rpc
 
 from backend.browser_tunnel.application import Browser
+
 from .clipboard import ClipboardMethods
 from .input import InputMethods
 from .navigation import NavigationMethods

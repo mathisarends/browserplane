@@ -149,7 +149,7 @@ class BrowserTabClient {
   }
 }
 
-export class BrowserTunnelClient {
+export class BackendBrowserClient {
   readonly browser;
 
   constructor(private readonly transport: RpcTransport) {

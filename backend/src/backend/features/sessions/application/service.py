@@ -142,9 +142,7 @@ class SessionService:
             await self._browser_state.mount_authentication(
                 browser, suspended.authentication_state
             )
-            await self._browser_state.mount_browser(
-                browser, suspended.browser_state
-            )
+            await self._browser_state.mount_browser(browser, suspended.browser_state)
         except Exception:
             # The state is still stored, so the session stays resumable.
             with suppress(LeaseNotFoundException):

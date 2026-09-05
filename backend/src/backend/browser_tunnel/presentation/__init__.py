@@ -1,4 +1,3 @@
-from browsertunnel.presentation.provider import SessionProvider
-from browsertunnel.presentation.router import router
+from .router import browser_rpc_router
 
-__all__ = ["router", "SessionProvider"]
+__all__ = ["browser_rpc_router"]

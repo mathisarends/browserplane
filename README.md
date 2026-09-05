@@ -1,8 +1,8 @@
-# BrowserTunnel
+# Browser Provisioner
 
-Mirrors a real Chromium tab into a web page. BrowserTunnel drives the tab over
+Mirrors a real Chromium tab into a web page. The backend drives the tab over
 the Chrome DevTools Protocol and replays viewer input, while the data plane
-streams JPEG frames over a separate binary WebSocket to a `<canvas>`.
+streams JPEG frames through the backend to a `<canvas>`.
 
 Learning project, not a hardened product: no auth, no rate limiting. It's a
 reference for the core idea, not something to deploy as is.
@@ -22,26 +22,26 @@ not part of the video stream.
 ## Architecture
 
 ```text
-                        ┌── JSON-RPC commands/state ──▶ BrowserTunnel ──┐
-Frontend ──▶ Backend ───┤                                          raw CDP
-                        └── binary JPEG screencast ◀──────────────── Data Plane
+Frontend ── HTTP/WS ──▶ Backend ── internal HTTP/CDP/WS ──▶ Data Plane ──▶ Chromium
 ```
 
 The frontend only ever talks to the backend. It opens a session
 (`POST /api/v1/sessions`), which leases a browser from the pool and answers
-with two backend-relative paths; the backend relays those WebSockets to the
-BrowserTunnel and data-plane workers, so their addresses stay internal.
+with two backend-relative paths. The backend handles JSON-RPC itself and
+relays screencast frames from the data-plane workers, so their addresses stay
+internal.
 
 - The tab's screencast comes in frame by frame and gets drawn straight onto
   the canvas. No iframe, no embedded browser engine.
 - The tab only exists on the server. Every DOM event the viewer triggers on
   the canvas is translated into a CDP input command and replayed on the real
   tab, so it looks like a real user interacting with it.
-- `browsertunnel/src/browsertunnel/application` defines what a browser can do,
-  `browsertunnel/src/browsertunnel/infrastructure/cdp_browser` implements that over CDP,
-  `browsertunnel/src/browsertunnel/presentation` exposes it as JSON-RPC.
+- `backend/src/backend/browser_tunnel/application` defines what a browser can do,
+  `backend/src/backend/browser_tunnel/infrastructure/cdp_browser` implements
+  that over CDP, and `backend/src/backend/browser_tunnel/presentation` exposes
+  it as session-bound JSON-RPC.
   Each layer can be swapped without touching the others.
-- BrowserTunnel carries JSON-RPC commands and tab/navigation/cursor state. A
+- The backend carries JSON-RPC commands and tab/navigation/cursor state. A
   separate data-plane WebSocket carries binary JPEG screencast frames.
 
 ## Tunneled events
@@ -60,7 +60,7 @@ paste.
 **Tabs:** list, create, activate, close. Every tab command replies with the
 full tab list.
 
-**Pushed by BrowserTunnel:** tab list changes, navigation state (title, URL,
+**Pushed by the backend:** tab list changes, navigation state (title, URL,
 loading, can-go-back/forward, error), cursor style, and target
 crashed/detached.
 
@@ -75,7 +75,7 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Start Postgres, run the migrations, then the backend, browser pool and tunnels
+# Start Postgres, run the migrations, then the backend and data-plane workers
 docker compose up --build
 
 # Start the frontend
@@ -83,7 +83,7 @@ docker compose up --build
 
 # Then open in a browser: http://localhost:5173
 
-uv run python -m browsertunnel.schema_export # write JSON Schema and OpenRPC into schemas/
+uv run python -m backend.browser_tunnel.schema_export # write JSON Schema and OpenRPC
 (cd frontend && npm run generate) # regenerate schemas and both TypeScript clients
 ./scripts/generate_http_clients.sh # regenerate the Python HTTP clients
 # Schema changes: write a migration and apply it (BACKEND_DATABASE_URL points at Postgres)
@@ -102,7 +102,7 @@ The frontend can also just be started with `npm run dev` from `frontend/` after
 HTML/CSS/TS changes and proxies `/api` to the backend on port 8000.
 
 Two generated TypeScript clients live in npm workspace packages:
-`frontend/generated` holds the BrowserTunnel JSON-RPC client rendered from the
+`frontend/generated` holds the backend browser JSON-RPC client rendered from the
 OpenRPC document, and `frontend/generated-backend` holds the backend HTTP
 client that [orval](https://orval.dev) renders from
 `schemas/backend-openapi.json` (see `frontend/orval.config.ts`).
@@ -132,9 +132,9 @@ both documents, but stores them separately.
 
 ## Backend protocol
 
-The BrowserTunnel WebSocket uses JSON-RPC 2.0:
+The session-bound backend WebSocket uses JSON-RPC 2.0:
 
-- `ws://127.0.0.1:8000/api/v1/browser/ws`
+- `ws://127.0.0.1:8000/api/v1/sessions/{session_id}/tunnel`
 - JSON Schema: `/api/v1/browser/schema.json`
 - OpenRPC: `/api/v1/browser/openrpc.json`
 
@@ -154,11 +154,12 @@ Server-pushed events arrive as `browser.event`; `params.type` tells frames
 apart from tab/navigation state and crashed/detached targets. Frames are
 JPEG, base64-encoded for the JSON transport.
 
-BrowserTunnel requires `BROWSER_CDP_URL` and configures its view through
-`BROWSER_WIDTH`, `BROWSER_HEIGHT`, and `BROWSER_SCREENCAST_QUALITY`. Chromium
+The backend derives internal CDP URLs from `BACKEND_BROWSER_*_DATA_PLANE_URL`
+and configures its view through `BACKEND_BROWSER_WIDTH` and
+`BACKEND_BROWSER_HEIGHT`. Chromium
 lifecycle settings such as `DATA_PLANE_EXECUTABLE`, `DATA_PLANE_HEADLESS`,
 `DATA_PLANE_CAPACITY`, and `DATA_PLANE_STARTUP_TIMEOUT` belong to the
 data-plane worker.
 
 Smoke test against a real browser:
-`uv run python browsertunnel/tests/manual_smoke.py`.
+`uv run python backend/tests/browser_tunnel/manual_smoke.py`.

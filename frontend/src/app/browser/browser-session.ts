@@ -6,7 +6,7 @@ import {
   type SessionResponse,
 } from "@browsertunnel/backend-client";
 import {
-  BrowserTunnelClient,
+  BackendBrowserClient,
   WebSocketRpcTransport,
   type BrowserEvent,
   type KeyParams,
@@ -33,7 +33,7 @@ const SESSION_TTL_SECONDS = 600;
 @Injectable()
 export class BrowserSession {
   private transport?: WebSocketRpcTransport;
-  private client?: BrowserTunnelClient;
+  private client?: BackendBrowserClient;
   private screencast?: WebSocket;
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly TabResult[]>([]);
@@ -86,7 +86,7 @@ export class BrowserSession {
       }
       this.sessionState.set(session);
       this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
-      this.client = new BrowserTunnelClient(this.transport);
+      this.client = new BackendBrowserClient(this.transport);
       await this.transport.connect();
       await this.connectScreencast(socketUrl(session.screencast_path));
       this.connectionState.set("connected");
@@ -185,7 +185,7 @@ export class BrowserSession {
     this.errorState.set(error instanceof Error ? error.message : String(error));
   }
 
-  private async run(action: (client: BrowserTunnelClient) => Promise<void>): Promise<void> {
+  private async run(action: (client: BackendBrowserClient) => Promise<void>): Promise<void> {
     if (!this.client) {
       // Input keeps arriving after a failed connect; don't let its aftermath
       // overwrite the error that actually explains the missing connection.

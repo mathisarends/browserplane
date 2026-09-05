@@ -7,7 +7,6 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 COPY pyproject.toml uv.lock ./
 COPY backend/pyproject.toml backend/pyproject.toml
-COPY browsertunnel/pyproject.toml browsertunnel/pyproject.toml
 COPY data-plane/pyproject.toml data-plane/pyproject.toml
 COPY generated/pyproject.toml generated/pyproject.toml
 RUN uv sync --frozen --no-dev --package backend --no-install-project

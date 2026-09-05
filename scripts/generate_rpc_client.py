@@ -15,7 +15,7 @@ DEFAULT_OUTPUT = PROJECT_ROOT / "frontend" / "generated" / "src" / "generated"
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Generate the BrowserTunnel TypeScript RPC client."
+        description="Generate the backend browser TypeScript RPC client."
     )
     parser.add_argument("--schema", type=Path, default=DEFAULT_SCHEMA)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
@@ -27,7 +27,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         document,
         arguments.output,
         TypeScriptClientOptions(
-            client_name="BrowserTunnelClient",
+            client_name="BackendBrowserClient",
             source=arguments.schema.name,
         ),
         check=arguments.check,

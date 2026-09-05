@@ -5,7 +5,10 @@ from pyrpckit import RpcServer
 from pyrpckit.schema import render_json_schema, render_openrpc
 
 from backend.browser_tunnel.application import BrowserEvent, BrowserTab
-from backend.browser_tunnel.presentation.rpc import BROWSER_PROTOCOL, browser_rpc_methods
+from backend.browser_tunnel.presentation.rpc import (
+    BROWSER_PROTOCOL,
+    browser_rpc_methods,
+)
 
 
 class FakeNavigation:

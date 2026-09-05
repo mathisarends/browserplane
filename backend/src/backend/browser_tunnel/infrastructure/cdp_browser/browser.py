@@ -16,10 +16,15 @@ from backend.browser_tunnel.infrastructure.cdp_browser.active_target import Acti
 from backend.browser_tunnel.infrastructure.cdp_browser.clipboard import CdpClipboard
 from backend.browser_tunnel.infrastructure.cdp_browser.input import CdpInput
 from backend.browser_tunnel.infrastructure.cdp_browser.navigation import CdpNavigation
-from backend.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs, select_any_page
+from backend.browser_tunnel.infrastructure.cdp_browser.tabs import (
+    CdpTabs,
+    select_any_page,
+)
 from backend.browser_tunnel.infrastructure.cursor_event_bridge import CursorEventBridge
 from backend.browser_tunnel.infrastructure.events import BrowserEventForwarder, EventBus
-from backend.browser_tunnel.infrastructure.listener_event_bridge import ListenerEventBridge
+from backend.browser_tunnel.infrastructure.listener_event_bridge import (
+    ListenerEventBridge,
+)
 from backend.browser_tunnel.settings import BrowserSettings
 
 logger = logging.getLogger(__name__)

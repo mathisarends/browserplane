@@ -106,9 +106,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         )
         assert authentication.status_code == 200
         assert authentication.headers["cache-control"] == "no-store"
-        browser_state = client.get(
-            f"/api/v1/sessions/{session['id']}/browser-state"
-        )
+        browser_state = client.get(f"/api/v1/sessions/{session['id']}/browser-state")
         assert browser_state.status_code == 200
         assert browser_state.json()["tabs"][0]["url"].endswith("/inbox")
         assert session["browser_id"] == str(UUID(int=1))

@@ -2,6 +2,7 @@ from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
+from backend.browser_tunnel.presentation import browser_rpc_router
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
@@ -25,7 +26,7 @@ from backend.provider import SettingsProvider
 
 API_PREFIX = "/api/v1"
 API_ERRORS = SESSION_API_ERRORS
-ROUTERS = (health_router, session_router)
+ROUTERS = (health_router, session_router, browser_rpc_router)
 
 
 def create_app(

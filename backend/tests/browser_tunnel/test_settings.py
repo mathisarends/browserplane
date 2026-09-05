@@ -1,6 +1,6 @@
 import pytest
 
-from browsertunnel.settings import BrowserSettings
+from backend.browser_tunnel.settings import BrowserSettings
 
 
 def test_browser_settings_defaults() -> None:

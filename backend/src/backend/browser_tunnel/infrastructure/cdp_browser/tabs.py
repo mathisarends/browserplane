@@ -1,4 +1,8 @@
-from backend.browser_tunnel.application import BrowserTab, BrowserTabNotFoundError, BrowserTabs
+from backend.browser_tunnel.application import (
+    BrowserTab,
+    BrowserTabNotFoundError,
+    BrowserTabs,
+)
 from backend.browser_tunnel.infrastructure.cdp_browser.active_target import (
     ActiveTarget,
     SelectTarget,

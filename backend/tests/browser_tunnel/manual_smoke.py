@@ -3,9 +3,9 @@
 import asyncio
 from contextlib import aclosing
 
-from browsertunnel.application import NavigationChanged
-from browsertunnel.infrastructure.cdp_browser import CdpBrowser
-from browsertunnel.settings import BrowserSettings
+from backend.browser_tunnel.application import NavigationChanged
+from backend.browser_tunnel.infrastructure.cdp_browser import CdpBrowser
+from backend.browser_tunnel.settings import BrowserSettings
 
 
 async def next_navigation(events) -> NavigationChanged:
