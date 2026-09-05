@@ -7,8 +7,8 @@
 
 export interface ResumeSessionRequest {
   /**
-   * @maximum 86400
-   * @exclusiveMinimum 0
-   */
+     * @maximum 86400
+     * @exclusiveMinimum 0
+     */
   ttl_seconds?: number;
 }

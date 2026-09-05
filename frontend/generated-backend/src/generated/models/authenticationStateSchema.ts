@@ -4,11 +4,11 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { BrowserCookieSchema } from "./browserCookieSchema";
-import type { BrowserOriginStateSchema } from "./browserOriginStateSchema";
+import type { BrowserCookieSchema } from './browserCookieSchema';
+import type { BrowserOriginStateSchema } from './browserOriginStateSchema';
 
 export interface AuthenticationStateSchema {
   cookies?: BrowserCookieSchema[];
   origins?: BrowserOriginStateSchema[];
   [key: string]: unknown;
-}
+ }

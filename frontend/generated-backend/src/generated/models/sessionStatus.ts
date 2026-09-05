@@ -8,9 +8,10 @@
 /**
  * Whether a session currently holds a browser.
  */
-export type SessionStatus = (typeof SessionStatus)[keyof typeof SessionStatus];
+export type SessionStatus = typeof SessionStatus[keyof typeof SessionStatus];
+
 
 export const SessionStatus = {
-  active: "active",
-  suspended: "suspended",
+  active: 'active',
+  suspended: 'suspended',
 } as const;

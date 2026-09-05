@@ -6,6 +6,6 @@
  */
 
 export interface BrowserStateTransferFailedError {
-  code: "browser_state_transfer_failed";
+  code: 'browser_state_transfer_failed';
   message: string;
 }

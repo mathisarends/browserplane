@@ -6,6 +6,6 @@
  */
 
 export interface NoBrowserAvailableError {
-  code: "no_browser_available";
+  code: 'no_browser_available';
   message: string;
 }

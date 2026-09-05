@@ -4,10 +4,10 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { StorageItemSchema } from "./storageItemSchema";
+import type { StorageItemSchema } from './storageItemSchema';
 
 export interface BrowserOriginStateSchema {
   origin: string;
   localStorage?: StorageItemSchema[];
   [key: string]: unknown;
-}
+ }

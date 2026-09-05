@@ -4,12 +4,12 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { ScrollPositionSchema } from "./scrollPositionSchema";
-import type { StorageItemSchema } from "./storageItemSchema";
+import type { ScrollPositionSchema } from './scrollPositionSchema';
+import type { StorageItemSchema } from './storageItemSchema';
 
 export interface BrowserTabStateSchema {
   url: string;
   scroll?: ScrollPositionSchema;
   sessionStorage?: StorageItemSchema[];
   [key: string]: unknown;
-}
+ }

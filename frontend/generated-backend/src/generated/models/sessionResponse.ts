@@ -4,7 +4,7 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { SessionStatus } from "./sessionStatus";
+import type { SessionStatus } from './sessionStatus';
 
 /**
  * A session plus the backend paths that carry its live traffic.

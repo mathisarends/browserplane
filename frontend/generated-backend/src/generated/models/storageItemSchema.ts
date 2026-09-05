@@ -9,4 +9,4 @@ export interface StorageItemSchema {
   name: string;
   value: string;
   [key: string]: unknown;
-}
+ }

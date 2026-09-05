@@ -6,6 +6,6 @@
  */
 
 export interface SessionNotActiveError {
-  code: "session_not_active";
+  code: 'session_not_active';
   message: string;
 }

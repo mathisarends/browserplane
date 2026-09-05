@@ -6,6 +6,6 @@
  */
 
 export interface SessionNotSuspendedError {
-  code: "session_not_suspended";
+  code: 'session_not_suspended';
   message: string;
 }

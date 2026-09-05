@@ -9,4 +9,4 @@ export interface ScrollPositionSchema {
   x?: number;
   y?: number;
   [key: string]: unknown;
-}
+ }

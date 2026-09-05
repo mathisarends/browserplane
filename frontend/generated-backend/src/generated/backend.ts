@@ -17,701 +17,671 @@ import type {
   SessionNotActiveError,
   SessionNotFoundError,
   SessionNotSuspendedError,
-  SessionResponse,
-} from "./models";
+  SessionResponse
+} from './models';
+
 
 export type healthResponse200 = {
-  data: Health200;
-  status: 200;
-};
+  data: Health200
+  status: 200
+}
 
-export type healthResponseSuccess = healthResponse200 & {
+export type healthResponseSuccess = (healthResponse200) & {
   headers: Headers;
 };
-export type healthResponse = healthResponseSuccess;
+;
+
+export type healthResponse = (healthResponseSuccess)
 
 export const getHealthUrl = () => {
-  return `/api/v1/health`;
-};
+
+
+
+
+  return `/api/v1/health`
+}
 
 /**
  * @summary Health
  */
-export const health = async (
-  options?: RequestInit,
-): Promise<healthResponse> => {
-  const res = await fetch(getHealthUrl(), {
+export const health = async ( options?: RequestInit): Promise<healthResponse> => {
+
+  const res = await fetch(getHealthUrl(),
+  {
     ...options,
-    method: "GET",
-  });
+    method: 'GET'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: healthResponse["data"] = body ? JSON.parse(body) : {};
-  return { data, status: res.status, headers: res.headers } as healthResponse;
-};
-
+  const data: healthResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as healthResponse
+}
 export type readinessResponse200 = {
-  data: Readiness200;
-  status: 200;
-};
+  data: Readiness200
+  status: 200
+}
 
-export type readinessResponseSuccess = readinessResponse200 & {
+export type readinessResponseSuccess = (readinessResponse200) & {
   headers: Headers;
 };
-export type readinessResponse = readinessResponseSuccess;
+;
+
+export type readinessResponse = (readinessResponseSuccess)
 
 export const getReadinessUrl = () => {
-  return `/api/v1/readiness`;
-};
+
+
+
+
+  return `/api/v1/readiness`
+}
 
 /**
  * @summary Readiness
  */
-export const readiness = async (
-  options?: RequestInit,
-): Promise<readinessResponse> => {
-  const res = await fetch(getReadinessUrl(), {
+export const readiness = async ( options?: RequestInit): Promise<readinessResponse> => {
+
+  const res = await fetch(getReadinessUrl(),
+  {
     ...options,
-    method: "GET",
-  });
+    method: 'GET'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: readinessResponse["data"] = body ? JSON.parse(body) : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as readinessResponse;
-};
+  const data: readinessResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as readinessResponse
+}
+
+
 
 export type openSessionResponse201 = {
-  data: SessionResponse;
-  status: 201;
-};
+  data: SessionResponse
+  status: 201
+}
 
 export type openSessionResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type openSessionResponse503 = {
-  data: NoBrowserAvailableError;
-  status: 503;
-};
+  data: NoBrowserAvailableError
+  status: 503
+}
 
-export type openSessionResponseSuccess = openSessionResponse201 & {
+export type openSessionResponseSuccess = (openSessionResponse201) & {
   headers: Headers;
 };
-export type openSessionResponseError = (
-  openSessionResponse422 | openSessionResponse503
-) & {
+export type openSessionResponseError = (openSessionResponse422 | openSessionResponse503) & {
   headers: Headers;
 };
 
-export type openSessionResponse =
-  openSessionResponseSuccess | openSessionResponseError;
+export type openSessionResponse = (openSessionResponseSuccess | openSessionResponseError)
 
 export const getOpenSessionUrl = () => {
-  return `/api/v1/sessions`;
-};
+
+
+
+
+  return `/api/v1/sessions`
+}
 
 /**
  * @summary Open Session
  */
-export const openSession = async (
-  openSessionRequest: OpenSessionRequest,
-  options?: RequestInit,
-): Promise<openSessionResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
+export const openSession = async (openSessionRequest: OpenSessionRequest, options?: RequestInit): Promise<openSessionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-  const res = await fetch(getOpenSessionUrl(), {
+const res = await fetch(getOpenSessionUrl(),
+  {
     ...options,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(openSessionRequest),
-  });
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(openSessionRequest)
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: openSessionResponse["data"] = body ? JSON.parse(body) : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as openSessionResponse;
-};
+  const data: openSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as openSessionResponse
+}
+
+
 
 export type getSessionResponse200 = {
-  data: SessionResponse;
-  status: 200;
-};
+  data: SessionResponse
+  status: 200
+}
 
 export type getSessionResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type getSessionResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
-export type getSessionResponseSuccess = getSessionResponse200 & {
+export type getSessionResponseSuccess = (getSessionResponse200) & {
   headers: Headers;
 };
-export type getSessionResponseError = (
-  getSessionResponse404 | getSessionResponse422
-) & {
+export type getSessionResponseError = (getSessionResponse404 | getSessionResponse422) & {
   headers: Headers;
 };
 
-export type getSessionResponse =
-  getSessionResponseSuccess | getSessionResponseError;
+export type getSessionResponse = (getSessionResponseSuccess | getSessionResponseError)
 
-export const getGetSessionUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}`;
-};
+export const getGetSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}`
+}
 
 /**
  * @summary Get Session
  */
-export const getSession = async (
-  sessionId: string,
-  options?: RequestInit,
-): Promise<getSessionResponse> => {
-  const res = await fetch(getGetSessionUrl(sessionId), {
+export const getSession = async (sessionId: string, options?: RequestInit): Promise<getSessionResponse> => {
+
+  const res = await fetch(getGetSessionUrl(sessionId),
+  {
     ...options,
-    method: "GET",
-  });
+    method: 'GET'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: getSessionResponse["data"] = body ? JSON.parse(body) : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as getSessionResponse;
-};
+  const data: getSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getSessionResponse
+}
+
+
 
 export type closeSessionResponse204 = {
-  data: void;
-  status: 204;
-};
+  data: void
+  status: 204
+}
 
 export type closeSessionResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type closeSessionResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
-export type closeSessionResponseSuccess = closeSessionResponse204 & {
+export type closeSessionResponseSuccess = (closeSessionResponse204) & {
   headers: Headers;
 };
-export type closeSessionResponseError = (
-  closeSessionResponse404 | closeSessionResponse422
-) & {
+export type closeSessionResponseError = (closeSessionResponse404 | closeSessionResponse422) & {
   headers: Headers;
 };
 
-export type closeSessionResponse =
-  closeSessionResponseSuccess | closeSessionResponseError;
+export type closeSessionResponse = (closeSessionResponseSuccess | closeSessionResponseError)
 
-export const getCloseSessionUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}`;
-};
+export const getCloseSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}`
+}
 
 /**
  * @summary Close Session
  */
-export const closeSession = async (
-  sessionId: string,
-  options?: RequestInit,
-): Promise<closeSessionResponse> => {
-  const res = await fetch(getCloseSessionUrl(sessionId), {
+export const closeSession = async (sessionId: string, options?: RequestInit): Promise<closeSessionResponse> => {
+
+  const res = await fetch(getCloseSessionUrl(sessionId),
+  {
     ...options,
-    method: "DELETE",
-  });
+    method: 'DELETE'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: closeSessionResponse["data"] = body
-    ? JSON.parse(body)
-    : undefined;
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as closeSessionResponse;
-};
+  const data: closeSessionResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as closeSessionResponse
+}
+
+
 
 export type captureSessionAuthenticationStateResponse200 = {
-  data: AuthenticationStateSchema;
-  status: 200;
-};
+  data: AuthenticationStateSchema
+  status: 200
+}
 
 export type captureSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type captureSessionAuthenticationStateResponse409 = {
-  data: SessionNotActiveError;
-  status: 409;
-};
+  data: SessionNotActiveError
+  status: 409
+}
 
 export type captureSessionAuthenticationStateResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type captureSessionAuthenticationStateResponse503 = {
-  data: BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: BrowserStateTransferFailedError
+  status: 503
+}
 
-export type captureSessionAuthenticationStateResponseSuccess =
-  captureSessionAuthenticationStateResponse200 & {
-    headers: Headers;
-  };
-export type captureSessionAuthenticationStateResponseError = (
-  | captureSessionAuthenticationStateResponse404
-  | captureSessionAuthenticationStateResponse409
-  | captureSessionAuthenticationStateResponse422
-  | captureSessionAuthenticationStateResponse503
-) & {
+export type captureSessionAuthenticationStateResponseSuccess = (captureSessionAuthenticationStateResponse200) & {
+  headers: Headers;
+};
+export type captureSessionAuthenticationStateResponseError = (captureSessionAuthenticationStateResponse404 | captureSessionAuthenticationStateResponse409 | captureSessionAuthenticationStateResponse422 | captureSessionAuthenticationStateResponse503) & {
   headers: Headers;
 };
 
-export type captureSessionAuthenticationStateResponse =
-  | captureSessionAuthenticationStateResponseSuccess
-  | captureSessionAuthenticationStateResponseError;
+export type captureSessionAuthenticationStateResponse = (captureSessionAuthenticationStateResponseSuccess | captureSessionAuthenticationStateResponseError)
 
-export const getCaptureSessionAuthenticationStateUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/authentication-state`;
-};
+export const getCaptureSessionAuthenticationStateUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-state`
+}
 
 /**
  * @summary Capture Session Authentication State
  */
-export const captureSessionAuthenticationState = async (
-  sessionId: string,
-  options?: RequestInit,
-): Promise<captureSessionAuthenticationStateResponse> => {
-  const res = await fetch(getCaptureSessionAuthenticationStateUrl(sessionId), {
+export const captureSessionAuthenticationState = async (sessionId: string, options?: RequestInit): Promise<captureSessionAuthenticationStateResponse> => {
+
+  const res = await fetch(getCaptureSessionAuthenticationStateUrl(sessionId),
+  {
     ...options,
-    method: "GET",
-  });
+    method: 'GET'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: captureSessionAuthenticationStateResponse["data"] = body
-    ? JSON.parse(body)
-    : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as captureSessionAuthenticationStateResponse;
-};
+  const data: captureSessionAuthenticationStateResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as captureSessionAuthenticationStateResponse
+}
+
+
 
 export type mountSessionAuthenticationStateResponse204 = {
-  data: void;
-  status: 204;
-};
+  data: void
+  status: 204
+}
 
 export type mountSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type mountSessionAuthenticationStateResponse409 = {
-  data: SessionNotActiveError;
-  status: 409;
-};
+  data: SessionNotActiveError
+  status: 409
+}
 
 export type mountSessionAuthenticationStateResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type mountSessionAuthenticationStateResponse503 = {
-  data: BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: BrowserStateTransferFailedError
+  status: 503
+}
 
-export type mountSessionAuthenticationStateResponseSuccess =
-  mountSessionAuthenticationStateResponse204 & {
-    headers: Headers;
-  };
-export type mountSessionAuthenticationStateResponseError = (
-  | mountSessionAuthenticationStateResponse404
-  | mountSessionAuthenticationStateResponse409
-  | mountSessionAuthenticationStateResponse422
-  | mountSessionAuthenticationStateResponse503
-) & {
+export type mountSessionAuthenticationStateResponseSuccess = (mountSessionAuthenticationStateResponse204) & {
+  headers: Headers;
+};
+export type mountSessionAuthenticationStateResponseError = (mountSessionAuthenticationStateResponse404 | mountSessionAuthenticationStateResponse409 | mountSessionAuthenticationStateResponse422 | mountSessionAuthenticationStateResponse503) & {
   headers: Headers;
 };
 
-export type mountSessionAuthenticationStateResponse =
-  | mountSessionAuthenticationStateResponseSuccess
-  | mountSessionAuthenticationStateResponseError;
+export type mountSessionAuthenticationStateResponse = (mountSessionAuthenticationStateResponseSuccess | mountSessionAuthenticationStateResponseError)
 
-export const getMountSessionAuthenticationStateUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/authentication-state`;
-};
+export const getMountSessionAuthenticationStateUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-state`
+}
 
 /**
  * @summary Mount Session Authentication State
  */
-export const mountSessionAuthenticationState = async (
-  sessionId: string,
-  authenticationStateSchema: AuthenticationStateSchema,
-  options?: RequestInit,
-): Promise<mountSessionAuthenticationStateResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
+export const mountSessionAuthenticationState = async (sessionId: string,
+    authenticationStateSchema: AuthenticationStateSchema, options?: RequestInit): Promise<mountSessionAuthenticationStateResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-  const res = await fetch(getMountSessionAuthenticationStateUrl(sessionId), {
+const res = await fetch(getMountSessionAuthenticationStateUrl(sessionId),
+  {
     ...options,
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(authenticationStateSchema),
-  });
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(authenticationStateSchema)
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: mountSessionAuthenticationStateResponse["data"] = body
-    ? JSON.parse(body)
-    : undefined;
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as mountSessionAuthenticationStateResponse;
-};
+  const data: mountSessionAuthenticationStateResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as mountSessionAuthenticationStateResponse
+}
+
+
 
 export type captureSessionBrowserStateResponse200 = {
-  data: BrowserStateSchema;
-  status: 200;
-};
+  data: BrowserStateSchema
+  status: 200
+}
 
 export type captureSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type captureSessionBrowserStateResponse409 = {
-  data: SessionNotActiveError;
-  status: 409;
-};
+  data: SessionNotActiveError
+  status: 409
+}
 
 export type captureSessionBrowserStateResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type captureSessionBrowserStateResponse503 = {
-  data: BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: BrowserStateTransferFailedError
+  status: 503
+}
 
-export type captureSessionBrowserStateResponseSuccess =
-  captureSessionBrowserStateResponse200 & {
-    headers: Headers;
-  };
-export type captureSessionBrowserStateResponseError = (
-  | captureSessionBrowserStateResponse404
-  | captureSessionBrowserStateResponse409
-  | captureSessionBrowserStateResponse422
-  | captureSessionBrowserStateResponse503
-) & {
+export type captureSessionBrowserStateResponseSuccess = (captureSessionBrowserStateResponse200) & {
+  headers: Headers;
+};
+export type captureSessionBrowserStateResponseError = (captureSessionBrowserStateResponse404 | captureSessionBrowserStateResponse409 | captureSessionBrowserStateResponse422 | captureSessionBrowserStateResponse503) & {
   headers: Headers;
 };
 
-export type captureSessionBrowserStateResponse =
-  | captureSessionBrowserStateResponseSuccess
-  | captureSessionBrowserStateResponseError;
+export type captureSessionBrowserStateResponse = (captureSessionBrowserStateResponseSuccess | captureSessionBrowserStateResponseError)
 
-export const getCaptureSessionBrowserStateUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/browser-state`;
-};
+export const getCaptureSessionBrowserStateUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/browser-state`
+}
 
 /**
  * @summary Capture Session Browser State
  */
-export const captureSessionBrowserState = async (
-  sessionId: string,
-  options?: RequestInit,
-): Promise<captureSessionBrowserStateResponse> => {
-  const res = await fetch(getCaptureSessionBrowserStateUrl(sessionId), {
+export const captureSessionBrowserState = async (sessionId: string, options?: RequestInit): Promise<captureSessionBrowserStateResponse> => {
+
+  const res = await fetch(getCaptureSessionBrowserStateUrl(sessionId),
+  {
     ...options,
-    method: "GET",
-  });
+    method: 'GET'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: captureSessionBrowserStateResponse["data"] = body
-    ? JSON.parse(body)
-    : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as captureSessionBrowserStateResponse;
-};
+  const data: captureSessionBrowserStateResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as captureSessionBrowserStateResponse
+}
+
+
 
 export type mountSessionBrowserStateResponse204 = {
-  data: void;
-  status: 204;
-};
+  data: void
+  status: 204
+}
 
 export type mountSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type mountSessionBrowserStateResponse409 = {
-  data: SessionNotActiveError;
-  status: 409;
-};
+  data: SessionNotActiveError
+  status: 409
+}
 
 export type mountSessionBrowserStateResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type mountSessionBrowserStateResponse503 = {
-  data: BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: BrowserStateTransferFailedError
+  status: 503
+}
 
-export type mountSessionBrowserStateResponseSuccess =
-  mountSessionBrowserStateResponse204 & {
-    headers: Headers;
-  };
-export type mountSessionBrowserStateResponseError = (
-  | mountSessionBrowserStateResponse404
-  | mountSessionBrowserStateResponse409
-  | mountSessionBrowserStateResponse422
-  | mountSessionBrowserStateResponse503
-) & {
+export type mountSessionBrowserStateResponseSuccess = (mountSessionBrowserStateResponse204) & {
+  headers: Headers;
+};
+export type mountSessionBrowserStateResponseError = (mountSessionBrowserStateResponse404 | mountSessionBrowserStateResponse409 | mountSessionBrowserStateResponse422 | mountSessionBrowserStateResponse503) & {
   headers: Headers;
 };
 
-export type mountSessionBrowserStateResponse =
-  | mountSessionBrowserStateResponseSuccess
-  | mountSessionBrowserStateResponseError;
+export type mountSessionBrowserStateResponse = (mountSessionBrowserStateResponseSuccess | mountSessionBrowserStateResponseError)
 
-export const getMountSessionBrowserStateUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/browser-state`;
-};
+export const getMountSessionBrowserStateUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/browser-state`
+}
 
 /**
  * @summary Mount Session Browser State
  */
-export const mountSessionBrowserState = async (
-  sessionId: string,
-  browserStateSchema: BrowserStateSchema,
-  options?: RequestInit,
-): Promise<mountSessionBrowserStateResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
+export const mountSessionBrowserState = async (sessionId: string,
+    browserStateSchema: BrowserStateSchema, options?: RequestInit): Promise<mountSessionBrowserStateResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-  const res = await fetch(getMountSessionBrowserStateUrl(sessionId), {
+const res = await fetch(getMountSessionBrowserStateUrl(sessionId),
+  {
     ...options,
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(browserStateSchema),
-  });
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(browserStateSchema)
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: mountSessionBrowserStateResponse["data"] = body
-    ? JSON.parse(body)
-    : undefined;
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as mountSessionBrowserStateResponse;
-};
+  const data: mountSessionBrowserStateResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as mountSessionBrowserStateResponse
+}
+
+
 
 export type suspendSessionResponse200 = {
-  data: SessionResponse;
-  status: 200;
-};
+  data: SessionResponse
+  status: 200
+}
 
 export type suspendSessionResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type suspendSessionResponse409 = {
-  data: SessionNotActiveError;
-  status: 409;
-};
+  data: SessionNotActiveError
+  status: 409
+}
 
 export type suspendSessionResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type suspendSessionResponse503 = {
-  data: BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: BrowserStateTransferFailedError
+  status: 503
+}
 
-export type suspendSessionResponseSuccess = suspendSessionResponse200 & {
+export type suspendSessionResponseSuccess = (suspendSessionResponse200) & {
   headers: Headers;
 };
-export type suspendSessionResponseError = (
-  | suspendSessionResponse404
-  | suspendSessionResponse409
-  | suspendSessionResponse422
-  | suspendSessionResponse503
-) & {
+export type suspendSessionResponseError = (suspendSessionResponse404 | suspendSessionResponse409 | suspendSessionResponse422 | suspendSessionResponse503) & {
   headers: Headers;
 };
 
-export type suspendSessionResponse =
-  suspendSessionResponseSuccess | suspendSessionResponseError;
+export type suspendSessionResponse = (suspendSessionResponseSuccess | suspendSessionResponseError)
 
-export const getSuspendSessionUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/suspend`;
-};
+export const getSuspendSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/suspend`
+}
 
 /**
  * Park a session: store what its browser holds and free the browser.
  * @summary Suspend Session
  */
-export const suspendSession = async (
-  sessionId: string,
-  options?: RequestInit,
-): Promise<suspendSessionResponse> => {
-  const res = await fetch(getSuspendSessionUrl(sessionId), {
+export const suspendSession = async (sessionId: string, options?: RequestInit): Promise<suspendSessionResponse> => {
+
+  const res = await fetch(getSuspendSessionUrl(sessionId),
+  {
     ...options,
-    method: "POST",
-  });
+    method: 'POST'
+
+
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: suspendSessionResponse["data"] = body ? JSON.parse(body) : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as suspendSessionResponse;
-};
+  const data: suspendSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as suspendSessionResponse
+}
+
+
 
 export type resumeSessionResponse200 = {
-  data: SessionResponse;
-  status: 200;
-};
+  data: SessionResponse
+  status: 200
+}
 
 export type resumeSessionResponse404 = {
-  data: SessionNotFoundError;
-  status: 404;
-};
+  data: SessionNotFoundError
+  status: 404
+}
 
 export type resumeSessionResponse409 = {
-  data: SessionNotSuspendedError;
-  status: 409;
-};
+  data: SessionNotSuspendedError
+  status: 409
+}
 
 export type resumeSessionResponse422 = {
-  data: HTTPValidationError;
-  status: 422;
-};
+  data: HTTPValidationError
+  status: 422
+}
 
 export type resumeSessionResponse503 = {
-  data: NoBrowserAvailableError | BrowserStateTransferFailedError;
-  status: 503;
-};
+  data: NoBrowserAvailableError | BrowserStateTransferFailedError
+  status: 503
+}
 
-export type resumeSessionResponseSuccess = resumeSessionResponse200 & {
+export type resumeSessionResponseSuccess = (resumeSessionResponse200) & {
   headers: Headers;
 };
-export type resumeSessionResponseError = (
-  | resumeSessionResponse404
-  | resumeSessionResponse409
-  | resumeSessionResponse422
-  | resumeSessionResponse503
-) & {
+export type resumeSessionResponseError = (resumeSessionResponse404 | resumeSessionResponse409 | resumeSessionResponse422 | resumeSessionResponse503) & {
   headers: Headers;
 };
 
-export type resumeSessionResponse =
-  resumeSessionResponseSuccess | resumeSessionResponseError;
+export type resumeSessionResponse = (resumeSessionResponseSuccess | resumeSessionResponseError)
 
-export const getResumeSessionUrl = (sessionId: string) => {
-  return `/api/v1/sessions/${sessionId}/resume`;
-};
+export const getResumeSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/resume`
+}
 
 /**
  * Mount a parked session onto whichever browser is free now.
  * @summary Resume Session
  */
-export const resumeSession = async (
-  sessionId: string,
-  resumeSessionRequest: ResumeSessionRequest,
-  options?: RequestInit,
-): Promise<resumeSessionResponse> => {
-  const getHeaders = (
-    h?: NonNullable<RequestInit["headers"]>,
-  ): Record<string, string | readonly string[]> => {
+export const resumeSession = async (sessionId: string,
+    resumeSessionRequest: ResumeSessionRequest, options?: RequestInit): Promise<resumeSessionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
     if (h instanceof Headers) return Object.fromEntries(h.entries());
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-  const res = await fetch(getResumeSessionUrl(sessionId), {
+const res = await fetch(getResumeSessionUrl(sessionId),
+  {
     ...options,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...getHeaders(options?.headers),
-    },
-    body: JSON.stringify(resumeSessionRequest),
-  });
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resumeSessionRequest)
+  }
+)
+
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: resumeSessionResponse["data"] = body ? JSON.parse(body) : {};
-  return {
-    data,
-    status: res.status,
-    headers: res.headers,
-  } as resumeSessionResponse;
-};
+  const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as resumeSessionResponse
+}

@@ -4,10 +4,10 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { BrowserTabStateSchema } from "./browserTabStateSchema";
+import type { BrowserTabStateSchema } from './browserTabStateSchema';
 
 export interface BrowserStateSchema {
   tabs?: BrowserTabStateSchema[];
   active_tab_index?: number;
   [key: string]: unknown;
-}
+ }
