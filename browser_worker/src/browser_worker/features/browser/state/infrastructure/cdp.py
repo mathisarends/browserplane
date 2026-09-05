@@ -156,9 +156,13 @@ async def _capture_origins(
     captured: list[BrowserOriginState] = []
     for origin in sorted(origins):
         try:
-            result = await client.dom_storage.get_dom_storage_items(
-                storage_id=StorageId(security_origin=origin, is_local_storage=True)
-            )
+            async with _loaded_origin(client, origin) as session:
+                result = await session.dom_storage.get_dom_storage_items(
+                    storage_id=StorageId(
+                        security_origin=origin,
+                        is_local_storage=True,
+                    )
+                )
         except Exception:
             logger.warning("Could not read localStorage of %s", origin, exc_info=True)
             continue
@@ -274,21 +278,45 @@ async def _restore_origin(client: Client, origin: BrowserOriginState) -> None:
     DOMStorage needs a document of that origin to exist, and writing through
     the API keeps the values out of any evaluated source string.
     """
-    created = await client.target.create_target(url=origin.origin, background=True)
+    async with _loaded_origin(client, origin.origin) as session:
+        storage_id = StorageId(
+            security_origin=origin.origin,
+            is_local_storage=True,
+        )
+        await session.dom_storage.enable()
+        await session.dom_storage.clear(storage_id=storage_id)
+        for item in origin.local_storage:
+            await session.dom_storage.set_dom_storage_item(
+                storage_id=storage_id,
+                key=item.name,
+                value=item.value,
+            )
+
+
+@asynccontextmanager
+async def _loaded_origin(
+    client: Client,
+    origin: str,
+) -> AsyncIterator[CDPSession]:
+    created = await client.target.create_target(url=_BLANK_URL, background=True)
     try:
         async with _attached(client, created.target_id) as session:
-            storage_id = StorageId(
-                security_origin=origin.origin,
-                is_local_storage=True,
+            await session.page.enable()
+            loaded = asyncio.create_task(
+                _wait_for_load(session, timeout=10),
+                name=f"browser-state:origin:{created.target_id}",
             )
-            await session.dom_storage.enable()
-            await session.dom_storage.clear(storage_id=storage_id)
-            for item in origin.local_storage:
-                await session.dom_storage.set_dom_storage_item(
-                    storage_id=storage_id,
-                    key=item.name,
-                    value=item.value,
-                )
+            try:
+                await asyncio.sleep(0)
+                navigation = await session.page.navigate(url=origin)
+                if navigation.error_text:
+                    raise BrowserStateFailedException(navigation.error_text)
+                await loaded
+            finally:
+                loaded.cancel()
+                with suppress(BaseException):
+                    await loaded
+            yield session
     finally:
         with suppress(Exception):
             await client.target.close_target(target_id=created.target_id)
