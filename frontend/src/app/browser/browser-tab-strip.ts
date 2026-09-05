@@ -37,8 +37,9 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
       display: flex;
       align-items: flex-end;
       gap: 10px;
-      height: 43px;
-      padding: 8px 12px 0 14px;
+      height: 42px;
+      padding: 7px 12px 0 14px;
+      background: #17191e;
     }
     .window-controls {
       display: flex;
@@ -89,27 +90,31 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
       max-width: 250px;
       height: 34px;
       padding: 0 5px 0 11px;
-      color: #919aa8;
-      background: rgb(12 15 20 / 45%);
+      color: #8f949d;
+      background: transparent;
       border: 1px solid transparent;
       border-bottom: 0;
-      border-radius: 8px 8px 0 0;
+      border-radius: 9px 9px 0 0;
       cursor: default;
       outline: none;
     }
     .browser-tab[aria-selected="true"] {
-      color: #eef1f6;
-      background: #292f39;
-      border-color: #39414e;
+      color: #f0f1f3;
+      background: #26282d;
+      border-color: #30333a;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 3%);
     }
     .browser-tab:focus-visible {
       box-shadow: inset 0 0 0 1px #79a4ff;
     }
     .browser-tab > i {
-      width: 8px;
-      height: 8px;
-      background: #6c92e8;
+      width: 7px;
+      height: 7px;
+      background: #666c76;
       border-radius: 50%;
+    }
+    .browser-tab[aria-selected="true"] > i {
+      background: #b8bdc6;
     }
     .browser-tab > span {
       overflow: hidden;
@@ -121,16 +126,16 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
     .new-tab {
       display: grid;
       place-items: center;
-      color: #7d8592;
+      color: #81868f;
       background: transparent;
       border: 0;
-      border-radius: 5px;
+      border-radius: 999px;
       cursor: pointer;
     }
     .close-tab:hover,
     .new-tab:hover {
-      color: #e4e8ef;
-      background: #343a45;
+      color: #f0f1f3;
+      background: #303238;
     }
     .close-tab:focus-visible,
     .new-tab:focus-visible {
@@ -147,8 +152,8 @@ import type { TabResult } from "@browsertunnel/browser-rpc-client";
       flex: 0 0 28px;
       width: 28px;
       height: 28px;
-      margin: 0 0 2px 4px;
-      font-size: 1.25rem;
+      margin: 0 0 2px 5px;
+      font-size: 1.12rem;
     }
     @media (max-width: 580px) {
       :host {

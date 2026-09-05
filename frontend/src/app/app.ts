@@ -98,7 +98,7 @@ import { BrowserPanel } from "./browser/browser-panel";
     .app-shell {
       width: min(100%, 1640px);
       margin-inline: auto;
-      padding: clamp(12px, 2vw, 32px);
+      padding: 6px clamp(10px, 2vw, 32px) clamp(16px, 2vw, 32px);
     }
     .browser-stage {
       min-width: 0;
@@ -107,7 +107,7 @@ import { BrowserPanel } from "./browser/browser-panel";
       display: flex;
       justify-content: center;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 8px;
     }
     .view-switcher {
       display: inline-flex;
@@ -266,18 +266,18 @@ import { BrowserPanel } from "./browser/browser-panel";
       min-width: 0;
       aspect-ratio: 4 / 3;
       overflow: hidden;
-      background: rgb(17 21 28 / 55%);
-      border: 1px dashed #354052;
+      background: rgb(13 15 19 / 68%);
+      border: 1px dashed #2c3037;
       border-radius: 14px;
     }
     .browser-create-tile button {
       display: grid;
       place-content: center;
       justify-items: center;
-      gap: 14px;
+      gap: 12px;
       width: 100%;
-      padding: 32px;
-      color: #7f8da3;
+      padding: 20px;
+      color: #aeb3bd;
       background: transparent;
       border: 0;
       cursor: pointer;
@@ -286,22 +286,23 @@ import { BrowserPanel } from "./browser/browser-panel";
         background 180ms ease;
     }
     .browser-create-tile button:hover {
-      color: #b9c7dc;
-      background: rgb(102 145 235 / 5%);
+      color: #f0f1f3;
+      background: rgb(255 255 255 / 2.5%);
     }
     .create-icon {
       display: grid;
       place-items: center;
-      width: 52px;
-      height: 52px;
-      color: #8eacf0;
-      background: rgb(83 123 209 / 10%);
-      border: 1px solid rgb(102 145 235 / 24%);
-      border-radius: 14px;
+      width: 44px;
+      height: 44px;
+      color: #c5c8cf;
+      background: #1b1d22;
+      border: 1px solid #32353c;
+      border-radius: 999px;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
     }
     .create-icon svg {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       fill: none;
       stroke: currentcolor;
       stroke-width: 1.6;
@@ -309,17 +310,17 @@ import { BrowserPanel } from "./browser/browser-panel";
     }
     .create-copy {
       display: grid;
-      gap: 6px;
+      gap: 4px;
       text-align: center;
     }
     .create-copy strong {
       color: inherit;
-      font-size: 0.86rem;
+      font-size: 0.82rem;
       font-weight: 650;
     }
     .create-copy small {
-      color: #647186;
-      font-size: 0.7rem;
+      color: #686e79;
+      font-size: 0.68rem;
     }
     .browser-stage[data-view="focus"] .gallery-viewport {
       animation: focus-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -346,10 +347,10 @@ import { BrowserPanel } from "./browser/browser-panel";
     }
     @media (max-width: 580px) {
       .app-shell {
-        padding: 8px;
+        padding: 4px 8px 14px;
       }
       .view-toolbar {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
       .view-switcher {
         width: 208px;
