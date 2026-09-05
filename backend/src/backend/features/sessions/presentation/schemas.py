@@ -49,3 +49,9 @@ class SessionResponse(BaseModel):
     browser_id: UUID | None = None
     tunnel_path: str | None = None
     screencast_path: str | None = None
+
+
+class OpenSessionResponse(SessionResponse):
+    """A newly leased session and the capacity left after taking its browser."""
+
+    remaining_capacity: int = Field(ge=0)

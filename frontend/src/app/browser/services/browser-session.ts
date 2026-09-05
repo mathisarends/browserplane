@@ -75,7 +75,7 @@ export class BrowserSession {
     return `${tab.title || "New tab"} · ${this.navigation()?.loading ? "loading" : "connected"}`;
   });
 
-  async connect(ownerId: string): Promise<void> {
+  async connect(ownerId: string): Promise<number | undefined> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
     try {
@@ -98,9 +98,11 @@ export class BrowserSession {
       this.connectionState.set("connected");
       void this.receiveNotifications();
       this.tabsState.set((await this.client.browser.tab.list()).tabs);
+      return response.data.remaining_capacity;
     } catch (error) {
       await this.disconnect();
       this.reportError(error);
+      return undefined;
     }
   }
 
@@ -270,7 +272,6 @@ export class BrowserSession {
       }
     });
   }
-
 }
 
 /** Resolve address-bar input like a browser omnibox would. */

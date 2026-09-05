@@ -71,6 +71,9 @@ class SessionService:
         leased = await self._browsers.get(lease.browser_id)
         return Session(lease=lease, browser=leased)
 
+    async def remaining_capacity(self) -> int:
+        return await self._browsers.remaining_capacity()
+
     async def get(self, session_id: UUID) -> Session | SuspendedSession:
         """Look a session up, whether it currently holds a browser or not."""
         suspended = await self._find_suspended(session_id)

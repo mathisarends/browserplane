@@ -59,6 +59,12 @@ class BrowserService:
         """The next browser free to be leased, if the pool still has one."""
         return await self._repository.find_available()
 
+    async def remaining_capacity(self) -> int:
+        """How many healthy pool slots can still be leased right now."""
+        return sum(
+            browser.is_available for browser in await self._repository.list_all()
+        )
+
     async def destroy(self, browser_id: UUID) -> Browser:
         """Tear the browser process down. The slot survives, empty, until restarted."""
         browser = await self.get(browser_id)

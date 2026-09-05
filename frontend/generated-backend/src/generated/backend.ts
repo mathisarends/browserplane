@@ -16,6 +16,7 @@ import type {
   Health200,
   NoBrowserAvailableError,
   OpenSessionRequest,
+  OpenSessionResponse,
   PooledBrowserResponse,
   Readiness200,
   ResumeSessionRequest,
@@ -113,7 +114,7 @@ export const readiness = async ( options?: RequestInit): Promise<readinessRespon
 
 
 export type openSessionResponse201 = {
-  data: SessionResponse
+  data: OpenSessionResponse
   status: 201
 }
 

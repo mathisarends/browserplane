@@ -108,6 +108,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         )
         assert created.status_code == 201
         session = created.json()
+        assert session["remaining_capacity"] == 0
         assert state.mounted_authentication == {"cookies": [], "origins": []}
         assert state.mounted_browser is not None
         assert state.mounted_browser["tabs"][0]["url"].endswith("/profile")

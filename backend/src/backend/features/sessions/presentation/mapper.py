@@ -6,6 +6,7 @@ from backend.features.sessions.application.models import (
 )
 from backend.features.sessions.presentation.schemas import (
     BrowserStateSnapshotResponse,
+    OpenSessionResponse,
     SessionResponse,
 )
 from generated.data_plane import AuthenticationStateSchema, BrowserStateSchema
@@ -25,6 +26,15 @@ def to_session_response(session: Session | SuspendedSession) -> SessionResponse:
         browser_id=session.browser_id,
         tunnel_path=f"{SESSION_PATH}/{session.id}/tunnel",
         screencast_path=f"{SESSION_PATH}/{session.id}/screencast",
+    )
+
+
+def to_open_session_response(
+    session: Session, *, remaining_capacity: int
+) -> OpenSessionResponse:
+    response = to_session_response(session)
+    return OpenSessionResponse(
+        **response.model_dump(), remaining_capacity=remaining_capacity
     )
 
 

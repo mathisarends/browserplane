@@ -27,12 +27,14 @@ from backend.features.sessions.presentation.errors import (
 )
 from backend.features.sessions.presentation.mapper import (
     to_browser_state_snapshot_response,
+    to_open_session_response,
     to_session_response,
 )
 from backend.features.sessions.presentation.schemas import (
     BrowserStateSnapshotResponse,
     CaptureBrowserStateSnapshotRequest,
     OpenSessionRequest,
+    OpenSessionResponse,
     ResumeSessionRequest,
     SessionResponse,
 )
@@ -45,14 +47,14 @@ logger = logging.getLogger(__name__)
 
 @session_router.post(
     "/sessions",
-    response_model=SessionResponse,
+    response_model=OpenSessionResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="open_session",
     responses=api_error_responses(NO_BROWSER_AVAILABLE),
 )
 async def open_session(
     request: OpenSessionRequest, service: FromDishka[SessionService]
-) -> SessionResponse:
+) -> OpenSessionResponse:
     session = await service.open(
         owner_id=request.owner_id,
         ttl=timedelta(seconds=request.ttl_seconds),
@@ -67,7 +69,9 @@ async def open_session(
             else None
         ),
     )
-    return to_session_response(session)
+    return to_open_session_response(
+        session, remaining_capacity=await service.remaining_capacity()
+    )
 
 
 @session_router.get(

@@ -21,6 +21,7 @@ export * from './health200';
 export * from './hTTPValidationError';
 export * from './noBrowserAvailableError';
 export * from './openSessionRequest';
+export * from './openSessionResponse';
 export * from './pooledBrowserResponse';
 export * from './readiness200';
 export * from './resumeSessionRequest';

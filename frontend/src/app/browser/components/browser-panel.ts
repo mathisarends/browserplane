@@ -7,6 +7,7 @@ import {
   input,
   OnDestroy,
   OnInit,
+  output,
   signal,
   viewChild,
 } from "@angular/core";
@@ -86,6 +87,8 @@ import { BrowserTabStrip } from "./browser-tab-strip";
 export class BrowserPanel implements OnInit, OnDestroy {
   readonly ownerId = input.required<string>();
   readonly position = input.required<number>();
+  readonly capacityChange = output<number>();
+  readonly leaseFailed = output<string>();
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
   protected readonly label = computed(() => this.session.browserId() ?? "No session");
@@ -96,7 +99,7 @@ export class BrowserPanel implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    void this.session.connect(this.ownerId());
+    void this.connect();
   }
 
   ngOnDestroy(): void {
@@ -111,5 +114,14 @@ export class BrowserPanel implements OnInit, OnDestroy {
   protected async createTab(): Promise<void> {
     await this.session.createTab();
     this.navigationBar()?.focusAddress();
+  }
+
+  private async connect(): Promise<void> {
+    const remainingCapacity = await this.session.connect(this.ownerId());
+    if (remainingCapacity === undefined) {
+      this.leaseFailed.emit(this.ownerId());
+      return;
+    }
+    this.capacityChange.emit(remainingCapacity);
   }
 }

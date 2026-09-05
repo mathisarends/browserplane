@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, signal } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, input, signal } from "@angular/core";
 import { BrowserCreateTile } from "../components/browser-create-tile";
 import { BrowserGalleryNavigation } from "../components/browser-gallery-navigation";
 import { BrowserPanel } from "../components/browser-panel";
@@ -14,18 +14,23 @@ export type BrowserViewMode = "grid" | "focus";
       <div class="browser-gallery">
         <div class="gallery-viewport">
           <div class="browser-track" [style.transform]="trackTransform()">
-            @for (ownerId of ownerIds; track ownerId; let index = $index) {
-              <app-browser-panel [ownerId]="ownerId" [position]="index + 1" />
+            @for (ownerId of ownerIds(); track ownerId; let index = $index) {
+              <app-browser-panel
+                [ownerId]="ownerId"
+                [position]="index + 1"
+                (capacityChange)="handleCapacityChange($event)"
+                (leaseFailed)="handleLeaseFailed($event)"
+              />
             }
-            @if (view() === "grid") {
-              <app-browser-create-tile />
+            @if (canCreate() && (view() === "grid" || ownerIds().length === 0)) {
+              <app-browser-create-tile (create)="createBrowser()" />
             }
           </div>
         </div>
 
-        @if (view() === "focus") {
+        @if (view() === "focus" && ownerIds().length > 0) {
           <app-browser-gallery-navigation
-            [items]="ownerIds"
+            [items]="ownerIds()"
             [activeIndex]="activeIndex()"
             (previous)="previous()"
             (next)="next()"
@@ -64,7 +69,8 @@ export type BrowserViewMode = "grid" | "focus";
       transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
       will-change: transform;
     }
-    .browser-track app-browser-panel {
+    .browser-track app-browser-panel,
+    .browser-track app-browser-create-tile {
       flex: 0 0 100%;
       min-width: 0;
     }
@@ -124,8 +130,32 @@ export type BrowserViewMode = "grid" | "focus";
 })
 export class BrowserLayout {
   readonly view = input.required<BrowserViewMode>();
-  protected readonly ownerIds = [crypto.randomUUID(), crypto.randomUUID()] as const;
+  protected readonly ownerIds = signal<readonly string[]>([]);
   protected readonly activeIndex = signal(0);
+  private readonly remainingCapacity = signal<number | undefined>(undefined);
+  private readonly creating = signal(false);
+  protected readonly canCreate = computed(
+    () => !this.creating() && (this.remainingCapacity() ?? 1) > 0,
+  );
+
+  protected createBrowser(): void {
+    if (!this.canCreate()) return;
+    const nextIndex = this.ownerIds().length;
+    this.creating.set(true);
+    this.ownerIds.update((ownerIds) => [...ownerIds, crypto.randomUUID()]);
+    this.activeIndex.set(nextIndex);
+  }
+
+  protected handleCapacityChange(remainingCapacity: number): void {
+    this.remainingCapacity.set(remainingCapacity);
+    this.creating.set(false);
+  }
+
+  protected handleLeaseFailed(ownerId: string): void {
+    this.ownerIds.update((ownerIds) => ownerIds.filter((id) => id !== ownerId));
+    this.activeIndex.update((index) => Math.max(0, Math.min(index, this.ownerIds().length - 1)));
+    this.creating.set(false);
+  }
 
   protected trackTransform(): string {
     return this.view() === "focus" ? `translateX(-${this.activeIndex() * 100}%)` : "none";
@@ -136,10 +166,12 @@ export class BrowserLayout {
   }
 
   protected previous(): void {
-    this.activeIndex.update((index) => (index - 1 + this.ownerIds.length) % this.ownerIds.length);
+    const length = this.ownerIds().length;
+    this.activeIndex.update((index) => (index - 1 + length) % length);
   }
 
   protected next(): void {
-    this.activeIndex.update((index) => (index + 1) % this.ownerIds.length);
+    const length = this.ownerIds().length;
+    this.activeIndex.update((index) => (index + 1) % length);
   }
 }
