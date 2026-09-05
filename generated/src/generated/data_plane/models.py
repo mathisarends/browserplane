@@ -117,6 +117,22 @@ class CreateBrowserRequest(BaseModel):
     id: UUID
 
 
+class DownloadNotFoundError(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    code: Literal["download_not_found"]
+    message: str
+
+
+class DownloadResponse(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    id: str
+    filename: str
+    url: str
+    size: int
+
+
 class ValidationError(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 

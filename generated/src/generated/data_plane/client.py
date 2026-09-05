@@ -23,6 +23,8 @@ from generated.data_plane.models import (
     BrowserStateSchema,
     CaptureAuthenticationStateParams,
     CreateBrowserRequest,
+    DownloadNotFoundError,
+    DownloadResponse,
     HTTPValidationError,
     HealthResponse,
     RecordingAlreadyRunningError,
@@ -219,6 +221,98 @@ class GeneratedDataPlaneClient:
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
             parsed_body = BrowserStateFailedError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def list_downloads(
+        self,
+        browser_id: UUID,
+        *,
+        timeout: float | None = None,
+    ) -> list[DownloadResponse]:
+        path = "/api/v1/browser/{browser_id}/downloads"
+        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        response = await self._client.request(
+            method=HttpMethods.GET,
+            url=f"{self._base_url}{path}",
+            headers=headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 200:
+            return TypeAdapter(list[DownloadResponse]).validate_python(response.json())
+        if response.status_code == 404:
+            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 422:
+            parsed_body = HTTPValidationError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def clear_downloads(
+        self,
+        browser_id: UUID,
+        *,
+        timeout: float | None = None,
+    ) -> None:
+        path = "/api/v1/browser/{browser_id}/downloads"
+        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        response = await self._client.request(
+            method=HttpMethods.DELETE,
+            url=f"{self._base_url}{path}",
+            headers=headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 204:
+            return None
+        if response.status_code == 404:
+            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 422:
+            parsed_body = HTTPValidationError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def download_file(
+        self,
+        browser_id: UUID,
+        download_id: str,
+        *,
+        timeout: float | None = None,
+    ) -> bytes:
+        path = "/api/v1/browser/{browser_id}/downloads/{download_id}/file"
+        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = path.replace("{download_id}", serialize_path("download_id", download_id))
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/octet-stream, application/json")
+
+        response = await self._client.request(
+            method=HttpMethods.GET,
+            url=f"{self._base_url}{path}",
+            headers=headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 200:
+            return response.content
+        if response.status_code == 404:
+            parsed_body = TypeAdapter(BrowserNotFoundError | DownloadNotFoundError).validate_python(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+        if response.status_code == 422:
+            parsed_body = HTTPValidationError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
