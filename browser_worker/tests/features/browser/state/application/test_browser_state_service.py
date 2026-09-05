@@ -85,12 +85,18 @@ class FakeStore(BrowserStateStore):
         self.browser_state = state
 
 
-async def _running_service(store: FakeStore) -> tuple[BrowserStateService, object]:
+async def _running_service(
+    store: FakeStore,
+    *,
+    max_tabs: int | None = None,
+) -> tuple[BrowserStateService, object]:
     browsers = BrowserService(FakeBrowserProcess())
     browser = await browsers.create(uuid4())
     service = BrowserStateService(
         browsers,
-        BrowserStateSettings(_env_file=None).max_tabs,
+        max_tabs
+        if max_tabs is not None
+        else BrowserStateSettings(_env_file=None).max_tabs,
         lambda _: store,
     )
     return service, browser.id
@@ -140,3 +146,23 @@ async def test_non_web_tab_url_is_rejected() -> None:
 
     with pytest.raises(BrowserStateInvalidException):
         await service.mount_browser(browser_id, to_browser_state(state))
+
+
+@pytest.mark.asyncio
+async def test_browser_state_with_too_many_tabs_is_rejected() -> None:
+    service, browser_id = await _running_service(FakeStore(), max_tabs=1)
+    state = BrowserStateSchema(
+        tabs=[{"url": "https://a.example"}, {"url": "https://b.example"}]
+    )
+
+    with pytest.raises(BrowserStateInvalidException):
+        await service.mount_browser(browser_id, to_browser_state(state))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("origin", ["example.com", "https://example.com/path"])
+async def test_capture_rejects_values_that_are_not_origins(origin: str) -> None:
+    service, browser_id = await _running_service(FakeStore())
+
+    with pytest.raises(BrowserStateInvalidException):
+        await service.capture_authentication(browser_id, (origin,))
