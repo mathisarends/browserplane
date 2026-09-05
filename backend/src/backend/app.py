@@ -14,6 +14,7 @@ from backend.features.browsers.infrastructure import BrowserProvider
 from backend.features.browsers.presentation.errors import (
     API_ERRORS as BROWSER_API_ERRORS,
 )
+from backend.features.health.infrastructure import HealthProvider
 from backend.features.health.presentation.router import health_router
 from backend.features.leases.infrastructure import LeaseProvider
 from backend.features.recordings.infrastructure import RecordingProvider
@@ -67,6 +68,7 @@ def create_app(
         DatabaseProvider(),
         BrowserTunnelProvider(),
         BrowserProvider(provisioner, repository),
+        HealthProvider(),
         RecordingProvider(),
         LeaseProvider(),
         SessionProvider(
