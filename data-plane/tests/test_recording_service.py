@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from data_plane.features.browsers.application.ports import BrowserProcess
-from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browser.application.ports import BrowserProcess
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.recordings.application.models import (
     RecordedSegment,
     RecordingFormat,

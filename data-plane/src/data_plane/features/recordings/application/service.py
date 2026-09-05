@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.recordings.application.exceptions import (
     RecordingAlreadyRunningException,
     RecordingHasSegmentsException,

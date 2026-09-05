@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, provide
 
-from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.downloads.application.service import DownloadService
 from data_plane.workspace import Workspace
 

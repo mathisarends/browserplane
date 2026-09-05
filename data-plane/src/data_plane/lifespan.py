@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.workspace import Workspace
 
 

@@ -1,4 +1,4 @@
-from data_plane.features.browsers.infrastructure.screencast.models import (
+from data_plane.features.screencast.infrastructure.events import (
     Frame,
     VisibleTarget,
 )

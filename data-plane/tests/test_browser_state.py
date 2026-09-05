@@ -3,27 +3,27 @@ from uuid import uuid4
 
 import pytest
 
-from data_plane.features.browser_state.application.exceptions import (
+from data_plane.features.browser.application.ports import BrowserProcess
+from data_plane.features.browser.application.service import BrowserService
+from data_plane.features.browser.state.application.exceptions import (
     BrowserStateInvalidException,
 )
-from data_plane.features.browser_state.application.models import (
+from data_plane.features.browser.state.application.models import (
     AuthenticationState,
     BrowserState,
 )
-from data_plane.features.browser_state.application.ports import BrowserStateStore
-from data_plane.features.browser_state.application.service import BrowserStateService
-from data_plane.features.browser_state.presentation.mapper import (
+from data_plane.features.browser.state.application.ports import BrowserStateStore
+from data_plane.features.browser.state.application.service import BrowserStateService
+from data_plane.features.browser.state.presentation.mapper import (
     to_authentication_state,
     to_authentication_state_response,
     to_browser_state,
     to_browser_state_response,
 )
-from data_plane.features.browser_state.presentation.schemas import (
+from data_plane.features.browser.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )
-from data_plane.features.browsers.application.ports import BrowserProcess
-from data_plane.features.browsers.application.service import BrowserService
 from data_plane.settings import DataPlaneSettings
 
 PLAYWRIGHT_STATE = {
@@ -38,24 +38,24 @@ PLAYWRIGHT_STATE = {
 }
 
 AUTHENTICATION_STATE = {
-        "cookies": [
-            {
-                "name": "session",
-                "value": "secret",
-                "domain": "example.com",
-                "path": "/",
-                "expires": None,
-                "httpOnly": True,
-                "secure": True,
-                "sameSite": "Lax",
-            }
-        ],
-        "origins": [
-            {
-                "origin": "https://example.com",
-                "localStorage": [{"name": "token", "value": "abc"}],
-            }
-        ],
+    "cookies": [
+        {
+            "name": "session",
+            "value": "secret",
+            "domain": "example.com",
+            "path": "/",
+            "expires": None,
+            "httpOnly": True,
+            "secure": True,
+            "sameSite": "Lax",
+        }
+    ],
+    "origins": [
+        {
+            "origin": "https://example.com",
+            "localStorage": [{"name": "token", "value": "abc"}],
+        }
+    ],
 }
 
 

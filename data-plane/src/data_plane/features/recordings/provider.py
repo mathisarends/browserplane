@@ -2,8 +2,7 @@ from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, provide
 
-from data_plane.features.browsers.application.service import BrowserService
-from data_plane.features.browsers.infrastructure.screencast import ActiveTabStreams
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.recordings.application.ports import ScreenRecorder
 from data_plane.features.recordings.application.service import (
     RecorderFactory,
@@ -12,6 +11,7 @@ from data_plane.features.recordings.application.service import (
 from data_plane.features.recordings.infrastructure.ffmpeg_recorder import (
     FfmpegScreenRecorder,
 )
+from data_plane.features.screencast.application.service import ScreencastService
 from data_plane.settings import DataPlaneSettings
 
 
@@ -21,11 +21,11 @@ class RecordingProvider(Provider):
         self._service = service
 
     @provide(scope=Scope.APP)
-    def recorder_factory(self, streams: ActiveTabStreams) -> RecorderFactory:
+    def recorder_factory(self, screencasts: ScreencastService) -> RecorderFactory:
         """Encode the browser's shared raw screencast frames with FFmpeg."""
 
         def build(cdp_url: str, settings: DataPlaneSettings) -> ScreenRecorder:
-            return FfmpegScreenRecorder(streams.for_browser(cdp_url), settings)
+            return FfmpegScreenRecorder(screencasts.for_browser(cdp_url), settings)
 
         return build
 

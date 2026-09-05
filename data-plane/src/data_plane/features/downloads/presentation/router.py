@@ -4,7 +4,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Response, status
 from fastapi.responses import FileResponse
 
-from data_plane.features.browsers.presentation.errors import BROWSER_NOT_FOUND
+from data_plane.features.browser.presentation.errors import BROWSER_NOT_FOUND
 from data_plane.features.downloads.application.service import DownloadService
 from data_plane.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
 from data_plane.features.downloads.presentation.mapper import to_download_response

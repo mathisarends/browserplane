@@ -1,13 +1,9 @@
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, suppress
 from datetime import UTC, datetime
 from pathlib import Path
 
-from data_plane.features.browsers.infrastructure.screencast import (
-    ActiveTabStream,
-    cancel_and_wait,
-)
 from data_plane.features.recordings.application.exceptions import (
     RecordingFailedException,
 )
@@ -17,13 +13,15 @@ from data_plane.features.recordings.application.models import (
 )
 from data_plane.features.recordings.application.ports import ScreenRecorder
 from data_plane.features.recordings.infrastructure.ffmpeg import VideoRecorder
+from data_plane.features.screencast.application.ports import FrameStream
+from data_plane.features.screencast.infrastructure.tasks import cancel_and_wait
 from data_plane.settings import DataPlaneSettings
 
 
 class FfmpegScreenRecorder(ScreenRecorder):
     """Record raw active-tab screencast frames through FFmpeg."""
 
-    def __init__(self, stream: ActiveTabStream, settings: DataPlaneSettings) -> None:
+    def __init__(self, stream: FrameStream, settings: DataPlaneSettings) -> None:
         self._stream = stream
         self._settings = settings
         self._scope: AsyncExitStack | None = None
@@ -97,7 +95,7 @@ class FfmpegScreenRecorder(ScreenRecorder):
             with suppress(Exception):
                 await video.stop()
 
-    async def _write_frames(self, frames: AsyncGenerator[bytes]) -> None:
+    async def _write_frames(self, frames: AsyncIterator[bytes]) -> None:
         try:
             async for frame in frames:
                 assert self._video is not None

@@ -12,7 +12,7 @@ from cdpify.domains.browser.events import (
     DownloadWillBeginEvent,
 )
 
-from data_plane.features.browsers.application.service import BrowserService
+from data_plane.features.browser.application.service import BrowserService
 from data_plane.features.downloads.application.exceptions import (
     DownloadNotFoundException,
 )
@@ -145,7 +145,7 @@ class DownloadService:
         try:
             resolved = path.resolve(strict=True)
             resolved.relative_to(self._workspace.downloads)
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError, ValueError:
             logger.warning("Completed download file is unavailable guid=%s", event.guid)
             return
         download = Download(
