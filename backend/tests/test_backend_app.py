@@ -5,6 +5,9 @@ from fastapi.testclient import TestClient
 from backend.app import create_app
 from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
+from backend.features.browsers.infrastructure.in_memory_repository import (
+    InMemoryBrowserRepository,
+)
 
 OWNER_ID = str(UUID(int=7))
 
@@ -25,7 +28,8 @@ class FakeProvisioner(BrowserProvisioner):
 
 
 def test_backend_serves_a_session_lifecycle() -> None:
-    with TestClient(create_app(FakeProvisioner())) as client:
+    app = create_app(FakeProvisioner(), InMemoryBrowserRepository())
+    with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 200
 
         created = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})

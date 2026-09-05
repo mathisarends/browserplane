@@ -15,17 +15,23 @@ class BrowserProvisioner(ABC):
     async def deprovision(self) -> None: ...
 
 
-class BrowserRegistry(ABC):
-    """Storage port for provisioned browsers."""
+class BrowserRepository(ABC):
+    """Persistence contract for the browser pool."""
 
     @abstractmethod
-    def add(self, browser: Browser) -> None: ...
+    async def save(self, *, browser: Browser) -> Browser: ...
 
     @abstractmethod
-    def list(self) -> list[Browser]: ...
+    async def get_by_id(self, *, browser_id: UUID) -> Browser | None: ...
 
     @abstractmethod
-    def get(self, browser_id: UUID) -> Browser | None: ...
+    async def find_available(self) -> Browser | None:
+        """
+        Claim the next free browser for the caller's transaction.
+
+        Handing one out is a read-modify-write across the whole pool, so the
+        row is locked until the caller either leases it or gives up.
+        """
 
     @abstractmethod
-    def clear(self) -> None: ...
+    async def delete_all(self) -> None: ...

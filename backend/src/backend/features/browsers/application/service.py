@@ -1,4 +1,3 @@
-import asyncio
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -13,7 +12,7 @@ from backend.features.browsers.application.models import (
 )
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
-    BrowserRegistry,
+    BrowserRepository,
 )
 
 
@@ -21,57 +20,54 @@ class BrowserService:
     """Browser lifecycle: provisioning, inspection and reservation."""
 
     def __init__(
-        self, provisioner: BrowserProvisioner, registry: BrowserRegistry
+        self, provisioner: BrowserProvisioner, repository: BrowserRepository
     ) -> None:
         self._provisioner = provisioner
-        self._registry = registry
-        self._lock = asyncio.Lock()
+        self._repository = repository
 
     async def start(self) -> None:
         now = datetime.now(UTC)
         for slot in await self._provisioner.provision():
-            self._registry.add(Browser(slot=slot, created_at=now))
+            await self._repository.save(browser=Browser(slot=slot, created_at=now))
 
     async def stop(self) -> None:
-        self._registry.clear()
+        await self._repository.delete_all()
         await self._provisioner.deprovision()
 
     async def create(self) -> Browser:
         raise BrowserCapacityExhaustedException("No unassigned browser slots")
 
-    def list(self) -> list[Browser]:
-        return self._registry.list()
-
-    def get(self, browser_id: UUID) -> Browser:
-        browser = self._registry.get(browser_id)
+    async def get(self, browser_id: UUID) -> Browser:
+        browser = await self._repository.get_by_id(browser_id=browser_id)
         if browser is None:
             raise BrowserNotFoundException()
         return browser
 
+    async def find_available(self) -> Browser | None:
+        """The next browser free to be leased, if the pool still has one."""
+        return await self._repository.find_available()
+
     async def destroy(self, browser_id: UUID) -> None:
-        async with self._lock:
-            browser = self.get(browser_id)
-            browser.state = BrowserState.STOPPING
-            browser.state = BrowserState.FAILED
+        browser = await self.get(browser_id)
+        browser.state = BrowserState.FAILED
+        await self._repository.save(browser=browser)
 
     async def reset(self, browser_id: UUID) -> Browser:
-        async with self._lock:
-            browser = self.get(browser_id)
-            browser.state = BrowserState.STARTING
-            browser.state = BrowserState.READY
-            return browser
+        browser = await self.get(browser_id)
+        browser.state = BrowserState.READY
+        return await self._repository.save(browser=browser)
 
     async def reserve(self, browser_id: UUID) -> None:
         """Mark a browser as taken. Raises when it is not free."""
-        async with self._lock:
-            browser = self.get(browser_id)
-            if not browser.is_available:
-                raise BrowserUnavailableException("Browser is already leased")
-            browser.state = BrowserState.LEASED
+        browser = await self.get(browser_id)
+        if not browser.is_available:
+            raise BrowserUnavailableException("Browser is already leased")
+        browser.state = BrowserState.LEASED
+        await self._repository.save(browser=browser)
 
     async def release(self, browser_id: UUID) -> None:
         """Return a reserved browser to the pool. Unknown browsers are ignored."""
-        async with self._lock:
-            browser = self._registry.get(browser_id)
-            if browser is not None and browser.state is BrowserState.LEASED:
-                browser.state = BrowserState.READY
+        browser = await self._repository.get_by_id(browser_id=browser_id)
+        if browser is not None and browser.state is BrowserState.LEASED:
+            browser.state = BrowserState.READY
+            await self._repository.save(browser=browser)

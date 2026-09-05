@@ -1,7 +1,10 @@
-from collections.abc import Awaitable
+from collections.abc import AsyncGenerator, Callable, Coroutine
+from contextlib import asynccontextmanager
 from datetime import timedelta
+from typing import Any
 from uuid import UUID
 
+from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, status
 
@@ -65,10 +68,11 @@ async def close_session(session_id: UUID, service: FromDishka[SessionService]) -
 @session_router.websocket("/sessions/{session_id}/tunnel")
 @inject
 async def session_tunnel(
-    session_id: UUID, websocket: WebSocket, service: FromDishka[SessionService]
+    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
 ) -> None:
-    pending = service.upstream_tunnel_url(session_id)
-    upstream_url = await _resolve(websocket, pending)
+    upstream_url = await _resolve(
+        websocket, container, lambda service: service.upstream_tunnel_url(session_id)
+    )
     if upstream_url is None:
         return
     # The control channel is the session: once it is gone, so is the frontend,
@@ -76,24 +80,47 @@ async def session_tunnel(
     try:
         await proxy_stream(websocket, upstream_url, name="Browser tunnel")
     finally:
-        await service.end(session_id)
+        async with _session_service(container) as service:
+            await service.end(session_id)
 
 
 @session_router.websocket("/sessions/{session_id}/screencast")
 @inject
 async def session_screencast(
-    session_id: UUID, websocket: WebSocket, service: FromDishka[SessionService]
+    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
 ) -> None:
-    pending = service.upstream_screencast_url(session_id)
-    upstream_url = await _resolve(websocket, pending)
+    upstream_url = await _resolve(
+        websocket,
+        container,
+        lambda service: service.upstream_screencast_url(session_id),
+    )
     if upstream_url is not None:
         await proxy_stream(websocket, upstream_url, name="Screencast")
 
 
-async def _resolve(websocket: WebSocket, pending: Awaitable[str]) -> str | None:
-    """Await an upstream URL, closing the socket in session terms when it is gone."""
+@asynccontextmanager
+async def _session_service(
+    container: AsyncContainer,
+) -> AsyncGenerator[SessionService]:
+    """
+    A service for one step of a live connection.
+
+    A stream outlives any unit of work, so each lookup gets its own scope and
+    hands its database session back before the proxying starts.
+    """
+    async with container(scope=Scope.REQUEST) as scoped:
+        yield await scoped.get(SessionService)
+
+
+async def _resolve(
+    websocket: WebSocket,
+    container: AsyncContainer,
+    resolve: Callable[[SessionService], Coroutine[Any, Any, str]],
+) -> str | None:
+    """Look up an upstream URL, closing the socket in session terms when it is gone."""
     try:
-        return await pending
+        async with _session_service(container) as service:
+            return await resolve(service)
     except LeaseNotFoundException, BrowserNotFoundException:
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")

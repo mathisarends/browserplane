@@ -6,7 +6,7 @@ from backend.features.sessions.application.service import SessionService
 
 
 class SessionProvider(Provider):
-    @provide(scope=Scope.APP)
+    @provide(scope=Scope.REQUEST)
     def session_service(
         self, browsers: BrowserService, leases: LeaseService
     ) -> SessionService:

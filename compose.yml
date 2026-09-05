@@ -14,6 +14,34 @@ x-browser-tunnel: &browser-tunnel
     - PORT=8000
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=browser
+      - POSTGRES_PASSWORD=browser
+      - POSTGRES_DB=browser
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U browser -d browser"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  # One-shot: brings the schema up to date before the backend opens its pool.
+  # Runs the backend image, which the backend service builds.
+  migrate:
+    image: browser-provisioner-backend:local
+    working_dir: /app/backend
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   data-plane-1:
     <<: *data-plane
     build:
@@ -34,6 +62,7 @@ services:
       - DATA_PLANE_PUBLIC_BASE_URL=ws://localhost:8012
 
   backend:
+    image: browser-provisioner-backend:local
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -41,6 +70,7 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
       # The backend relays the live traffic itself, so these addresses stay on
       # the compose network and never reach the frontend.
       - BACKEND_BROWSER_1_DATA_PLANE_URL=http://data-plane-1:8000
@@ -54,6 +84,8 @@ services:
         condition: service_healthy
       data-plane-2:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
       interval: 2s
@@ -84,3 +116,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  postgres-data:

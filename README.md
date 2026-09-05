@@ -75,7 +75,7 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Start the backend, the browser pool and the tunnels
+# Start Postgres, run the migrations, then the backend, browser pool and tunnels
 docker compose up --build
 
 # Start the frontend
@@ -86,6 +86,10 @@ docker compose up --build
 uv run python -m browsertunnel.schema_export # write JSON Schema and OpenRPC into schemas/
 (cd frontend && npm run generate) # regenerate schemas and both TypeScript clients
 ./scripts/generate_http_clients.sh # regenerate the Python HTTP clients
+# Schema changes: write a migration and apply it (BACKEND_DATABASE_URL points at Postgres)
+(cd backend && uv run alembic revision --autogenerate -m "...")
+(cd backend && uv run alembic upgrade head)
+
 uv run pytest        # tests
 uv run ruff check .  # lint
 uv run ruff format . # format

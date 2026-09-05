@@ -20,13 +20,15 @@ class SessionService:
         self._leases = leases
 
     async def open(self, owner_id: UUID, ttl: timedelta) -> Session:
-        browser = self._pick_available_browser()
+        browser = await self._pick_available_browser()
         lease = await self._leases.create(browser.id, owner_id, ttl)
-        return Session(lease=lease, browser=self._browsers.get(lease.browser_id))
+        leased = await self._browsers.get(lease.browser_id)
+        return Session(lease=lease, browser=leased)
 
     async def get(self, session_id: UUID) -> Session:
         lease = await self._leases.get(session_id)
-        return Session(lease=lease, browser=self._browsers.get(lease.browser_id))
+        browser = await self._browsers.get(lease.browser_id)
+        return Session(lease=lease, browser=browser)
 
     async def close(self, session_id: UUID) -> None:
         await self._leases.release(session_id)
@@ -53,8 +55,8 @@ class SessionService:
         session = await self.get(session_id)
         return session.screencast_url
 
-    def _pick_available_browser(self) -> Browser:
-        for browser in self._browsers.list():
-            if browser.is_available:
-                return browser
-        raise NoBrowserAvailableException()
+    async def _pick_available_browser(self) -> Browser:
+        browser = await self._browsers.find_available()
+        if browser is None:
+            raise NoBrowserAvailableException()
+        return browser

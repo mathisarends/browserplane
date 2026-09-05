@@ -16,11 +16,11 @@ class LeaseProvider(Provider):
     def store(self) -> LeaseStore:
         return InMemoryLeaseStore()
 
-    @provide(scope=Scope.APP, provides=BrowserAllocator)
+    @provide(scope=Scope.REQUEST, provides=BrowserAllocator)
     def allocator(self, browsers: BrowserService) -> BrowserAllocator:
         return BrowserServiceAllocator(browsers)
 
-    @provide(scope=Scope.APP)
+    @provide(scope=Scope.REQUEST)
     def lease_service(
         self, allocator: BrowserAllocator, store: LeaseStore
     ) -> LeaseService:
