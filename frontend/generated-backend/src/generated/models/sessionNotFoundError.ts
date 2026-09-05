@@ -6,6 +6,6 @@
  */
 
 export interface SessionNotFoundError {
-  code: 'session_not_found';
+  code: "session_not_found";
   message: string;
 }

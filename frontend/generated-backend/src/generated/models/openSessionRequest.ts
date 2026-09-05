@@ -8,8 +8,8 @@
 export interface OpenSessionRequest {
   owner_id: string;
   /**
-     * @maximum 86400
-     * @exclusiveMinimum 0
-     */
+   * @maximum 86400
+   * @exclusiveMinimum 0
+   */
   ttl_seconds?: number;
 }
