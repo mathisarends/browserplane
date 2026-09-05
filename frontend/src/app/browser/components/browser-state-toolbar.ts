@@ -125,7 +125,9 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       height: 30px;
       padding: 0 8px;
       color: #747982;
-      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.01em;
       background: #101116;
       border-top: 1px solid #25272d;
     }

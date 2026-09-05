@@ -187,8 +187,9 @@ import type { NavigationState } from "../services/browser-session";
       min-width: 0;
       height: 100%;
       padding: 0;
-      font: inherit;
-      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      letter-spacing: -0.01em;
       color: #dee4ed;
       text-overflow: ellipsis;
       background: transparent;
@@ -198,6 +199,9 @@ import type { NavigationState } from "../services/browser-session";
     }
     input::placeholder {
       color: rgb(105 116 134 / 88%);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      letter-spacing: -0.005em;
     }
     .visually-hidden {
       position: absolute;
@@ -230,7 +234,10 @@ import type { NavigationState } from "../services/browser-session";
         height: 14px;
       }
       input {
-        font-size: 0.8rem;
+        font-size: 0.72rem;
+      }
+      input::placeholder {
+        font-size: 0.76rem;
       }
     }
   `,

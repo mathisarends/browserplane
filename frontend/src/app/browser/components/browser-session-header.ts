@@ -35,22 +35,15 @@ import type { ConnectionState } from "../services/browser-session";
     .session-index {
       flex: none;
       color: #7292d8;
-      font:
-        650 0.66rem/1 ui-monospace,
-        SFMono-Regular,
-        Consolas,
-        monospace;
+      font: 650 0.66rem/1 var(--font-mono);
       letter-spacing: 0.11em;
       text-transform: uppercase;
     }
     strong {
       overflow: hidden;
       color: #aeb8c8;
-      font:
-        500 0.72rem/1 ui-monospace,
-        SFMono-Regular,
-        Consolas,
-        monospace;
+      font: 500 0.72rem/1 var(--font-mono);
+      letter-spacing: -0.01em;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -67,11 +60,7 @@ import type { ConnectionState } from "../services/browser-session";
       min-height: 25px;
       padding: 0 9px;
       color: #7f8999;
-      font:
-        600 0.66rem/1 ui-monospace,
-        SFMono-Regular,
-        Consolas,
-        monospace;
+      font: 600 0.66rem/1 var(--font-mono);
       letter-spacing: 0.04em;
       background: #151a22;
       border: 1px solid #29313e;
