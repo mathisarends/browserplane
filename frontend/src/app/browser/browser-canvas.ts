@@ -266,26 +266,63 @@ function mouseButton(button: number): MouseParams["button"] {
 }
 
 function modifiers(event: MouseEvent | KeyboardEvent): number {
-  return Number(event.altKey) + Number(event.ctrlKey) * 2
-    + Number(event.metaKey) * 4 + Number(event.shiftKey) * 8;
+  return (
+    Number(event.altKey) +
+    Number(event.ctrlKey) * 2 +
+    Number(event.metaKey) * 4 +
+    Number(event.shiftKey) * 8
+  );
 }
 
 function isShortcut(event: KeyboardEvent, key: string): boolean {
-  return (event.ctrlKey || event.metaKey) && !event.altKey
-    && event.key.toLowerCase() === key;
+  return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === key;
 }
 
 const VIRTUAL_KEY: Readonly<Record<string, number>> = {
-  Backspace: 8, Tab: 9, Enter: 13, NumpadEnter: 13, ShiftLeft: 16,
-  ShiftRight: 16, ControlLeft: 17, ControlRight: 17, AltLeft: 18,
-  AltRight: 18, Pause: 19, CapsLock: 20, Escape: 27, Space: 32,
-  PageUp: 33, PageDown: 34, End: 35, Home: 36, ArrowLeft: 37,
-  ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Insert: 45, Delete: 46,
-  MetaLeft: 91, MetaRight: 92, ContextMenu: 93, NumpadMultiply: 106,
-  NumpadAdd: 107, NumpadSubtract: 109, NumpadDecimal: 110,
-  NumpadDivide: 111, NumLock: 144, ScrollLock: 145, Semicolon: 186,
-  Equal: 187, Comma: 188, Minus: 189, Period: 190, Slash: 191,
-  Backquote: 192, BracketLeft: 219, Backslash: 220, BracketRight: 221,
+  Backspace: 8,
+  Tab: 9,
+  Enter: 13,
+  NumpadEnter: 13,
+  ShiftLeft: 16,
+  ShiftRight: 16,
+  ControlLeft: 17,
+  ControlRight: 17,
+  AltLeft: 18,
+  AltRight: 18,
+  Pause: 19,
+  CapsLock: 20,
+  Escape: 27,
+  Space: 32,
+  PageUp: 33,
+  PageDown: 34,
+  End: 35,
+  Home: 36,
+  ArrowLeft: 37,
+  ArrowUp: 38,
+  ArrowRight: 39,
+  ArrowDown: 40,
+  Insert: 45,
+  Delete: 46,
+  MetaLeft: 91,
+  MetaRight: 92,
+  ContextMenu: 93,
+  NumpadMultiply: 106,
+  NumpadAdd: 107,
+  NumpadSubtract: 109,
+  NumpadDecimal: 110,
+  NumpadDivide: 111,
+  NumLock: 144,
+  ScrollLock: 145,
+  Semicolon: 186,
+  Equal: 187,
+  Comma: 188,
+  Minus: 189,
+  Period: 190,
+  Slash: 191,
+  Backquote: 192,
+  BracketLeft: 219,
+  Backslash: 220,
+  BracketRight: 221,
   Quote: 222,
 };
 

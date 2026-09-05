@@ -35,9 +35,7 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BrowserTunnelClient;
   private screencast?: WebSocket;
-  private readonly sessionState = signal<SessionResponse | undefined>(
-    undefined,
-  );
+  private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly TabResult[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
@@ -86,9 +84,7 @@ export class BrowserSession {
         throw new Error("Die Session hält keinen Browser");
       }
       this.sessionState.set(session);
-      this.transport = new WebSocketRpcTransport(
-        socketUrl(session.tunnel_path),
-      );
+      this.transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
       this.client = new BrowserTunnelClient(this.transport);
       await this.transport.connect();
       await this.connectScreencast(socketUrl(session.screencast_path));
@@ -133,17 +129,13 @@ export class BrowserSession {
 
   reloadOrStop(): Promise<void> {
     return this.run((client) =>
-      this.navigation()?.loading
-        ? client.browser.nav.stop()
-        : client.browser.nav.reload(),
+      this.navigation()?.loading ? client.browser.nav.stop() : client.browser.nav.reload(),
     );
   }
 
   createTab(): Promise<void> {
     return this.run(async (client) => {
-      this.tabsState.set(
-        (await client.browser.tab.create({ url: "about:blank" })).tabs,
-      );
+      this.tabsState.set((await client.browser.tab.create({ url: "about:blank" })).tabs);
     });
   }
 
@@ -186,9 +178,7 @@ export class BrowserSession {
     this.errorState.set(error instanceof Error ? error.message : String(error));
   }
 
-  private async run(
-    action: (client: BrowserTunnelClient) => Promise<void>,
-  ): Promise<void> {
+  private async run(action: (client: BrowserTunnelClient) => Promise<void>): Promise<void> {
     if (!this.client) {
       // Input keeps arriving after a failed connect; don't let its aftermath
       // overwrite the error that actually explains the missing connection.
@@ -232,9 +222,7 @@ export class BrowserSession {
         });
         this.tabsState.update((tabs) =>
           tabs.map((tab) =>
-            tab.id === event.tabId
-              ? { ...tab, title: event.title, url: event.url }
-              : tab,
+            tab.id === event.tabId ? { ...tab, title: event.title, url: event.url } : tab,
           ),
         );
         if (event.error) this.errorState.set(event.error);

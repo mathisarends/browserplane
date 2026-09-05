@@ -17,19 +17,32 @@ import { WorkspaceHeader } from "./workspace-header";
     </div>
   `,
   styles: `
-    :host { display: block; }
-    .app-shell { width: min(100%, 1640px); margin-inline: auto; padding: clamp(12px, 2vw, 32px); }
-    app-workspace-header { margin-bottom: clamp(12px, 1.5vw, 20px); }
-    .workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); }
-    @media (max-width: 580px) { .app-shell { padding: 8px; } }
+    :host {
+      display: block;
+    }
+    .app-shell {
+      width: min(100%, 1640px);
+      margin-inline: auto;
+      padding: clamp(12px, 2vw, 32px);
+    }
+    app-workspace-header {
+      margin-bottom: clamp(12px, 1.5vw, 20px);
+    }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: clamp(16px, 2vw, 28px);
+    }
+    @media (max-width: 580px) {
+      .app-shell {
+        padding: 8px;
+      }
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class App {
   // One owner per panel: the backend leases whichever browser is free, so the
   // frontend no longer knows or names the browsers behind it.
-  protected readonly ownerIds = [
-    crypto.randomUUID(),
-    crypto.randomUUID(),
-  ] as const;
+  protected readonly ownerIds = [crypto.randomUUID(), crypto.randomUUID()] as const;
 }

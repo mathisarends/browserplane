@@ -11,6 +11,8 @@
     "dev": "ng serve --proxy-config proxy.conf.json",
     "build": "npm run check:clients && ng build",
     "preview": "ng serve --configuration production --proxy-config proxy.conf.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate": "npm run generate:rpc && npm run generate:api",
     "generate:rpc": "uv run python -m browsertunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
     "generate:api": "uv run python ../scripts/export_openapi_schemas.py && orval && prettier --write generated-backend/src/generated",

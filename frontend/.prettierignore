@@ -1,0 +1,6 @@
+.angular
+node_modules
+generated
+generated-backend
+../dist
+package-lock.json
