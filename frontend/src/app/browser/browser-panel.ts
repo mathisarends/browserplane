@@ -14,11 +14,18 @@ import { BrowserCanvas } from "./browser-canvas";
 import { BrowserNavigationBar } from "./browser-navigation-bar";
 import { BrowserSession } from "./browser-session";
 import { BrowserSessionHeader } from "./browser-session-header";
+import { BrowserStateToolbar } from "./browser-state-toolbar";
 import { BrowserTabStrip } from "./browser-tab-strip";
 
 @Component({
   selector: "app-browser-panel",
-  imports: [BrowserCanvas, BrowserNavigationBar, BrowserSessionHeader, BrowserTabStrip],
+  imports: [
+    BrowserCanvas,
+    BrowserNavigationBar,
+    BrowserSessionHeader,
+    BrowserStateToolbar,
+    BrowserTabStrip,
+  ],
   providers: [BrowserSession],
   template: `
     <section class="browser-panel" [attr.aria-label]="label() + ' Vorschau'">
@@ -28,6 +35,7 @@ import { BrowserTabStrip } from "./browser-tab-strip";
           [label]="label()"
           [connection]="session.connection()"
         />
+        <app-browser-state-toolbar [position]="position()" />
         <app-browser-tab-strip
           [tabs]="session.tabs()"
           (activate)="session.activateTab($event)"

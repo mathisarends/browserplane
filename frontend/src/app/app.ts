@@ -1,14 +1,11 @@
 import { ChangeDetectionStrategy, Component, signal } from "@angular/core";
 import { BrowserPanel } from "./browser/browser-panel";
-import { WorkspaceHeader } from "./workspace-header";
 
 @Component({
   selector: "app-root",
-  imports: [BrowserPanel, WorkspaceHeader],
+  imports: [BrowserPanel],
   template: `
     <div class="app-shell">
-      <app-workspace-header [sessionCount]="ownerIds.length" />
-
       <main
         class="browser-stage"
         [attr.data-view]="viewMode()"
@@ -105,9 +102,6 @@ import { WorkspaceHeader } from "./workspace-header";
       width: min(100%, 1640px);
       margin-inline: auto;
       padding: clamp(12px, 2vw, 32px);
-    }
-    app-workspace-header {
-      margin-bottom: clamp(12px, 1.5vw, 20px);
     }
     .browser-stage {
       min-width: 0;

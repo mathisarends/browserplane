@@ -49,6 +49,7 @@ export class BrowserSession {
   readonly frame = this.frameState.asReadonly();
   readonly cursor = this.cursorState.asReadonly();
   readonly browserId = computed(() => this.sessionState()?.browser_id);
+  readonly sessionId = computed(() => this.sessionState()?.id);
   readonly activeTab = computed(() => this.tabs().find((tab) => tab.active));
   readonly activeUrl = computed(() => {
     const url = this.activeTab()?.url;
@@ -136,6 +137,12 @@ export class BrowserSession {
   createTab(): Promise<void> {
     return this.run(async (client) => {
       this.tabsState.set((await client.browser.tab.create({ url: "about:blank" })).tabs);
+    });
+  }
+
+  refreshTabs(): Promise<void> {
+    return this.run(async (client) => {
+      this.tabsState.set((await client.browser.tab.list()).tabs);
     });
   }
 
