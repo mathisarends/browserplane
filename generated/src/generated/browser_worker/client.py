@@ -27,9 +27,8 @@ from generated.browser_worker.models import (
     DownloadResponse,
     HTTPValidationError,
     HealthResponse,
-    RecordingAlreadyRunningError,
+    RecordingAlreadyExistsError,
     RecordingFailedError,
-    RecordingHasSegmentsError,
     RecordingNotCompletedError,
     RecordingNotFoundError,
     RecordingNotRunningError,
@@ -122,25 +121,6 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 503:
             parsed_body = BrowserStartupFailedError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
-
-        raise ApiError(response.status_code, response.text, response=response)
-
-    async def destroy_browser(
-        self,
-        *,
-        timeout: float | None = None,
-    ) -> None:
-        path = "/api/v1/browser"
-
-        response = await self._client.request(
-            method=HttpMethods.DELETE,
-            url=f"{self._base_url}{path}",
-            headers=self._headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
-
-        if response.status_code == 204:
-            return None
 
         raise ApiError(response.status_code, response.text, response=response)
 
@@ -342,7 +322,7 @@ class GeneratedBrowserWorkerClient:
             parsed_body = BrowserNotFoundError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 409:
-            parsed_body = RecordingAlreadyRunningError.model_validate(response.json())
+            parsed_body = RecordingAlreadyExistsError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
             parsed_body = HTTPValidationError.model_validate(response.json())
@@ -399,45 +379,6 @@ class GeneratedBrowserWorkerClient:
         path = path.replace(
             "{recording_id}", serialize_path("recording_id", recording_id)
         )
-
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
-
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
-
-        if response.status_code == 200:
-            return None
-        if response.status_code == 404:
-            parsed_body = RecordingNotFoundError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 409:
-            parsed_body = TypeAdapter(RecordingNotCompletedError | RecordingHasSegmentsError).validate_python(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-
-        raise ApiError(response.status_code, response.text, response=response)
-
-    async def download_recording_segment(
-        self,
-        browser_id: UUID,
-        recording_id: UUID,
-        index: int,
-        *,
-        timeout: float | None = None,
-    ) -> None:
-        path = "/api/v1/browser/{browser_id}/recordings/{recording_id}/segments/{index}/file"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
-        path = path.replace(
-            "{recording_id}", serialize_path("recording_id", recording_id)
-        )
-        path = path.replace("{index}", serialize_path("index", index))
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -616,5 +557,24 @@ class GeneratedBrowserWorkerClient:
 
         if response.status_code == 200:
             return HealthResponse.model_validate(response.json())
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def release_worker(
+        self,
+        *,
+        timeout: float | None = None,
+    ) -> None:
+        path = "/api/v1/release"
+
+        response = await self._client.request(
+            method=HttpMethods.POST,
+            url=f"{self._base_url}{path}",
+            headers=self._headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 204:
+            return None
 
         raise ApiError(response.status_code, response.text, response=response)

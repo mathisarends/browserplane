@@ -5,8 +5,8 @@ class RecordingNotFoundException(BackendException):
     message = "Recording not found"
 
 
-class RecordingAlreadyRunningException(BackendException):
-    message = "Browser is already being recorded"
+class RecordingAlreadyExistsException(BackendException):
+    message = "This browser session already has a recording"
 
 
 class RecordingNotRunningException(BackendException):

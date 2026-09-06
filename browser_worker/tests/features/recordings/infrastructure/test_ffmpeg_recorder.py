@@ -49,7 +49,7 @@ async def test_records_screencast_frames_to_mp4(tmp_path: Path) -> None:
     await screen_recorder.start(tmp_path)
     video = await screen_recorder.stop()
 
-    assert video.path == tmp_path / "0.mp4"
+    assert video.path == tmp_path / "video.mp4"
     assert video.size_bytes == video.path.stat().st_size
     assert video.size_bytes > 0
     assert video.format.media_type == "video/mp4"

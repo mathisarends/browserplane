@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface RecordingAlreadyRunningError {
-  code: 'recording_already_running';
+export interface RecordingAlreadyExistsError {
+  code: 'recording_already_exists';
   message: string;
 }

@@ -6,7 +6,7 @@ from fastapi import APIRouter, status
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.recordings.application.service import RecordingService
 from backend.features.recordings.presentation.errors import (
-    RECORDING_ALREADY_RUNNING,
+    RECORDING_ALREADY_EXISTS,
     RECORDING_NOT_FOUND,
     RECORDING_NOT_RUNNING,
     RECORDING_TRANSFER_FAILED,
@@ -24,7 +24,7 @@ recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
     operation_id="start_recording",
     responses=api_error_responses(
         BROWSER_NOT_FOUND,
-        RECORDING_ALREADY_RUNNING,
+        RECORDING_ALREADY_EXISTS,
         RECORDING_TRANSFER_FAILED,
     ),
 )

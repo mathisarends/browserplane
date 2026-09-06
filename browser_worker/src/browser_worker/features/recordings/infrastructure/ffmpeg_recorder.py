@@ -36,7 +36,7 @@ class FfmpegScreenRecorder(ScreenRecorder):
             first_frame = await asyncio.wait_for(
                 anext(frames), self._settings.start_timeout
             )
-            path = directory / "0.mp4"
+            path = directory / "video.mp4"
             video = VideoRecorder(path)
             await video.start()
             await video.write(first_frame)

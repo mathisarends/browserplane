@@ -5,8 +5,8 @@ class RecordingNotFoundException(BrowserWorkerException):
     message = "Recording not found"
 
 
-class RecordingAlreadyRunningException(BrowserWorkerException):
-    message = "Browser is already being recorded"
+class RecordingAlreadyExistsException(BrowserWorkerException):
+    message = "This browser session already has a recording"
 
 
 class RecordingNotRunningException(BrowserWorkerException):
@@ -19,7 +19,3 @@ class RecordingNotCompletedException(BrowserWorkerException):
 
 class RecordingFailedException(BrowserWorkerException):
     message = "Screen recording failed"
-
-
-class RecordingHasSegmentsException(BrowserWorkerException):
-    message = "Recording spans several tabs; download its segments instead"

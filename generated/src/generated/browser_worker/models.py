@@ -160,10 +160,10 @@ class HealthResponse(BaseModel):
     status: HealthStatus
 
 
-class RecordingAlreadyRunningError(BaseModel):
+class RecordingAlreadyExistsError(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    code: Literal["recording_already_running"]
+    code: Literal["recording_already_exists"]
     message: str
 
 
@@ -171,18 +171,6 @@ class RecordingFailedError(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     code: Literal["recording_failed"]
-    message: str
-
-
-class RecordingFormat(StrEnum):
-    WEBM = "webm"
-    MP4 = "mp4"
-
-
-class RecordingHasSegmentsError(BaseModel):
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
-    code: Literal["recording_has_segments"]
     message: str
 
 
@@ -207,17 +195,6 @@ class RecordingNotRunningError(BaseModel):
     message: str
 
 
-class RecordingSegmentResponse(BaseModel):
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
-    index: int
-    target_id: str
-    size_bytes: int
-    format: RecordingFormat
-    started_at: datetime
-    stopped_at: datetime
-
-
 class RecordingState(StrEnum):
     RECORDING = "recording"
     COMPLETED = "completed"
@@ -233,7 +210,6 @@ class RecordingResponse(BaseModel):
     started_at: datetime
     stopped_at: datetime | None = None
     size_bytes: int | None = None
-    segments: list[RecordingSegmentResponse] = []
 
 
 class CaptureAuthenticationStateParams(BaseModel):

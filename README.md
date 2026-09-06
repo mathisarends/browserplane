@@ -68,7 +68,7 @@ to object storage by the backend.
 
 **Browser Worker** (`browser_worker/`) — one worker per Chromium: lifecycle, CDP,
 screencast, state capture, recording capture, health and capacity. It streams
-completed recording segments to the backend and has no object-storage
+the completed recording video to the backend and has no object-storage
 credentials. Reachable only via `BACKEND_BROWSER_*_BROWSER_WORKER_URL`.
 
 Live traffic uses two transports: the backend WebSocket for JSON-RPC and

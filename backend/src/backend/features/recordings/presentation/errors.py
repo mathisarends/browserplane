@@ -3,7 +3,7 @@ from typing import Literal
 from fastapi import status
 
 from backend.features.recordings.application.exceptions import (
-    RecordingAlreadyRunningException,
+    RecordingAlreadyExistsException,
     RecordingNotFoundException,
     RecordingNotRunningException,
     RecordingTransferException,
@@ -16,8 +16,8 @@ class RecordingNotFoundError(ApiErrorResponse):
     code: Literal[ApiErrorCode.RECORDING_NOT_FOUND]
 
 
-class RecordingAlreadyRunningError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.RECORDING_ALREADY_RUNNING]
+class RecordingAlreadyExistsError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.RECORDING_ALREADY_EXISTS]
 
 
 class RecordingNotRunningError(ApiErrorResponse):
@@ -35,12 +35,12 @@ RECORDING_NOT_FOUND = ApiErrorSpec(
     response_model=RecordingNotFoundError,
     description="Recording not found",
 )
-RECORDING_ALREADY_RUNNING = ApiErrorSpec(
-    exceptions=(RecordingAlreadyRunningException,),
+RECORDING_ALREADY_EXISTS = ApiErrorSpec(
+    exceptions=(RecordingAlreadyExistsException,),
     status_code=status.HTTP_409_CONFLICT,
-    code=ApiErrorCode.RECORDING_ALREADY_RUNNING,
-    response_model=RecordingAlreadyRunningError,
-    description="Browser is already being recorded",
+    code=ApiErrorCode.RECORDING_ALREADY_EXISTS,
+    response_model=RecordingAlreadyExistsError,
+    description="Browser session already has a recording",
 )
 RECORDING_NOT_RUNNING = ApiErrorSpec(
     exceptions=(RecordingNotRunningException,),
@@ -59,7 +59,7 @@ RECORDING_TRANSFER_FAILED = ApiErrorSpec(
 
 API_ERRORS = (
     RECORDING_NOT_FOUND,
-    RECORDING_ALREADY_RUNNING,
+    RECORDING_ALREADY_EXISTS,
     RECORDING_NOT_RUNNING,
     RECORDING_TRANSFER_FAILED,
 )

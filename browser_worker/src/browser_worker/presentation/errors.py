@@ -11,10 +11,9 @@ class ApiErrorCode(StrEnum):
     BROWSER_STATE_FAILED = "browser_state_failed"
     DOWNLOAD_NOT_FOUND = "download_not_found"
     RECORDING_NOT_FOUND = "recording_not_found"
-    RECORDING_ALREADY_RUNNING = "recording_already_running"
+    RECORDING_ALREADY_EXISTS = "recording_already_exists"
     RECORDING_NOT_RUNNING = "recording_not_running"
     RECORDING_NOT_COMPLETED = "recording_not_completed"
-    RECORDING_HAS_SEGMENTS = "recording_has_segments"
     RECORDING_FAILED = "recording_failed"
 
 

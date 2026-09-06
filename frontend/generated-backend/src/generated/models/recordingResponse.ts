@@ -4,7 +4,6 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
-import type { RecordingSegmentResponse } from './recordingSegmentResponse';
 import type { RecordingState } from './recordingState';
 
 export interface RecordingResponse {
@@ -14,6 +13,5 @@ export interface RecordingResponse {
   started_at: string;
   stopped_at?: string | null;
   size_bytes?: number | null;
-  segments?: RecordingSegmentResponse[];
   [key: string]: unknown;
  }

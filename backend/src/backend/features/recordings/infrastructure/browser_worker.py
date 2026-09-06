@@ -8,15 +8,13 @@ from pydantic import ValidationError
 
 from backend.features.browsers.application.models import Browser
 from backend.features.recordings.application.exceptions import (
-    RecordingAlreadyRunningException,
+    RecordingAlreadyExistsException,
     RecordingNotFoundException,
     RecordingNotRunningException,
     RecordingTransferException,
 )
 from backend.features.recordings.application.models import (
     Recording,
-    RecordingFormat,
-    RecordingSegment,
     RecordingState,
 )
 from backend.features.recordings.application.ports import Recorder
@@ -76,13 +74,7 @@ class BrowserWorkerRecorder(Recorder):
             raise _recording_error(error) from error
         except (HTTPError, ValidationError, ValueError) as error:
             raise _transfer_error("stop", error) from error
-        for segment in recording.segments:
-            await self._store_segment(
-                browser,
-                recording_id,
-                segment.index,
-                segment.format.value,
-            )
+        await self._store_recording(browser, recording_id)
         return _to_recording(recording)
 
     def _client(
@@ -105,17 +97,12 @@ class BrowserWorkerRecorder(Recorder):
             timeout=timeout,
         )
 
-    async def _store_segment(
+    async def _store_recording(
         self,
         browser: Browser,
         recording_id: UUID,
-        index: int,
-        extension: str,
     ) -> None:
-        path = (
-            f"/api/v1/browser/{browser.id}/recordings/{recording_id}"
-            f"/segments/{index}/file"
-        )
+        path = f"/api/v1/browser/{browser.id}/recordings/{recording_id}/file"
         try:
             url = f"{browser.slot.browser_worker_url.rstrip('/')}/{path.lstrip('/')}"
             request_id = current_request_id()
@@ -135,11 +122,13 @@ class BrowserWorkerRecorder(Recorder):
                                 PurePosixPath(
                                     str(browser.id),
                                     str(recording_id),
-                                    f"{index}.{extension}",
+                                    "video.mp4",
                                 )
                             ),
                             content=content,
-                            content_type=f"video/{extension}",
+                            content_type=response.headers.get(
+                                "content-type", "video/mp4"
+                            ),
                         )
                     )
                 except Exception as error:
@@ -152,8 +141,8 @@ def _recording_error(error: ApiError) -> Exception:
     code = getattr(error.parsed_body, "code", None)
     if code == "recording_not_found":
         return RecordingNotFoundException()
-    if code == "recording_already_running":
-        return RecordingAlreadyRunningException()
+    if code == "recording_already_exists":
+        return RecordingAlreadyExistsException()
     if code == "recording_not_running":
         return RecordingNotRunningException()
     return _transfer_error("communicate with", error)
@@ -167,17 +156,6 @@ def _to_recording(recording: WorkerRecordingResponse) -> Recording:
         started_at=recording.started_at,
         stopped_at=recording.stopped_at,
         size_bytes=recording.size_bytes,
-        segments=tuple(
-            RecordingSegment(
-                index=segment.index,
-                target_id=segment.target_id,
-                size_bytes=segment.size_bytes,
-                format=RecordingFormat(segment.format.value),
-                started_at=segment.started_at,
-                stopped_at=segment.stopped_at,
-            )
-            for segment in recording.segments
-        ),
     )
 
 

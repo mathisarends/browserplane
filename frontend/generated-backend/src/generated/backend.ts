@@ -25,7 +25,7 @@ import type {
   OwnerSessionsResponse,
   PooledBrowserResponse,
   Readiness200,
-  RecordingAlreadyRunningError,
+  RecordingAlreadyExistsError,
   RecordingNotFoundError,
   RecordingNotRunningError,
   RecordingResponse,
@@ -1148,7 +1148,7 @@ export type startRecordingResponse404 = {
 }
 
 export type startRecordingResponse409 = {
-  data: RecordingAlreadyRunningError
+  data: RecordingAlreadyExistsError
   status: 409
 }
 
@@ -1374,52 +1374,52 @@ export const listPooledBrowsers = async ( options?: RequestInit): Promise<listPo
 
 
 
-export type destroyPooledBrowserResponse200 = {
+export type releasePooledBrowserResponse200 = {
   data: PooledBrowserResponse
   status: 200
 }
 
-export type destroyPooledBrowserResponse404 = {
+export type releasePooledBrowserResponse404 = {
   data: BrowserNotFoundError
   status: 404
 }
 
-export type destroyPooledBrowserResponse422 = {
+export type releasePooledBrowserResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type destroyPooledBrowserResponse503 = {
+export type releasePooledBrowserResponse503 = {
   data: BrowserProvisioningFailedError
   status: 503
 }
 
-export type destroyPooledBrowserResponseSuccess = (destroyPooledBrowserResponse200) & {
+export type releasePooledBrowserResponseSuccess = (releasePooledBrowserResponse200) & {
   headers: Headers;
 };
-export type destroyPooledBrowserResponseError = (destroyPooledBrowserResponse404 | destroyPooledBrowserResponse422 | destroyPooledBrowserResponse503) & {
+export type releasePooledBrowserResponseError = (releasePooledBrowserResponse404 | releasePooledBrowserResponse422 | releasePooledBrowserResponse503) & {
   headers: Headers;
 };
 
-export type destroyPooledBrowserResponse = (destroyPooledBrowserResponseSuccess | destroyPooledBrowserResponseError)
+export type releasePooledBrowserResponse = (releasePooledBrowserResponseSuccess | releasePooledBrowserResponseError)
 
-export const getDestroyPooledBrowserUrl = (browserId: string,) => {
-
-
+export const getReleasePooledBrowserUrl = (browserId: string,) => {
 
 
-  return `/api/v1/admin/browsers/${browserId}`
+
+
+  return `/api/v1/admin/browsers/${browserId}/release`
 }
 
 /**
- * @summary Destroy Pooled Browser
+ * @summary Release Pooled Browser
  */
-export const destroyPooledBrowser = async (browserId: string, options?: RequestInit): Promise<destroyPooledBrowserResponse> => {
+export const releasePooledBrowser = async (browserId: string, options?: RequestInit): Promise<releasePooledBrowserResponse> => {
 
-  const res = await fetch(getDestroyPooledBrowserUrl(browserId),
+  const res = await fetch(getReleasePooledBrowserUrl(browserId),
   {
     ...options,
-    method: 'DELETE'
+    method: 'POST'
 
 
   }
@@ -1428,8 +1428,8 @@ export const destroyPooledBrowser = async (browserId: string, options?: RequestI
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: destroyPooledBrowserResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as destroyPooledBrowserResponse
+  const data: releasePooledBrowserResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as releasePooledBrowserResponse
 }
 
 
