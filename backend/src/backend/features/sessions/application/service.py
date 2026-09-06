@@ -24,12 +24,12 @@ from backend.features.sessions.application.ports import (
     SessionRepository,
 )
 from backend.features.sessions.domain.models import (
-    ActiveSession,
     AuthenticationProfile,
     BrowserCheckpoint,
     BrowserStateDocument,
     Download,
     Session,
+    SessionContext,
     SessionStatus,
 )
 
@@ -63,7 +63,7 @@ class SessionService:
         *,
         authentication_profile_id: UUID | None = None,
         browser_checkpoint_id: UUID | None = None,
-    ) -> ActiveSession:
+    ) -> SessionContext:
         checkpoint = (
             await self.get_browser_checkpoint(browser_checkpoint_id)
             if browser_checkpoint_id is not None
@@ -102,60 +102,50 @@ class SessionService:
                 expires_at=lease.expires_at,
             )
         )
-        return ActiveSession(
-            session=aggregate,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
+        return SessionContext.active(
+            aggregate, lease, await self._browsers.get(lease.browser_id)
         )
 
     async def remaining_capacity(self) -> int:
         return await self._browsers.remaining_capacity()
 
-    async def get(self, session_id: UUID) -> ActiveSession | Session:
-        aggregate = await self._session(session_id)
-        if aggregate.status is not SessionStatus.ACTIVE:
-            return aggregate
+    async def get(self, session_id: UUID) -> SessionContext:
+        session = await self._session(session_id)
+        if session.status is not SessionStatus.ACTIVE:
+            return SessionContext.inactive(session)
         lease = await self._leases.inspect(session_id)
-        return ActiveSession(
-            session=aggregate,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
+        return SessionContext.active(
+            session, lease, await self._browsers.get(lease.browser_id)
         )
 
-    async def get_active(self, session_id: UUID) -> ActiveSession:
-        aggregate = await self._session(session_id)
-        if aggregate.status is not SessionStatus.ACTIVE:
+    async def get_active(self, session_id: UUID) -> SessionContext:
+        session = await self._session(session_id)
+        if session.status is not SessionStatus.ACTIVE:
             raise SessionNotActiveException()
         try:
             lease = await self._leases.get(session_id)
         except LeaseNotFoundException as error:
             raise SessionNotActiveException() from error
-        return ActiveSession(
-            session=aggregate,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
+        return SessionContext.active(
+            session, lease, await self._browsers.get(lease.browser_id)
         )
 
-    async def list(
-        self, owner_id: UUID | None = None
-    ) -> tuple[ActiveSession | Session, ...]:
-        result: list[ActiveSession | Session] = []
-        for aggregate in await self._sessions.list():
-            if aggregate.status is SessionStatus.SUSPENDED and aggregate.is_expired(
+    async def list(self, owner_id: UUID | None = None) -> tuple[SessionContext, ...]:
+        result: list[SessionContext] = []
+        for session in await self._sessions.list():
+            if session.status is SessionStatus.SUSPENDED and session.is_expired(
                 datetime.now(UTC)
             ):
-                aggregate = await self._sessions.save(aggregate.close())
-            if aggregate.status is SessionStatus.ACTIVE:
-                lease = await self._leases.inspect(aggregate.id)
+                session = await self._sessions.save(session.close())
+            if session.status is SessionStatus.ACTIVE:
+                lease = await self._leases.inspect(session.id)
                 result.append(
-                    ActiveSession(
-                        session=aggregate,
-                        lease=lease,
-                        browser=await self._browsers.get(lease.browser_id),
+                    SessionContext.active(
+                        session, lease, await self._browsers.get(lease.browser_id)
                     )
                 )
             else:
-                result.append(aggregate)
+                result.append(SessionContext.inactive(session))
         if owner_id is None:
             return tuple(result)
         return tuple(item for item in result if item.owner_id == owner_id)
@@ -277,7 +267,7 @@ class SessionService:
         if not await self._authentication_profiles.delete(profile_id):
             raise AuthenticationProfileNotFoundException()
 
-    async def suspend(self, session_id: UUID) -> Session:
+    async def suspend(self, session_id: UUID) -> SessionContext:
         active = await self.get_active(session_id)
         authentication_state, browser_state = await asyncio.gather(
             self._browser_state.capture_authentication(active.browser),
@@ -306,9 +296,9 @@ class SessionService:
             active.session.suspend(checkpoint.id, now + self._suspension_ttl)
         )
         await self._leases.release(session_id, reason="session_suspended")
-        return suspended
+        return SessionContext.inactive(suspended)
 
-    async def resume(self, session_id: UUID) -> ActiveSession:
+    async def resume(self, session_id: UUID) -> SessionContext:
         aggregate = await self._suspended_session(session_id)
         checkpoint = await self.get_browser_checkpoint(aggregate.browser_checkpoint_id)  # type: ignore[arg-type]
         profile = (
@@ -332,10 +322,8 @@ class SessionService:
                 await self._leases.release(lease.id, reason="resume_state_mount_failed")
             raise
         resumed = await self._sessions.save(aggregate.resume(lease.expires_at))
-        return ActiveSession(
-            session=resumed,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
+        return SessionContext.active(
+            resumed, lease, await self._browsers.get(lease.browser_id)
         )
 
     async def close(self, session_id: UUID) -> None:
@@ -344,16 +332,14 @@ class SessionService:
             await self._leases.release(session_id, reason="session_closed")
         await self._sessions.save(aggregate.close())
 
-    async def renew(self, session_id: UUID) -> ActiveSession:
+    async def renew(self, session_id: UUID) -> SessionContext:
         aggregate = await self._session(session_id)
         if aggregate.status is not SessionStatus.ACTIVE:
             raise SessionNotActiveException()
         lease = await self._leases.renew(session_id)
         aggregate = await self._sessions.save(aggregate.renew(lease.expires_at))
-        return ActiveSession(
-            session=aggregate,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
+        return SessionContext.active(
+            aggregate, lease, await self._browsers.get(lease.browser_id)
         )
 
     async def reap_expired(self) -> tuple[UUID, ...]:

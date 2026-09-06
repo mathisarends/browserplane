@@ -14,7 +14,7 @@ from backend.features.sessions.application.exceptions import (
     SessionNotActiveException,
 )
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ActiveSession
+from backend.features.sessions.domain.models import SessionContext
 from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
@@ -513,7 +513,7 @@ async def _resolve(
     session_id: UUID,
     *,
     renew: bool = False,
-) -> ActiveSession | None:
+) -> SessionContext | None:
     """Look up the live session, closing the socket in session terms when it is gone."""
     try:
         return await lease_keeper.resolve(session_id, renew=renew)

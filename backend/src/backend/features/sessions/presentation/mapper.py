@@ -1,10 +1,9 @@
 from collections.abc import Sequence
 
 from backend.features.sessions.domain.models import (
-    ActiveSession,
     AuthenticationProfile,
     BrowserCheckpoint,
-    Session,
+    SessionContext,
 )
 from backend.features.sessions.presentation.schemas import (
     AuthenticationProfileResponse,
@@ -17,41 +16,28 @@ from backend.features.sessions.presentation.schemas import (
 SESSION_PATH = "/api/v1/sessions"
 
 
-def to_session_response(session: ActiveSession | Session) -> SessionResponse:
-    aggregate = session.session if isinstance(session, ActiveSession) else session
+def to_session_response(context: SessionContext) -> SessionResponse:
+    session = context.session
+    has_browser = context.browser_id is not None
     return SessionResponse(
-        id=aggregate.id,
-        status=aggregate.status,
-        owner_id=aggregate.owner_id,
-        expires_at=(
-            session.lease.expires_at
-            if isinstance(session, ActiveSession)
-            else aggregate.expires_at
-        ),
-        created_at=aggregate.created_at,
-        browser_checkpoint_id=aggregate.browser_checkpoint_id,
-        lease_generation=(
-            session.lease.generation if isinstance(session, ActiveSession) else None
-        ),
-        reclaim_after=(
-            session.lease.reclaim_after if isinstance(session, ActiveSession) else None
-        ),
-        browser_id=session.browser_id if isinstance(session, ActiveSession) else None,
-        tunnel_path=(
-            f"{SESSION_PATH}/{aggregate.id}/tunnel"
-            if isinstance(session, ActiveSession)
-            else None
-        ),
+        id=session.id,
+        status=session.status,
+        owner_id=session.owner_id,
+        expires_at=context.expires_at,
+        created_at=session.created_at,
+        browser_checkpoint_id=session.browser_checkpoint_id,
+        lease_generation=context.lease_generation,
+        reclaim_after=context.reclaim_after,
+        browser_id=context.browser_id,
+        tunnel_path=(f"{SESSION_PATH}/{session.id}/tunnel" if has_browser else None),
         screencast_path=(
-            f"{SESSION_PATH}/{aggregate.id}/screencast"
-            if isinstance(session, ActiveSession)
-            else None
+            f"{SESSION_PATH}/{session.id}/screencast" if has_browser else None
         ),
     )
 
 
 def to_open_session_response(
-    session: ActiveSession, *, remaining_capacity: int
+    session: SessionContext, *, remaining_capacity: int
 ) -> OpenSessionResponse:
     return OpenSessionResponse(
         **to_session_response(session).model_dump(),
@@ -60,7 +46,7 @@ def to_open_session_response(
 
 
 def to_owner_sessions_response(
-    sessions: Sequence[ActiveSession | Session], *, remaining_capacity: int
+    sessions: Sequence[SessionContext], *, remaining_capacity: int
 ) -> OwnerSessionsResponse:
     return OwnerSessionsResponse(
         sessions=[to_session_response(session) for session in sessions],

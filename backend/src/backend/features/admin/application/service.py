@@ -8,7 +8,7 @@ from backend.features.browsers.domain.models import Browser
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ActiveSession, Session
+from backend.features.sessions.domain.models import SessionContext
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class AdminService:
             for browser in await self._browsers.list()
         )
 
-    async def list_sessions(self) -> tuple[ActiveSession | Session, ...]:
+    async def list_sessions(self) -> tuple[SessionContext, ...]:
         return await self._sessions.list()
 
     async def release_browser(self, browser_id: UUID) -> Browser:

@@ -71,12 +71,33 @@ class Session:
 
 
 @dataclass(frozen=True, slots=True)
-class ActiveSession:
-    """An active aggregate together with its current lease and browser."""
+class SessionContext:
+    """A session aggregate together with its currently bound resources."""
 
     session: Session
-    lease: Lease
-    browser: Browser
+    _lease: Lease | None = None
+    _browser: Browser | None = None
+
+    def __post_init__(self) -> None:
+        has_lease = self._lease is not None
+        has_browser = self._browser is not None
+        if has_lease != has_browser:
+            raise ValueError("Lease and browser must be bound together")
+        if (self.session.status is SessionStatus.ACTIVE) != has_lease:
+            raise ValueError("Only an active session may have bound resources")
+        if self._lease is not None and self._browser is not None:
+            if self._lease.id != self.session.id:
+                raise ValueError("Lease must belong to the session")
+            if self._lease.browser_id != self._browser.id:
+                raise ValueError("Lease must belong to the browser")
+
+    @classmethod
+    def active(cls, session: Session, lease: Lease, browser: Browser) -> SessionContext:
+        return cls(session=session, _lease=lease, _browser=browser)
+
+    @classmethod
+    def inactive(cls, session: Session) -> SessionContext:
+        return cls(session=session)
 
     @property
     def id(self) -> UUID:
@@ -87,8 +108,36 @@ class ActiveSession:
         return self.session.owner_id
 
     @property
-    def browser_id(self) -> UUID:
-        return self.browser.id
+    def expires_at(self) -> datetime | None:
+        return (
+            self._lease.expires_at
+            if self._lease is not None
+            else self.session.expires_at
+        )
+
+    @property
+    def lease_generation(self) -> int | None:
+        return self._lease.generation if self._lease is not None else None
+
+    @property
+    def reclaim_after(self) -> datetime | None:
+        return self._lease.reclaim_after if self._lease is not None else None
+
+    @property
+    def browser_id(self) -> UUID | None:
+        return self._browser.id if self._browser is not None else None
+
+    @property
+    def lease(self) -> Lease:
+        if self._lease is None:
+            raise ValueError("Session has no active lease")
+        return self._lease
+
+    @property
+    def browser(self) -> Browser:
+        if self._browser is None:
+            raise ValueError("Session has no active browser")
+        return self._browser
 
 
 @dataclass(frozen=True, slots=True)
