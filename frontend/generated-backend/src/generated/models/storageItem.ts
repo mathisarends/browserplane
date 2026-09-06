@@ -5,8 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ScrollPositionSchema {
-  x?: number;
-  y?: number;
+export interface StorageItem {
+  name: string;
+  value: string;
   [key: string]: unknown;
  }
