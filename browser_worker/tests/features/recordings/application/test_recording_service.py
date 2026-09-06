@@ -55,7 +55,7 @@ async def test_service_records_the_active_tab_into_one_video(tmp_path: Path) -> 
     recorder = FakeRecorder()
     service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
 
-    await browsers.create(uuid4())
+    await browsers.create(0)
     recording = await service.start()
     assert recording.state is RecordingState.RECORDING
 
@@ -81,7 +81,7 @@ async def test_only_one_recording_can_run_at_a_time(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
     recorder = FakeRecorder()
     service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
-    await browsers.create(uuid4())
+    await browsers.create(0)
     await service.start()
 
     with pytest.raises(RecordingAlreadyExistsException):
@@ -95,7 +95,7 @@ async def test_only_one_recording_can_run_at_a_time(tmp_path: Path) -> None:
 async def test_unfinished_and_unknown_recordings_have_no_files(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
     service = RecordingService(browsers, Workspace(tmp_path), lambda _: FakeRecorder())
-    await browsers.create(uuid4())
+    await browsers.create(0)
     recording = await service.start()
 
     with pytest.raises(RecordingNotCompletedException):
@@ -114,7 +114,7 @@ async def test_failed_stop_releases_the_browser_for_another_recording(
     failing_recorder = FailingRecorder()
     recorders = iter((failing_recorder, FakeRecorder()))
     service = RecordingService(browsers, Workspace(tmp_path), lambda _: next(recorders))
-    await browsers.create(uuid4())
+    await browsers.create(0)
     failed = await service.start()
 
     with pytest.raises(RuntimeError, match="encoder stopped"):

@@ -13,7 +13,8 @@ def test_worker_exposes_health_and_readiness() -> None:
         readiness = client.get("/api/v1/readiness")
 
     assert health.status_code == 200
-    assert health.json() == {"status": "ok"}
+    assert health.json()["status"] == "ok"
+    assert health.json()["instance_id"] == readiness.json()["instance_id"]
     assert readiness.status_code == 200
     assert readiness.json()["status"] in {"ok", "not_ready"}
     assert process.stop_count == 0

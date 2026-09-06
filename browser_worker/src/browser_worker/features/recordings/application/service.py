@@ -79,8 +79,10 @@ class RecordingService:
                         "Could not stop and close recording",
                         [stop_error, close_error],
                     ) from stop_error
+                if self._recorder is recorder:
+                    self._recorder = None
                 raise
-            finally:
+            if self._recorder is recorder:
                 self._recorder = None
             completed = replace(
                 recording,
@@ -114,7 +116,13 @@ class RecordingService:
         The worker-level release owns deletion of files through ``Workspace.clear``.
         """
         async with self._lock:
-            recorder, self._recorder = self._recorder, None
-            self._recording = None
+            recorder = self._recorder
             if recorder is not None:
                 await recorder.close()
+                if self._recorder is recorder:
+                    self._recorder = None
+            self._recording = None
+
+    @property
+    def is_idle(self) -> bool:
+        return self._recorder is None

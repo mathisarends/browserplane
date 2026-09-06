@@ -71,7 +71,7 @@ class DownloadService:
             self._tasks = ()
             raise
         self._client = client
-        logger.info("Download monitoring active browser_id=%s", browser.browser_id)
+        logger.info("Download monitoring active generation=%d", browser.generation)
 
     def list(self) -> tuple[Download, ...]:
         self._ensure_browser()
@@ -99,10 +99,8 @@ class DownloadService:
         self._clear_files()
 
     async def stop(self) -> None:
-        tasks, self._tasks = self._tasks, ()
-        client, self._client = self._client, None
-        self._pending.clear()
-        self._downloads.clear()
+        tasks = self._tasks
+        client = self._client
         for task in tasks:
             task.cancel()
         for task in tasks:
@@ -110,6 +108,16 @@ class DownloadService:
                 await task
         if client is not None:
             await client.disconnect()
+        if self._tasks is tasks:
+            self._tasks = ()
+        if self._client is client:
+            self._client = None
+        self._pending.clear()
+        self._downloads.clear()
+
+    @property
+    def is_idle(self) -> bool:
+        return self._client is None and not self._tasks
 
     async def _listen_for_starts(self, client: Client) -> None:
         async for event in client.listen(

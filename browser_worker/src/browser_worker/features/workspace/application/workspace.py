@@ -2,7 +2,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from uuid import UUID
+from uuid import UUID, uuid4
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +42,27 @@ class Workspace:
     def directories(self) -> tuple[Path, ...]:
         """Directories exclusively owned by this worker."""
         return self.uploads, self.downloads, self.recordings, self.artifacts
+
+    @property
+    def garbage(self) -> Path:
+        return self.root / "garbage"
+
+    def isolate(self) -> Path | None:
+        """Move active files out of every path visible to the next session."""
+        existing = tuple(path for path in self.directories if path.exists())
+        if not existing:
+            return None
+
+        destination = self.garbage / str(uuid4())
+        destination.mkdir(parents=True)
+        for directory in existing:
+            directory.replace(destination / directory.name)
+        return destination
+
+    @staticmethod
+    def delete_isolated(directory: Path) -> None:
+        """Delete one already-isolated workspace without blocking release."""
+        shutil.rmtree(directory)
 
     def clear(self) -> None:
         """Remove all worker-owned files while leaving the configured root alone."""

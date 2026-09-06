@@ -18,7 +18,13 @@ class ScreencastService:
 
     async def release(self) -> None:
         """Close and forget the stream associated with the released browser."""
-        stream, self._stream = self._stream, None
-        self._cdp_url = None
+        stream = self._stream
         if stream is not None:
             await stream.close()
+            if self._stream is stream:
+                self._stream = None
+                self._cdp_url = None
+
+    @property
+    def is_idle(self) -> bool:
+        return self._stream is None

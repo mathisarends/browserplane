@@ -352,14 +352,14 @@ class GeneratedBrowserWorkerClient:
         recording_id: UUID,
         *,
         timeout: float | None = None,
-    ) -> None:
+    ) -> bytes:
         path = "/api/v1/browser/recordings/{recording_id}/file"
         path = path.replace(
             "{recording_id}", serialize_path("recording_id", recording_id)
         )
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "video/webm, video/mp4, application/json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -369,7 +369,19 @@ class GeneratedBrowserWorkerClient:
         )
 
         if response.status_code == 200:
-            return None
+            response_content_type = response.headers.get("Content-Type", "")
+            response_content_type = response_content_type.split(";", 1)[0].lower()
+            if response_content_type == "video/webm":
+                parsed_body = response.content
+            elif response_content_type == "video/mp4":
+                parsed_body = response.content
+            else:
+                raise ApiError(
+                    response.status_code,
+                    f"unsupported response Content-Type: {response_content_type}",
+                    response=response,
+                )
+            return parsed_body
         if response.status_code == 404:
             parsed_body = RecordingNotFoundError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)

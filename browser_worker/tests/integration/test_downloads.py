@@ -4,7 +4,6 @@ import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
@@ -78,7 +77,7 @@ async def test_download_service_collects_and_clears_a_chromium_download(
         pytest.skip("Chromium is not available")
 
     browsers = BrowserService(ChromeProcess(settings))
-    await browsers.create(uuid4())
+    await browsers.create(0)
     downloads = DownloadService(browsers, Workspace(tmp_path / "workspace"))
     await downloads.start()
 
@@ -99,9 +98,7 @@ async def test_download_service_collects_and_clears_a_chromium_download(
             (download,) = downloads.list()
             assert download.filename == "artifact.txt"
             download_file = downloads.file(download.id)
-            assert download_file.path.read_bytes() == (
-                b"downloaded through Chromium\n"
-            )
+            assert download_file.path.read_bytes() == (b"downloaded through Chromium\n")
 
             await downloads.clear()
             assert downloads.list() == ()

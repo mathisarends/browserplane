@@ -128,7 +128,6 @@ class BrowserNotFoundError(BaseModel):
 class BrowserResponse(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    id: UUID
     generation: int
     cdp_url: str
 
@@ -186,8 +185,7 @@ class BrowserStateSchema(BaseModel):
 class CreateBrowserRequest(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    id: UUID
-    generation: int = 0
+    generation: int
 
 
 class DownloadNotFoundError(BaseModel):
@@ -231,6 +229,7 @@ class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     status: HealthStatus
+    instance_id: UUID
 
 
 class RecordingAlreadyExistsError(BaseModel):
@@ -287,7 +286,6 @@ class RecordingResponse(BaseModel):
 class ReleaseWorkerRequest(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    browser_id: UUID
     generation: int
 
 

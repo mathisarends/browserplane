@@ -1,8 +1,5 @@
 import asyncio
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from uuid import UUID
 
 from browser_worker.features.browser.application.exceptions import (
     BrowserAlreadyRunningException,
@@ -13,47 +10,48 @@ from browser_worker.features.browser.application.ports import BrowserProcess
 
 @dataclass(frozen=True, slots=True)
 class RunningBrowser:
-    """The id the worker's browser answers to, and where its CDP endpoint is."""
+    """The generation and local CDP endpoint owned by this worker."""
 
-    browser_id: UUID
     generation: int
     upstream_cdp_url: str
 
 
 class BrowserService:
-    """Own the worker's single browser process and its public endpoint."""
+    """Own the worker's single browser process and generation fence."""
 
-    def __init__(
-        self,
-        process: BrowserProcess,
-    ) -> None:
+    def __init__(self, process: BrowserProcess) -> None:
         self._process = process
         self._running: RunningBrowser | None = None
-        self._release_pending = False
+        self._high_water_generation: int | None = None
+        self._releasing_generation: int | None = None
+        self._poisoned_generation: int | None = None
+        self._process_may_be_running = False
         self._lock = asyncio.Lock()
 
-    async def create(self, browser_id: UUID, generation: int = 0) -> UUID:
+    async def create(self, generation: int) -> None:
         async with self._lock:
-            if self._release_pending:
+            if (
+                self._releasing_generation is not None
+                or self._poisoned_generation is not None
+            ):
                 raise BrowserAlreadyRunningException
             if self._running is not None:
-                if (
-                    self._running.browser_id != browser_id
-                    or self._running.generation != generation
-                ):
+                if self._running.generation != generation:
                     raise BrowserAlreadyRunningException
-                return self._running.browser_id
-            self._running = RunningBrowser(
-                browser_id=browser_id,
-                generation=generation,
-                upstream_cdp_url=await self._process.start(),
-            )
-            return self._running.browser_id
+                return
+            if (
+                self._high_water_generation is not None
+                and generation <= self._high_water_generation
+            ):
+                raise BrowserAlreadyRunningException
 
-    def get(self) -> UUID:
-        if self._running is None:
-            raise BrowserNotFoundException
-        return self._running.browser_id
+            upstream_cdp_url = await self._process.start()
+            self._running = RunningBrowser(
+                generation=generation,
+                upstream_cdp_url=upstream_cdp_url,
+            )
+            self._process_may_be_running = True
+            self._high_water_generation = generation
 
     def inspect(self) -> RunningBrowser:
         if self._running is None:
@@ -65,33 +63,53 @@ class BrowserService:
         browser = self.inspect()
         return browser.upstream_cdp_url
 
-    async def release(self) -> None:
-        """Return the browser runtime to the worker's empty initial state."""
-        async with self.release_scope():
-            pass
-
-    @asynccontextmanager
-    async def release_scope(
-        self,
-        browser_id: UUID | None = None,
-        generation: int | None = None,
-    ) -> AsyncGenerator[None]:
-        """Keep browser creation blocked throughout worker-wide cleanup."""
+    async def prepare_release(self, generation: int) -> bool:
+        """Fence the runtime and report whether physical cleanup is required."""
         async with self._lock:
+            if self._releasing_generation is not None:
+                if self._releasing_generation != generation:
+                    raise BrowserAlreadyRunningException
+                return True
+
             running = self._running
-            if running is not None and (
-                (browser_id is not None and running.browser_id != browser_id)
-                or (generation is not None and running.generation != generation)
-            ):
+            if running is not None:
+                if running.generation != generation:
+                    raise BrowserAlreadyRunningException
+                self._running = None
+                self._releasing_generation = generation
+                return True
+
+            if self._poisoned_generation is not None:
+                if self._poisoned_generation != generation:
+                    raise BrowserAlreadyRunningException
+                self._releasing_generation = generation
+                return True
+
+            if self._high_water_generation == generation:
+                return False
+            raise BrowserAlreadyRunningException
+
+    async def stop_process(self) -> None:
+        """Stop Chromium without changing the logical release state."""
+        await self._process.stop()
+        self._process_may_be_running = False
+
+    async def finish_release(self, generation: int, *, succeeded: bool) -> None:
+        async with self._lock:
+            if self._releasing_generation != generation:
                 raise BrowserAlreadyRunningException
-            # Make the browser unavailable before waiting for its process to stop.
-            # Concurrent feature requests will consequently fail as unknown rather
-            # than attaching to a runtime that is currently being released.
+            self._releasing_generation = None
+            if succeeded:
+                self._poisoned_generation = None
+                self._high_water_generation = generation
+            else:
+                self._poisoned_generation = generation
+
+    async def release(self) -> None:
+        """Best-effort application shutdown independent of control-plane fencing."""
+        async with self._lock:
             self._running = None
-            self._release_pending = self._release_pending or running is not None
-            try:
-                yield
-            finally:
-                if self._release_pending:
-                    await self._process.stop()
-                    self._release_pending = False
+            self._releasing_generation = None
+            self._poisoned_generation = None
+        if self._process_may_be_running:
+            await self.stop_process()

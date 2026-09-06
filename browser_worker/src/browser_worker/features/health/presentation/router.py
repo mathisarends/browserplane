@@ -9,9 +9,11 @@ health_router = APIRouter(tags=["health"], route_class=DishkaRoute)
 
 @health_router.get("/health", operation_id="health")
 async def health(service: FromDishka[HealthService]) -> HealthResponse:
-    return HealthResponse(status=service.liveness())
+    status = service.liveness()
+    return HealthResponse(status=status, instance_id=service.instance_id)
 
 
 @health_router.get("/readiness", operation_id="readiness")
 async def readiness(service: FromDishka[HealthService]) -> HealthResponse:
-    return HealthResponse(status=service.readiness())
+    status = service.readiness()
+    return HealthResponse(status=status, instance_id=service.instance_id)

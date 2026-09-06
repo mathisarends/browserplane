@@ -44,16 +44,14 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
 
     async def start(self, slot: BrowserSlot, generation: int = 0) -> None:
         client = self._client(slot)
-        await client.create_browser(
-            CreateBrowserRequest(id=slot.id, generation=generation)
-        )
+        request = CreateBrowserRequest(generation=generation)
+        await client.create_browser(request)
         self._generations[slot.id] = generation
 
     async def release(self, slot: BrowserSlot, generation: int) -> None:
         client = self._client(slot)
-        await client.release_worker(
-            ReleaseWorkerRequest(browser_id=slot.id, generation=generation)
-        )
+        request = ReleaseWorkerRequest(generation=generation)
+        await client.release_worker(request)
 
     def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
         return GeneratedBrowserWorkerClient(

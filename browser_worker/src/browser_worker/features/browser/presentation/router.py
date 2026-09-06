@@ -34,7 +34,7 @@ async def create_browser(
     downloads: FromDishka[DownloadService],
     settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
-    await service.create(request.id, request.generation)
+    await service.create(request.generation)
     await downloads.start()
     return BrowserResponse.from_browser(
         browser=service.inspect(), public_base_url=settings.public_base_url

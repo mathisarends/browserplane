@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
@@ -10,7 +8,6 @@ release_router = APIRouter(tags=["worker"], route_class=DishkaRoute)
 
 
 class ReleaseWorkerRequest(BaseModel):
-    browser_id: UUID
     generation: int
 
 
@@ -23,5 +20,5 @@ async def release_worker(
     request: ReleaseWorkerRequest,
     service: FromDishka[WorkerReleaseService],
 ) -> Response:
-    await service.release(request.browser_id, request.generation)
+    await service.release(request.generation)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
