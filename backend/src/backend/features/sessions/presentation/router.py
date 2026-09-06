@@ -1,13 +1,17 @@
 import logging
+from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Response, WebSocket, status
+from fastapi import APIRouter, Query, Response, WebSocket, status
 
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
-from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
+from backend.features.browsers.infrastructure.routes import (
+    BrowserWorkerRoutes,
+    ScreencastMode,
+)
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
@@ -448,71 +452,33 @@ async def session_screencast(
     websocket: WebSocket,
     lease_keeper: FromDishka[SessionLeaseKeeper],
     routes: FromDishka[BrowserWorkerRoutes],
+    mode: Annotated[
+        ScreencastMode, Query(description="How frames are packaged for the client")
+    ] = ScreencastMode.JPEG,
 ) -> None:
-    session = await _resolve(websocket, lease_keeper, session_id)
-    if session is not None:
-        url = routes.screencast_url(session.browser.slot)
-        logger.info(
-            "Screencast connected session_id=%s slot=%s",
-            session_id,
-            session.browser.slot.id,
-        )
-        try:
-            await proxy_stream(websocket, url, name="Screencast")
-        finally:
-            logger.info("Screencast disconnected session_id=%s", session_id)
+    """Relay the worker's screencast, one fresh subscription per client.
 
-
-@session_router.websocket("/sessions/{session_id}/screencast/dirty-rectangles")
-@inject
-async def session_dirty_rectangle_screencast(
-    session_id: UUID,
-    websocket: WebSocket,
-    lease_keeper: FromDishka[SessionLeaseKeeper],
-    routes: FromDishka[BrowserWorkerRoutes],
-) -> None:
-    """Relay the worker's changed-tile stream, one fresh subscription per client.
-
-    The worker keeps its diff state per subscription, so every connect - and
-    therefore every reconnect - opens with a packet covering the whole canvas.
-    That is what lets a client that lost its canvas rebuild it from patches.
+    The worker keeps the state a mode needs per subscription, so every
+    connect - and therefore every reconnect - opens with what a client needs to
+    start from nothing: a whole frame, a patch covering the whole canvas, or an
+    fMP4 init segment ahead of the fragments that depend on it.
     """
     session = await _resolve(websocket, lease_keeper, session_id)
-    if session is not None:
-        url = routes.dirty_rectangle_screencast_url(session.browser.slot)
-        logger.info(
-            "Dirty rectangle screencast connected session_id=%s slot=%s",
-            session_id,
-            session.browser.slot.id,
+    if session is None:
+        return
+    name = f"Screencast ({mode})"
+    logger.info(
+        "%s connected session_id=%s slot=%s",
+        name,
+        session_id,
+        session.browser.slot.id,
+    )
+    try:
+        await proxy_stream(
+            websocket, routes.screencast_url(session.browser.slot, mode), name=name
         )
-        try:
-            await proxy_stream(websocket, url, name="Dirty rectangle screencast")
-        finally:
-            logger.info(
-                "Dirty rectangle screencast disconnected session_id=%s", session_id
-            )
-
-
-@session_router.websocket("/sessions/{session_id}/screencast/fmp4")
-@inject
-async def session_fmp4_screencast(
-    session_id: UUID,
-    websocket: WebSocket,
-    lease_keeper: FromDishka[SessionLeaseKeeper],
-    routes: FromDishka[BrowserWorkerRoutes],
-) -> None:
-    session = await _resolve(websocket, lease_keeper, session_id)
-    if session is not None:
-        url = routes.fmp4_screencast_url(session.browser.slot)
-        logger.info(
-            "fMP4 screencast connected session_id=%s slot=%s",
-            session_id,
-            session.browser.slot.id,
-        )
-        try:
-            await proxy_stream(websocket, url, name="fMP4 screencast")
-        finally:
-            logger.info("fMP4 screencast disconnected session_id=%s", session_id)
+    finally:
+        logger.info("%s disconnected session_id=%s", name, session_id)
 
 
 async def _resolve(
