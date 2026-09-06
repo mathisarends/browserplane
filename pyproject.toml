@@ -63,7 +63,8 @@ testpaths = [
     "frontend/tests",
     "generated/tests",
 ]
-pythonpath = [".", "browser_worker"]
+pythonpath = [".", "backend/tests", "browser_worker"]
+addopts = ["--import-mode=importlib"]
 
 [tool.coverage.run]
 branch = true
