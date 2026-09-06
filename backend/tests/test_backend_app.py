@@ -1,24 +1,23 @@
 from uuid import UUID
 
+from fakes.browser_repository import InMemoryBrowserRepository
+from fakes.lease_store import InMemoryLeaseStore
+from fakes.session_repositories import (
+    InMemoryAuthenticationStateSnapshotRepository,
+    InMemoryBrowserStateSnapshotRepository,
+    InMemorySuspendedSessionRepository,
+)
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
 from backend.features.browsers.application.models import Browser, BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
-from backend.features.browsers.infrastructure.in_memory_repository import (
-    InMemoryBrowserRepository,
-)
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
 )
 from backend.features.sessions.application.ports import BrowserRuntime
-from backend.features.sessions.infrastructure.in_memory_repository import (
-    InMemoryAuthenticationStateSnapshotRepository,
-    InMemoryBrowserStateSnapshotRepository,
-    InMemorySuspendedSessionRepository,
-)
 
 OWNER_ID = str(UUID(int=7))
 
@@ -97,6 +96,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         state,
+        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 200
@@ -163,6 +163,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         FakeBrowserRuntime(),
+        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -206,6 +207,7 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         state,
+        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         opened = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -238,6 +240,7 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
         FakeBrowserRuntime(),
         InMemoryBrowserStateSnapshotRepository(),
         InMemoryAuthenticationStateSnapshotRepository(),
+        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -268,6 +271,7 @@ def test_a_client_finds_its_own_sessions_again() -> None:
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         FakeBrowserRuntime(),
+        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()

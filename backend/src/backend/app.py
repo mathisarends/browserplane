@@ -15,6 +15,7 @@ from backend.features.browsers.presentation.errors import (
 )
 from backend.features.health.infrastructure import HealthProvider
 from backend.features.health.presentation.router import health_router
+from backend.features.leases.application.ports import LeaseStore
 from backend.features.leases.infrastructure import LeaseProvider
 from backend.features.recordings.infrastructure import RecordingProvider
 from backend.features.recordings.presentation.errors import (
@@ -56,6 +57,7 @@ def create_app(
     browser_state: BrowserRuntime | None = None,
     snapshots: BrowserStateSnapshotRepository | None = None,
     authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
+    lease_store: LeaseStore | None = None,
 ) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
     install_request_logging(app)
@@ -70,7 +72,7 @@ def create_app(
         BrowserProvider(provisioner, repository),
         HealthProvider(),
         RecordingProvider(),
-        LeaseProvider(),
+        LeaseProvider(lease_store),
         SessionProvider(
             suspensions, browser_state, snapshots, authentication_snapshots
         ),

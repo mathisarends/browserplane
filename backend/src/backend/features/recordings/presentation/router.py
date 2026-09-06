@@ -32,7 +32,8 @@ async def start_recording(
     browser_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return to_recording_response(await service.start(browser_id))
+    recording = await service.start(browser_id)
+    return to_recording_response(recording)
 
 
 @recording_router.get(
@@ -49,7 +50,8 @@ async def inspect_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return to_recording_response(await service.inspect(browser_id, recording_id))
+    recording = await service.inspect(browser_id, recording_id)
+    return to_recording_response(recording)
 
 
 @recording_router.post(
@@ -67,4 +69,5 @@ async def stop_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return to_recording_response(await service.stop(browser_id, recording_id))
+    recording = await service.stop(browser_id, recording_id)
+    return to_recording_response(recording)

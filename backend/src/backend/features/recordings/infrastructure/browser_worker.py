@@ -39,22 +39,20 @@ class BrowserWorkerRecorder(Recorder):
         self._client = client
 
     async def start(self, browser: Browser) -> Recording:
-        return _to_recording(
-            await self._request(
-                browser,
-                "start",
-                lambda client: client.start_recording(browser.id),
-            )
+        recording = await self._request(
+            browser,
+            "start",
+            lambda client: client.start_recording(browser.id),
         )
+        return _to_recording(recording)
 
     async def inspect(self, browser: Browser, recording_id: UUID) -> Recording:
-        return _to_recording(
-            await self._request(
-                browser,
-                "inspect",
-                lambda client: client.inspect_recording(browser.id, recording_id),
-            )
+        recording = await self._request(
+            browser,
+            "inspect",
+            lambda client: client.inspect_recording(browser.id, recording_id),
         )
+        return _to_recording(recording)
 
     async def stop_and_store(self, browser: Browser, recording_id: UUID) -> Recording:
         recording = await self._request(

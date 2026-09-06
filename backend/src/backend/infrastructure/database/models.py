@@ -40,6 +40,20 @@ class BrowserModel(DatabaseModel, table=True):
     state: BrowserState = Field(sa_column=Column(String, nullable=False))
 
 
+class LeaseModel(DatabaseModel, table=True):
+    """A persisted, time-boxed claim of one browser by one owner."""
+
+    __tablename__ = "leases"
+
+    browser_id: UUID = Field(index=True)
+    owner_id: UUID = Field(index=True)
+    expires_at: datetime = Field(
+        sa_type=DateTime(timezone=True),
+        nullable=False,
+        index=True,
+    )
+
+
 class SuspendedSessionModel(DatabaseModel, table=True):
     """A session that gave its browser back, and what it needs to come back."""
 
