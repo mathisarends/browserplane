@@ -1,7 +1,6 @@
 """Run with python -m backend.scheduler, independently of the HTTP API."""
 
 import asyncio
-import logging
 from contextlib import suppress
 
 from backend.app import FEATURES
@@ -10,6 +9,7 @@ from backend.features.session_requests.infrastructure.dispatcher import Dispatch
 from backend.features.session_requests.infrastructure.notifications import (
     PostgresListener,
 )
+from backend.observability import configure_logging
 
 
 async def main():
@@ -24,6 +24,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    configure_logging()
     with suppress(KeyboardInterrupt):
         asyncio.run(main())

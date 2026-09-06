@@ -102,6 +102,13 @@ class LeaseService:
             return
         if lease.state is not LeaseState.RECLAIMING:
             lease = await self._store.save(lease.begin_reclaim(now, reason=reason))
+        logger.info(
+            "Lease reclaim started lease_id=%s browser_id=%s generation=%d reason=%s",
+            lease.id,
+            lease.browser_id,
+            lease.generation,
+            reason,
+        )
         await self._finish_reclaim(lease)
 
     async def reap_due(self) -> tuple[UUID, ...]:
@@ -111,6 +118,12 @@ class LeaseService:
             limit=self._reaper_batch_size,
             reason="lease_expired",
         )
+        if leases:
+            logger.info(
+                "Lease reaper claimed %d expired lease(s) lease_ids=%s",
+                len(leases),
+                ",".join(str(lease.id) for lease in leases),
+            )
         released: list[UUID] = []
         for lease in leases:
             if await self._finish_reclaim(lease):

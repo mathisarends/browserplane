@@ -250,6 +250,15 @@ class SessionService:
             active.session.suspend(checkpoint.id, now + self._suspension_ttl)
         )
         await self._leases.release(session_id, reason="session_suspended")
+        logger.info(
+            "Session suspended session_id=%s owner_id=%s browser_id=%s "
+            "checkpoint_id=%s expires_at=%s",
+            session_id,
+            active.owner_id,
+            active.browser_id,
+            checkpoint.id,
+            suspended.expires_at.isoformat() if suspended.expires_at else None,
+        )
         return ResolvedSession.inactive(suspended)
 
     async def close(self, session_id: UUID) -> None:
@@ -257,6 +266,12 @@ class SessionService:
         if aggregate.status is SessionStatus.ACTIVE:
             await self._leases.release(session_id, reason="session_closed")
         await self._sessions.save(aggregate.close())
+        logger.info(
+            "Session closed session_id=%s owner_id=%s previous_status=%s",
+            session_id,
+            aggregate.owner_id,
+            aggregate.status,
+        )
 
     async def renew(self, session_id: UUID) -> ResolvedSession:
         aggregate = await self._session(session_id)
@@ -276,6 +291,20 @@ class SessionService:
             session = await self._sessions.get_by_id(session_id=session_id)
             if session is not None and session.status is SessionStatus.ACTIVE:
                 await self._sessions.save(session.close())
+                logger.info(
+                    "Session reaped session_id=%s owner_id=%s "
+                    "reason=lease_expired expired_at=%s",
+                    session_id,
+                    session.owner_id,
+                    session.expires_at.isoformat() if session.expires_at else None,
+                )
+            else:
+                logger.info(
+                    "Session lease reaped without an active session session_id=%s "
+                    "status=%s",
+                    session_id,
+                    session.status if session is not None else "missing",
+                )
         return released
 
     async def _session(self, session_id: UUID) -> Session:

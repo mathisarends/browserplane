@@ -410,7 +410,16 @@ async def session_tunnel(
     if session is None:
         return
     try:
-        logger.info("Session tunnel connected session_id=%s", session_id)
+        logger.info(
+            "Session tunnel connected session_id=%s owner_id=%s browser_id=%s "
+            "slot=%s generation=%s expires_at=%s",
+            session_id,
+            session.owner_id,
+            session.browser_id,
+            session.browser.slot,
+            session.lease_generation,
+            session.expires_at.isoformat() if session.expires_at else None,
+        )
         await lease_keeper.run(
             session_id,
             tunnel.serve(websocket, routes.cdp_url(session.browser.slot)),
@@ -420,6 +429,10 @@ async def session_tunnel(
         BrowserNotFoundException,
         SessionNotActiveException,
     ):
+        logger.info(
+            "Session tunnel lost its lease session_id=%s; closing transport",
+            session_id,
+        )
         await websocket.close(code=1008, reason="Session lease expired")
     finally:
         # State capture is an independent HTTP operation. Keep the lease alive
@@ -442,7 +455,15 @@ async def session_screencast(
     session = await _resolve(websocket, lease_keeper, session_id)
     if session is not None:
         url = routes.screencast_url(session.browser.slot)
-        await proxy_stream(websocket, url, name="Screencast")
+        logger.info(
+            "Screencast connected session_id=%s slot=%s",
+            session_id,
+            session.browser.slot,
+        )
+        try:
+            await proxy_stream(websocket, url, name="Screencast")
+        finally:
+            logger.info("Screencast disconnected session_id=%s", session_id)
 
 
 @session_router.websocket("/sessions/{session_id}/screencast/fmp4")
@@ -456,7 +477,15 @@ async def session_fmp4_screencast(
     session = await _resolve(websocket, lease_keeper, session_id)
     if session is not None:
         url = routes.fmp4_screencast_url(session.browser.slot)
-        await proxy_stream(websocket, url, name="fMP4 screencast")
+        logger.info(
+            "fMP4 screencast connected session_id=%s slot=%s",
+            session_id,
+            session.browser.slot,
+        )
+        try:
+            await proxy_stream(websocket, url, name="fMP4 screencast")
+        finally:
+            logger.info("fMP4 screencast disconnected session_id=%s", session_id)
 
 
 async def _resolve(
