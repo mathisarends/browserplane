@@ -6,39 +6,44 @@ from uuid import UUID, uuid4
 from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict
 
-from backend.features.browser_requests.application import ControlPlane, RequestRepository
-from backend.features.browser_requests.domain import BrowserRequest, RequestConflict, RequestEnded, RequestStatus
-from backend.features.sessions.application.exceptions import SessionNotSuspendedException
+from backend.features.browser_requests.application import (
+    ControlPlane,
+    RequestRepository,
+)
+from backend.features.browser_requests.domain import (
+    BrowserRequest,
+    RequestConflict,
+    RequestEnded,
+    RequestStatus,
+)
+from backend.features.browser_requests.presentation.schemas import (
+    BrowserRequestResponse,
+)
+from backend.features.sessions.application.exceptions import (
+    SessionNotSuspendedException,
+)
 from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.domain.models import SessionStatus
 
 router = APIRouter(route_class=DishkaRoute, tags=["browser-requests"])
 
 
-class BrowserRequestResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: UUID
-    owner_id: UUID
-    status: RequestStatus
-    created_at: datetime
-    expires_at: datetime
-    lease_id: UUID | None
-    test_run_id: UUID | None
-
-
 @router.get("/browser-requests/{request_id}", operation_id="get_browser_request")
-async def get_browser_request(request_id: UUID, owner_id: UUID,
-                              repository: FromDishka[RequestRepository]) -> BrowserRequestResponse:
-    return BrowserRequestResponse.model_validate(await owned_request(repository, request_id, owner_id))
+async def get_browser_request(
+    request_id: UUID, owner_id: UUID, repository: FromDishka[RequestRepository]
+) -> BrowserRequestResponse:
+    request = await owned_request(repository, request_id, owner_id)
+    return BrowserRequestResponse.model_validate(request)
 
 
 @router.delete("/browser-requests/{request_id}", operation_id="cancel_browser_request")
-async def cancel_browser_request(request_id: UUID, owner_id: UUID,
-                                 repository: FromDishka[RequestRepository]) -> BrowserRequestResponse:
+async def cancel_browser_request(
+    request_id: UUID, owner_id: UUID, repository: FromDishka[RequestRepository]
+) -> BrowserRequestResponse:
     await owned_request(repository, request_id, owner_id)
-    return BrowserRequestResponse.model_validate(await repository.end(request_id, RequestStatus.CANCELLED))
+    request = await repository.end(request_id, RequestStatus.CANCELLED)
+    return BrowserRequestResponse.model_validate(request)
 
 
 async def owned_request(repository, request_id, owner_id):
@@ -51,12 +56,19 @@ async def owned_request(repository, request_id, owner_id):
     return request
 
 
-async def acquire_session(http_request: Request, container: AsyncContainer, control: ControlPlane,
-                          *, owner_id: UUID | None = None, request_id: UUID | None = None,
-                          timeout_seconds: float = 60, test_run_id: UUID | None = None,
-                          authentication_profile_id: UUID | None = None,
-                          browser_checkpoint_id: UUID | None = None,
-                          resume_session_id: UUID | None = None) -> UUID:
+async def acquire_session(
+    http_request: Request,
+    container: AsyncContainer,
+    control: ControlPlane,
+    *,
+    owner_id: UUID | None = None,
+    request_id: UUID | None = None,
+    timeout_seconds: float = 60,
+    test_run_id: UUID | None = None,
+    authentication_profile_id: UUID | None = None,
+    browser_checkpoint_id: UUID | None = None,
+    resume_session_id: UUID | None = None,
+) -> UUID:
     existing = None
     if request_id is not None:
         repository = await container.get(RequestRepository)
@@ -78,18 +90,29 @@ async def acquire_session(http_request: Request, container: AsyncContainer, cont
                     raise SessionNotSuspendedException()
                 owner_id = aggregate.owner_id
                 browser_checkpoint_id = aggregate.session.browser_checkpoint_id
-            checkpoint = (await sessions.get_browser_checkpoint(browser_checkpoint_id)
-                          if browser_checkpoint_id else None)
-            profile_id = authentication_profile_id or (checkpoint.authentication_profile_id if checkpoint else None)
+            checkpoint = (
+                await sessions.get_browser_checkpoint(browser_checkpoint_id)
+                if browser_checkpoint_id
+                else None
+            )
+            profile_id = authentication_profile_id or (
+                checkpoint.authentication_profile_id if checkpoint else None
+            )
             if profile_id is not None:
                 await sessions.get_authentication_profile(profile_id)
     assert owner_id is not None
     now = datetime.now(UTC)
-    request = BrowserRequest(id=request_id or uuid4(), owner_id=owner_id,
-        status=RequestStatus.QUEUED, created_at=now,
-        expires_at=now + timedelta(seconds=timeout_seconds), test_run_id=test_run_id,
-        authentication_profile_id=authentication_profile_id, browser_checkpoint_id=browser_checkpoint_id,
-        resume_session_id=resume_session_id)
+    request = BrowserRequest(
+        id=request_id or uuid4(),
+        owner_id=owner_id,
+        status=RequestStatus.QUEUED,
+        created_at=now,
+        expires_at=now + timedelta(seconds=timeout_seconds),
+        test_run_id=test_run_id,
+        authentication_profile_id=authentication_profile_id,
+        browser_checkpoint_id=browser_checkpoint_id,
+        resume_session_id=resume_session_id,
+    )
 
     async def disconnected():
         while not await http_request.is_disconnected():
@@ -98,15 +121,19 @@ async def acquire_session(http_request: Request, container: AsyncContainer, cont
     acquire = asyncio.create_task(control.acquire_browser(request))
     disconnect = asyncio.create_task(disconnected())
     try:
-        done, _ = await asyncio.wait((acquire, disconnect), return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait(
+            (acquire, disconnect), return_when=asyncio.FIRST_COMPLETED
+        )
         if acquire in done:
             return acquire.result()
         raise HTTPException(499, "Browser request disconnected")
     except RequestConflict as error:
         raise HTTPException(409, str(error)) from error
     except RequestEnded as error:
-        raise HTTPException(408 if error.request.status is RequestStatus.EXPIRED else 409,
-                            {"request_id": str(request.id), "status": error.request.status}) from error
+        raise HTTPException(
+            408 if error.request.status is RequestStatus.EXPIRED else 409,
+            {"request_id": str(request.id), "status": error.request.status},
+        ) from error
     finally:
         acquire.cancel()
         disconnect.cancel()

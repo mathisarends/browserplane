@@ -141,6 +141,14 @@ uv run ruff format . # format
 (cd frontend && npm run build) # type-check and build
 ```
 
+Keep awaited application or repository calls separate from response mapping so
+both steps remain easy to read:
+
+```python
+request = await repository.get(request_id)
+return BrowserRequestResponse.model_validate(request)
+```
+
 After the backend stops a recording, it streams each completed segment from the
 browser worker into the `recordings/` prefix of the S3-compatible
 `browser-recordings` bucket. MinIO exposes its S3 API at

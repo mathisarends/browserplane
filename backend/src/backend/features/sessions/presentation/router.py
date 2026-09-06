@@ -6,8 +6,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Request, Response, WebSocket, status
 
 from backend.features.browser_requests.application import ControlPlane
-from backend.features.browser_requests.presentation import acquire_session
-
+from backend.features.browser_requests.presentation.router import acquire_session
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
@@ -66,11 +65,15 @@ logger = logging.getLogger(__name__)
     responses=api_error_responses(NO_BROWSER_AVAILABLE),
 )
 async def open_session(
-    request: OpenSessionRequest, http_request: Request,
+    request: OpenSessionRequest,
+    http_request: Request,
     service: FromDishka[SessionService],
     control: FromDishka[ControlPlane],
 ) -> OpenSessionResponse:
-    session_id = await acquire_session(http_request, http_request.app.state.dishka_container, control,
+    session_id = await acquire_session(
+        http_request,
+        http_request.app.state.dishka_container,
+        control,
         owner_id=request.owner_id,
         request_id=request.request_id,
         timeout_seconds=request.timeout_seconds,
@@ -426,9 +429,14 @@ async def resume_session(
     control: FromDishka[ControlPlane],
 ) -> SessionResponse:
     """Mount a parked session onto whichever browser is free now."""
-    await acquire_session(http_request, http_request.app.state.dishka_container, control,
-        resume_session_id=session_id, request_id=request.request_id,
-        timeout_seconds=request.timeout_seconds)
+    await acquire_session(
+        http_request,
+        http_request.app.state.dishka_container,
+        control,
+        resume_session_id=session_id,
+        request_id=request.request_id,
+        timeout_seconds=request.timeout_seconds,
+    )
     session = await service.get_active(session_id)
     return to_session_response(session)
 
