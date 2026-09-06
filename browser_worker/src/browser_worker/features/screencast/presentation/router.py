@@ -16,7 +16,6 @@ from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.screencast.application.service import ScreencastService
 from browser_worker.features.screencast.infrastructure.dirty_rectangles import (
     DirtyRectangleJpegStream,
-    DirtyRectangleOptions,
 )
 from browser_worker.features.screencast.infrastructure.fmp4 import Fmp4Livestream
 from browser_worker.features.screencast.infrastructure.settings import (
@@ -69,14 +68,7 @@ async def browser_dirty_rectangle_screencast(
         await websocket.close(code=1008, reason="Unknown browser")
         return
 
-    stream = DirtyRectangleJpegStream(
-        source,
-        DirtyRectangleOptions(
-            tile_width=settings.tile_width,
-            tile_height=settings.tile_height,
-            jpeg_quality=settings.jpeg_quality,
-        ),
-    )
+    stream = DirtyRectangleJpegStream(source, settings)
     await websocket.accept()
     try:
         async with stream.subscribe() as packets:

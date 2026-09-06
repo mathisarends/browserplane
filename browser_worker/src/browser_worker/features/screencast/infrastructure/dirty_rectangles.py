@@ -1,10 +1,12 @@
 import asyncio
 import io
 import logging
+import queue
 import struct
+import threading
 import time
 from collections.abc import AsyncGenerator, AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 
 import numpy as np
@@ -12,6 +14,9 @@ import numpy.typing as npt
 from PIL import Image
 
 from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.features.screencast.infrastructure.settings import (
+    DirtyRectangleSettings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,21 +27,9 @@ _FRAME_HEADER = struct.Struct("!4sBHHI")
 _PATCH_HEADER = struct.Struct("!HHHHI")
 _MAGIC = b"DRJP"
 _VERSION = 1
+_STREAM_ENDED = object()
 
 type RgbFrame = npt.NDArray[np.uint8]
-
-
-@dataclass(frozen=True, slots=True)
-class DirtyRectangleOptions:
-    tile_width: int = 128
-    tile_height: int = 128
-    jpeg_quality: int = 80
-
-    def __post_init__(self) -> None:
-        if self.tile_width <= 0 or self.tile_height <= 0:
-            raise ValueError("Dirty rectangle tile dimensions must be positive")
-        if not 0 <= self.jpeg_quality <= 100:
-            raise ValueError("Dirty rectangle JPEG quality must be between 0 and 100")
 
 
 class DirtyRectangleJpegStream:
@@ -49,10 +42,10 @@ class DirtyRectangleJpegStream:
     def __init__(
         self,
         source: FrameStream,
-        options: DirtyRectangleOptions | None = None,
+        settings: DirtyRectangleSettings,
     ) -> None:
         self._source = source
-        self._options = options or DirtyRectangleOptions()
+        self._settings = settings
 
     @asynccontextmanager
     async def subscribe(self) -> AsyncGenerator[AsyncIterator[bytes]]:
@@ -64,25 +57,68 @@ class DirtyRectangleJpegStream:
         await self._source.close()
 
     async def _packets(self, frames: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-        previous: RgbFrame | None = None
-        async for frame in frames:
-            previous, packet, metrics = await asyncio.to_thread(
-                _encode_update,
-                frame,
-                previous,
-                self._options,
-            )
-            logger.debug(
-                "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
-                "dirty=%.1f%% payload=%dB",
-                metrics.decode_ms,
-                metrics.diff_ms,
-                metrics.encode_ms,
-                metrics.dirty_ratio * 100,
-                len(packet) if packet is not None else 0,
-            )
-            if packet is not None:
-                yield packet
+        loop = asyncio.get_running_loop()
+        input_queue: queue.Queue[bytes] = queue.Queue(maxsize=1)
+        output_queue: asyncio.Queue[_EncodedUpdate | Exception | object] = (
+            asyncio.Queue(maxsize=1)
+        )
+        producer_done = threading.Event()
+        stop = threading.Event()
+        output_slot = threading.Semaphore(1)
+        producer_error: list[Exception] = []
+        worker = threading.Thread(
+            target=_encoder_worker,
+            args=(
+                input_queue,
+                output_queue,
+                loop,
+                output_slot,
+                producer_done,
+                producer_error,
+                stop,
+                self._settings,
+            ),
+            name="screencast:dirty-jpeg-encoder",
+            daemon=True,
+        )
+        worker.start()
+        producer = asyncio.create_task(
+            _produce_latest_frames(
+                frames,
+                input_queue,
+                producer_done,
+                producer_error,
+            ),
+            name="screencast:dirty-jpeg-input",
+        )
+        try:
+            while True:
+                item = await output_queue.get()
+                if item is _STREAM_ENDED:
+                    output_slot.release()
+                    return
+                if isinstance(item, Exception):
+                    output_slot.release()
+                    raise item
+                assert isinstance(item, _EncodedUpdate)
+                logger.debug(
+                    "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
+                    "dirty=%.1f%% payload=%dB",
+                    item.metrics.decode_ms,
+                    item.metrics.diff_ms,
+                    item.metrics.encode_ms,
+                    item.metrics.dirty_ratio * 100,
+                    len(item.packet),
+                )
+                try:
+                    yield item.packet
+                finally:
+                    output_slot.release()
+        finally:
+            stop.set()
+            producer.cancel()
+            await asyncio.gather(producer, return_exceptions=True)
+            await _wait_for_thread(worker)
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,10 +129,104 @@ class _Metrics:
     dirty_ratio: float
 
 
+@dataclass(frozen=True, slots=True)
+class _EncodedUpdate:
+    packet: bytes
+    metrics: _Metrics
+
+
+async def _produce_latest_frames(
+    frames: AsyncIterator[bytes],
+    input_queue: queue.Queue[bytes],
+    done: threading.Event,
+    errors: list[Exception],
+) -> None:
+    try:
+        async for frame in frames:
+            _put_latest_frame(input_queue, frame)
+    except asyncio.CancelledError:
+        raise
+    except Exception as error:
+        errors.append(error)
+    finally:
+        done.set()
+
+
+def _put_latest_frame(input_queue: queue.Queue[bytes], frame: bytes) -> None:
+    try:
+        input_queue.put_nowait(frame)
+        return
+    except queue.Full:
+        pass
+    with suppress(queue.Empty):
+        input_queue.get_nowait()
+    input_queue.put_nowait(frame)
+
+
+def _encoder_worker(
+    input_queue: queue.Queue[bytes],
+    output_queue: asyncio.Queue[_EncodedUpdate | Exception | object],
+    loop: asyncio.AbstractEventLoop,
+    output_slot: threading.Semaphore,
+    producer_done: threading.Event,
+    producer_error: list[Exception],
+    stop: threading.Event,
+    settings: DirtyRectangleSettings,
+) -> None:
+    previous: RgbFrame | None = None
+    while _acquire_output_slot(output_slot, stop):
+        try:
+            frame = input_queue.get(timeout=0.05)
+        except queue.Empty:
+            if not producer_done.is_set():
+                output_slot.release()
+                continue
+            terminal = producer_error[0] if producer_error else _STREAM_ENDED
+            _send_to_event_loop(loop, output_queue, terminal)
+            return
+
+        try:
+            previous, packet, metrics = _encode_update(frame, previous, settings)
+        except Exception as error:
+            _send_to_event_loop(loop, output_queue, error)
+            return
+        if packet is None:
+            output_slot.release()
+            continue
+        _send_to_event_loop(loop, output_queue, _EncodedUpdate(packet, metrics))
+
+
+def _acquire_output_slot(
+    output_slot: threading.Semaphore,
+    stop: threading.Event,
+) -> bool:
+    while not stop.is_set():
+        if output_slot.acquire(timeout=0.05):
+            return True
+    return False
+
+
+def _send_to_event_loop(
+    loop: asyncio.AbstractEventLoop,
+    output_queue: asyncio.Queue[_EncodedUpdate | Exception | object],
+    item: _EncodedUpdate | Exception | object,
+) -> None:
+    with suppress(RuntimeError):
+        loop.call_soon_threadsafe(output_queue.put_nowait, item)
+
+
+async def _wait_for_thread(worker: threading.Thread) -> None:
+    deadline = asyncio.get_running_loop().time() + 2
+    while worker.is_alive() and asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(0.01)
+    if worker.is_alive():
+        logger.warning("Dirty JPEG encoder thread did not stop within two seconds")
+
+
 def _encode_update(
     frame_data: bytes,
     previous: RgbFrame | None,
-    options: DirtyRectangleOptions,
+    settings: DirtyRectangleSettings,
 ) -> tuple[RgbFrame, bytes | None, _Metrics]:
     started = time.perf_counter()
     with Image.open(io.BytesIO(frame_data)) as image:
@@ -107,8 +237,8 @@ def _encode_update(
     if width > 0xFFFF or height > 0xFFFF:
         raise ValueError("Dirty rectangle JPEG stream supports canvases up to 65535px")
 
-    rows = (height + options.tile_height - 1) // options.tile_height
-    columns = (width + options.tile_width - 1) // options.tile_width
+    rows = (height + settings.tile_height - 1) // settings.tile_height
+    columns = (width + settings.tile_width - 1) // settings.tile_width
     if previous is None or previous.shape != current.shape:
         dirty_tiles = np.ones((rows, columns), dtype=np.bool_)
     else:
@@ -116,15 +246,15 @@ def _encode_update(
         padded = np.pad(
             changed_pixels,
             (
-                (0, rows * options.tile_height - height),
-                (0, columns * options.tile_width - width),
+                (0, rows * settings.tile_height - height),
+                (0, columns * settings.tile_width - width),
             ),
         )
         dirty_tiles = padded.reshape(
             rows,
-            options.tile_height,
+            settings.tile_height,
             columns,
-            options.tile_width,
+            settings.tile_width,
         ).any(axis=(1, 3))
     diffed = time.perf_counter()
 
@@ -141,15 +271,15 @@ def _encode_update(
         _FRAME_HEADER.pack(_MAGIC, _VERSION, width, height, len(dirty_positions))
     ]
     for row, column in dirty_positions:
-        x = int(column) * options.tile_width
-        y = int(row) * options.tile_height
-        patch_width = min(options.tile_width, width - x)
-        patch_height = min(options.tile_height, height - y)
+        x = int(column) * settings.tile_width
+        y = int(row) * settings.tile_height
+        patch_width = min(settings.tile_width, width - x)
+        patch_height = min(settings.tile_height, height - y)
         patch = Image.fromarray(
             current[y : y + patch_height, x : x + patch_width]
         )
         output = io.BytesIO()
-        patch.save(output, format="JPEG", quality=options.jpeg_quality)
+        patch.save(output, format="JPEG", quality=settings.jpeg_quality)
         jpeg = output.getvalue()
         parts.extend(
             (
