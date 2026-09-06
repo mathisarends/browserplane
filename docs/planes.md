@@ -44,21 +44,22 @@ notification listener
 ```
 
 - **API process** is edge-only. It serves requests, keeps a lease alive while a
-  control tunnel is open, and parks callers that are waiting for capacity. It
-  owns no background business work.
-- **Scheduler** owns everything periodic: assigning queued requests, reclaiming
-  expired leases, reconciling slots against reality. Several may run; Postgres
-  row locks, not leader election, keep them from colliding.
+  control tunnel is open, and parks callers waiting for capacity. Its lifespan
+  opens exactly one thing: the notification listener. Starting an API replica
+  therefore starts no browser and duplicates no background work.
+- **Scheduler** (`python -m backend.scheduler`, same image and DI container)
+  owns everything periodic: assigning queued requests, provisioning runtimes on
+  demand, reclaiming expired leases, reconciling slots. Replicas may run, but
+  one `pg_try_advisory_lock` on a dedicated connection elects a single active
+  dispatcher; the others retry every two seconds and take over when it dies.
+  Row locks still guard every individual claim, so leadership is a convenience,
+  not the correctness argument.
 - **Browser worker** owns one Chromium and every resource around it. It has no
   database and no object-storage credentials.
 
-**Today** the API process still does the scheduler's job: `lifespan.py` calls
-`BrowserService.start()`, runs a reaper task, and reaps once at boot. That makes
-API startup provision browsers nobody asked for, and gives every replica its own
-copy of the same background work.
-
-**Planned:** a separate scheduler entry point using the same image and DI
-container; the API lifespan then opens only edge infrastructure.
+Browsers are started by demand, not by boot. A configured slot is reconciled
+into Postgres as `STOPPED`, and Chromium starts when a request actually claims
+it.
 
 ## Rules at the boundary
 

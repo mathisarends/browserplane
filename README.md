@@ -11,7 +11,8 @@ Learning project: no auth, no rate limiting.
 - [Deep dives](#deep-dives)
 - [Setup](#setup)
 - [Development](#development)
-- [Protocol](#protocol)
+- [HTTP API](#http-api)
+- [Browser tunnel](#browser-tunnel)
 - [Configuration](#configuration)
 
 ## See it in action
@@ -96,15 +97,21 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Postgres, MinIO, migrations, backend, scheduler and browser workers
-docker compose up --build
+docker compose up --build     # Postgres, MinIO, migrations, backend, scheduler, workers
+(cd frontend && npm run dev)  # regenerates every client, then serves on :5173
+```
 
-# Frontend on http://localhost:5173
-(cd frontend && npm run dev)
+That is the whole loop. `npm run dev` runs `predev`, which exports the OpenAPI
+and OpenRPC documents and rewrites all three generated clients — none of them is
+written by hand: `frontend/generated` (browser JSON-RPC, from OpenRPC),
+`frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev)), and
+the uv workspace package `generated/` (Python worker client, via httpxgen).
 
-uv run python -m backend.features.browser_tunnel.schema_export # JSON Schema and OpenRPC
-(cd frontend && npm run generate) # schemas and both TypeScript clients
-./scripts/generate_http_clients.sh # Python HTTP clients
+The rest is only needed on its own:
+
+```bash
+(cd frontend && npm run generate)         # all clients, without serving
+(cd frontend && npm run check:generated)  # fail if any client is stale
 (cd backend && uv run alembic revision --autogenerate -m "...")
 (cd backend && uv run alembic upgrade head)
 
@@ -122,25 +129,40 @@ request = await repository.get(request_id)
 return BrowserRequestResponse.model_validate(request)
 ```
 
-Generated clients: `frontend/generated` (browser JSON-RPC, from OpenRPC),
-`frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev) from
-`schemas/backend-openapi.json`), and the uv workspace package `generated/`
-(typed Python client for the browser worker API). `npm run check:generated` and
-`./scripts/generate_http_clients.sh --check` flag a stale one. `predev`
-regenerates schemas and clients; Vite hot-reloads and proxies `/api` to 8000.
-
 Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
 
-## Protocol
+## HTTP API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/sessions` | open a session; waits for capacity until its deadline |
+| `GET` `DELETE` | `/api/v1/browser-requests/{id}` | inspect or cancel a wait |
+| `GET` `DELETE` | `/api/v1/sessions/{id}` | inspect or close a session |
+| `POST` | `/api/v1/sessions/{id}/lease/renew` | heartbeat without a tunnel |
+| `POST` | `/api/v1/sessions/{id}/suspend` · `/resume` | park a session, pick it up on any free slot |
+| `GET` `PUT` | `/api/v1/sessions/{id}/browser-state` | capture or mount tabs, scroll, sessionStorage |
+| `PUT` | `/api/v1/sessions/{id}/authentication-profile` | mount a login identity into a live session |
+| `POST` | `/api/v1/sessions/{id}/authentication-profiles` | capture the identity as a reusable profile |
+| `POST` | `/api/v1/sessions/{id}/browser-checkpoints` | capture the current tabs as a checkpoint |
+| `GET` | `/api/v1/sessions/{id}/downloads` · `/{id}/file` | list and fetch what the browser downloaded |
+| `POST` `GET` | `/api/v1/browser/{browser_id}/recordings` | start, inspect and stop a recording |
+| `GET` | `/api/v1/admin/browsers` · `/admin/sessions` | pool and session overview |
+| `GET` | `/api/v1/health` · `/api/v1/readiness` | liveness and readiness |
+
+Full contract: `schemas/backend-openapi.json`, or Swagger UI on
+`http://localhost:8000/docs`.
+
+Session state is two independent documents — `authentication_state` (cookies and
+origin-localStorage; a reusable, encrypted profile) and `browser_state` (tabs,
+active tab, scroll, sessionStorage; a checkpoint). Authentication is mounted
+first, so restored tabs navigate logged in. See
+[docs/session-state.md](docs/session-state.md).
+
+## Browser tunnel
 
 ```text
-POST    /api/v1/sessions                        open a session; waits for capacity
-GET     /api/v1/browser-requests/{id}           inspect or pick a wait back up
-DELETE  /api/v1/browser-requests/{id}           cancel a wait
-POST    /api/v1/sessions/{id}/lease/renew       heartbeat without a tunnel
-GET|PUT /api/v1/sessions/{id}/browser-state     · /authentication-state
-ws      /api/v1/sessions/{id}/tunnel            JSON-RPC 2.0
-ws      /api/v1/browser/{browser_id}/screencast worker frames
+ws /api/v1/sessions/{session_id}/tunnel      JSON-RPC 2.0, relayed to CDP
+ws /api/v1/browser/{browser_id}/screencast   binary JPEG frames from the worker
 ```
 
 ```json
@@ -162,13 +184,8 @@ ws      /api/v1/browser/{browser_id}/screencast worker frames
 | Pushed | tab list, navigation state, cursor style, target crashed/detached |
 
 Server-pushed events arrive as `browser.event`; `params.type` tells frames apart
-from tab/navigation state and crashed/detached targets.
-
-Session state is two independent documents — `authentication_state` (cookies and
-origin-localStorage; a reusable, encrypted profile) and `browser_state` (tabs,
-active tab, scroll, sessionStorage; a checkpoint). Authentication is mounted
-first, so restored tabs navigate logged in. See
-[docs/session-state.md](docs/session-state.md).
+from tab/navigation state and crashed/detached targets. The OpenRPC contract in
+`schemas/openrpc.json` generates the browser client the frontend uses.
 
 ## Configuration
 

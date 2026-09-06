@@ -40,5 +40,6 @@ Neither may guess the other's answer.
 | [Acquiring a browser](acquiring-a-browser.md) | What happens when the pool is full and a caller waits |
 | [Session state](session-state.md) | Why authentication and browser state are two documents |
 
-Status markers: sections marked **planned** describe the target in
-`REQUEST_CONCEPT.md`; everything else is in the code today.
+Everything here describes the code as it stands. The working specs behind it —
+including decisions not yet built, such as lease holder credentials — are
+`LEASE_CONCEPT.md` and `REQUEST_CONCEPT.md`.

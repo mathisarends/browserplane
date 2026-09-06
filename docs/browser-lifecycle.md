@@ -22,13 +22,22 @@ what expires. A generation is what makes an old holder harmless.
 ## Browser states
 
 ```text
-STARTING ──▶ READY ──▶ LEASED ──▶ RECYCLING ──▶ READY
-                │         │           │
-                └─────────┴───────────┴──▶ FAILED ──▶ (retry)
+ claimed ──▶ STARTING ──▶ LEASED ──▶ RECYCLING ──▶ READY
+    ▲          cold start   held      release +     warm, no lease
+    │                                 fresh runtime      │
+    ├──────────────── claimable again ◀──────────────────┤
+    │                                                    │
+ STOPPED ◀── provisioning failed, generation + 1 ────────┘
+  no Chromium behind the slot
+
+ RECYCLING ── cleanup failed ──▶ FAILED ── backoff ──▶ RECYCLING
 ```
 
-`READY` is a strong promise: no live lease, and a freshly verified runtime.
-Only a proven cleanup produces it — a lease expiring never does.
+Two states mean "free": `STOPPED` is a slot with no Chromium behind it,
+`READY` is one with a freshly verified runtime. Both are claimable; neither has
+a live lease. `READY` is the strong promise, and only a proven cleanup produces
+it — a lease expiring never does. A failed provisioning attempt returns the slot
+to `STOPPED` with the generation already bumped.
 
 ## Lease states and timing
 
@@ -61,18 +70,27 @@ down, and it is the point of no return: after it, no renew can revive the lease.
 
 ## Allocation
 
+Allocation is three short transactions with the slow work between them, never
+inside them.
+
 ```text
-one short transaction              then, outside any transaction
-─────────────────────              ─────────────────────────────
-lock a READY browser               clear downloads
-  FOR UPDATE SKIP LOCKED           mount authentication state
-mark it LEASED                     mount browser state
-write the lease + deadlines        verify CDP readiness
-commit                             hand the session back
+claim                    provision                     finish
+─────────────────        ─────────────────────────     ────────────────────
+lock oldest QUEUED       release the slot first        re-check deadline
+  request                  (idempotent, generation-    re-check generation
+lock a free slot           checked — a dead leader     write lease + session
+  FOR UPDATE SKIP LOCKED   may have left a runtime)    slot → LEASED
+request → PROVISIONING   start Chromium                request → ASSIGNED
+slot → STARTING          clear downloads
+commit                   mount authentication
+                         mount browser state
 ```
 
-If any step after the commit fails, the same lease goes to `RECLAIMING` and the
-normal cleanup path takes over. The slot is never freed by a plain status write.
+The re-checks in `finish` are what make the middle safe to be slow: if the
+caller timed out or cancelled meanwhile, the runtime is released again and the
+slot goes back to `STOPPED` instead of becoming an assignment nobody is waiting
+for. A failure anywhere sets a retry deadline and leaves the reservation on the
+row, so the next leader resumes it.
 
 ## Reclaim
 

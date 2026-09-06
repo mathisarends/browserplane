@@ -1,8 +1,8 @@
 # Acquiring a browser
 
-Status: **planned** — the concept is `REQUEST_CONCEPT.md`, the draft lives in
-`backend/src/backend/features/browser_requests/`. Today `POST /api/v1/sessions`
-fails immediately with `NO_BROWSER_AVAILABLE` when the pool is full.
+Implemented in `backend/src/backend/features/browser_requests/`; the concept is
+`REQUEST_CONCEPT.md`. `POST /api/v1/sessions` no longer fails when the pool is
+full — it waits until its deadline.
 
 ## The goal
 
@@ -89,16 +89,22 @@ connections.
 
 ## Dispatcher
 
-Woken by notification, plus a slow recovery scan:
+Runs in the scheduler process, woken by notification and otherwise every five
+seconds:
 
-1. claim the oldest valid `QUEUED` request (FIFO by `created_at, id`)
-2. reserve a free slot exclusively
-3. provision the runtime if needed — outside the transaction
-4. persist lease and `ASSIGNED` atomically
-5. notify, so the waiting API process wakes up
+1. expire everything past its deadline
+2. resume an orphaned reservation first — a row that still carries a
+   `browser_id` is a leader that died mid-provisioning
+3. otherwise claim the oldest `QUEUED` request (FIFO by `created_at, id`) plus a
+   free slot, both `FOR UPDATE SKIP LOCKED`
+4. provision outside the transaction: release, start, mount state
+5. persist lease, session, and `ASSIGNED` in one transaction
+6. notify, so the waiting API process wakes up
 
-Doubled assignment is prevented by row locks, compare-and-set updates, and
-database constraints — not by the dispatcher being alone.
+One dispatcher is active at a time (`pg_try_advisory_lock`), but that is not
+what prevents double assignment — row locks and the re-checks in step 5 are.
+Losing the lock cancels local work; committed reservations are recovered by the
+next leader through step 2.
 
 ## Notifications
 
@@ -110,4 +116,22 @@ Listener                            →  one long-lived LISTEN connection, recon
 ```
 
 Domain and application code never see `asyncpg`, `LISTEN`, or a channel name.
-The message means only: *the persistent state may have changed*.
+The message means only: *the persistent state may have changed*. A waiter also
+re-reads on its own every five seconds, so a lost notification costs latency,
+never progress.
+
+## Caller-facing behaviour
+
+```text
+request id supplied again   same input  → the same wait is picked back up
+                            other input → 409, the id belongs to something else
+deadline passed             → 408, request EXPIRED
+cancelled                   → 409
+HTTP client disconnects     → 499, the request is cancelled
+GET    /api/v1/browser-requests/{id}?owner_id=…   inspect a wait
+DELETE /api/v1/browser-requests/{id}?owner_id=…   cancel a wait
+```
+
+Resume takes the same path: `resume_session_id` makes the assignment reuse the
+suspended session's id and its checkpoint, so a resumed session waits for
+capacity exactly like a new one.
