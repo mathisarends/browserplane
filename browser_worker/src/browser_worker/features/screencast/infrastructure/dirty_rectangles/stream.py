@@ -9,6 +9,7 @@ from browser_worker.features.screencast.application.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
 )
+from browser_worker.shared.tasks import cancel_and_wait
 
 from .encoder import encode_update
 from .models import EncodedUpdate, RgbFrame
@@ -16,6 +17,7 @@ from .models import EncodedUpdate, RgbFrame
 logger = logging.getLogger(__name__)
 
 _STREAM_ENDED = object()
+type _Update = EncodedUpdate | Exception | object
 
 
 class DirtyRectangleJpegStream:
@@ -36,161 +38,151 @@ class DirtyRectangleJpegStream:
     @asynccontextmanager
     async def subscribe(self) -> AsyncGenerator[AsyncIterator[bytes]]:
         async with self._source.subscribe() as frames:
-            yield self._packets(frames)
+            yield _EncoderPipeline(frames, self._settings).packets()
 
     async def close(self) -> None:
         """Close the wrapped frame stream."""
         await self._source.close()
 
-    async def _packets(self, frames: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
-        loop = asyncio.get_running_loop()
-        input_queue: queue.Queue[bytes] = queue.Queue(maxsize=1)
-        output_queue: asyncio.Queue[EncodedUpdate | Exception | object] = asyncio.Queue(
-            maxsize=1
-        )
-        producer_done = threading.Event()
-        stop = threading.Event()
-        output_slot = threading.Semaphore(1)
-        producer_error: list[Exception] = []
-        worker = threading.Thread(
-            target=_encoder_worker,
-            args=(
-                input_queue,
-                output_queue,
-                loop,
-                output_slot,
-                producer_done,
-                producer_error,
-                stop,
-                self._settings,
-            ),
+
+class _EncoderPipeline:
+    """Turn one subscription's frames into packets on a worker thread.
+
+    Encoding costs more than the browser's gap between frames, so the pipeline
+    holds exactly two things back: the frame queue keeps only the newest frame,
+    and the encoder picks up the next one only once the consumer has taken the
+    previous packet. A slow consumer therefore skips frames instead of building
+    a backlog of stale ones.
+    """
+
+    _POLL_INTERVAL = 0.05
+    _THREAD_STOP_TIMEOUT = 2
+
+    def __init__(
+        self, frames: AsyncIterator[bytes], settings: DirtyRectangleSettings
+    ) -> None:
+        self._frames = frames
+        self._settings = settings
+        self._loop = asyncio.get_running_loop()
+        self._pending: queue.Queue[bytes] = queue.Queue(maxsize=1)
+        self._updates: asyncio.Queue[_Update] = asyncio.Queue(maxsize=1)
+        self._free_slot = threading.Semaphore(1)
+        self._frames_done = threading.Event()
+        self._frames_error: Exception | None = None
+        self._stopped = threading.Event()
+
+    async def packets(self) -> AsyncIterator[bytes]:
+        """Yield one packet per encoded update until the frames run out."""
+        encoder = threading.Thread(
+            target=self._encode_frames,
             name="screencast:dirty-jpeg-encoder",
             daemon=True,
         )
-        worker.start()
-        producer = asyncio.create_task(
-            _produce_latest_frames(
-                frames,
-                input_queue,
-                producer_done,
-                producer_error,
-            ),
-            name="screencast:dirty-jpeg-input",
+        encoder.start()
+        reader = asyncio.create_task(
+            self._read_frames(), name="screencast:dirty-jpeg-input"
         )
         try:
             while True:
-                item = await output_queue.get()
-                if item is _STREAM_ENDED:
-                    output_slot.release()
+                update = await self._updates.get()
+                if update is _STREAM_ENDED:
+                    self._free_slot.release()
                     return
-                if isinstance(item, Exception):
-                    output_slot.release()
-                    raise item
-                assert isinstance(item, EncodedUpdate)
-                logger.debug(
-                    "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
-                    "dirty=%.1f%% patches=%d payload=%dB",
-                    item.metrics.decode_ms,
-                    item.metrics.diff_ms,
-                    item.metrics.encode_ms,
-                    item.metrics.dirty_ratio * 100,
-                    item.metrics.patches,
-                    len(item.packet),
-                )
+                if isinstance(update, Exception):
+                    self._free_slot.release()
+                    raise update
+                assert isinstance(update, EncodedUpdate)
+                _log_update(update)
                 try:
-                    yield item.packet
+                    yield update.packet
                 finally:
-                    output_slot.release()
+                    self._free_slot.release()
         finally:
-            stop.set()
-            producer.cancel()
-            await asyncio.gather(producer, return_exceptions=True)
-            await _wait_for_thread(worker)
+            self._stopped.set()
+            await cancel_and_wait(reader)
+            await self._join(encoder)
 
-
-async def _produce_latest_frames(
-    frames: AsyncIterator[bytes],
-    input_queue: queue.Queue[bytes],
-    done: threading.Event,
-    errors: list[Exception],
-) -> None:
-    try:
-        async for frame in frames:
-            _put_latest_frame(input_queue, frame)
-    except asyncio.CancelledError:
-        raise
-    except Exception as error:
-        errors.append(error)
-    finally:
-        done.set()
-
-
-def _put_latest_frame(input_queue: queue.Queue[bytes], frame: bytes) -> None:
-    try:
-        input_queue.put_nowait(frame)
-        return
-    except queue.Full:
-        pass
-    with suppress(queue.Empty):
-        input_queue.get_nowait()
-    input_queue.put_nowait(frame)
-
-
-def _encoder_worker(
-    input_queue: queue.Queue[bytes],
-    output_queue: asyncio.Queue[EncodedUpdate | Exception | object],
-    loop: asyncio.AbstractEventLoop,
-    output_slot: threading.Semaphore,
-    producer_done: threading.Event,
-    producer_error: list[Exception],
-    stop: threading.Event,
-    settings: DirtyRectangleSettings,
-) -> None:
-    previous: RgbFrame | None = None
-    while _acquire_output_slot(output_slot, stop):
+    async def _read_frames(self) -> None:
         try:
-            frame = input_queue.get(timeout=0.05)
-        except queue.Empty:
-            if not producer_done.is_set():
-                output_slot.release()
-                continue
-            terminal = producer_error[0] if producer_error else _STREAM_ENDED
-            _send_to_event_loop(loop, output_queue, terminal)
-            return
-
-        try:
-            previous, packet, metrics = encode_update(frame, previous, settings)
+            async for frame in self._frames:
+                self._offer(frame)
+        except asyncio.CancelledError:
+            raise
         except Exception as error:
-            _send_to_event_loop(loop, output_queue, error)
-            return
-        if packet is None:
-            output_slot.release()
-            continue
-        _send_to_event_loop(loop, output_queue, EncodedUpdate(packet, metrics))
+            self._frames_error = error
+        finally:
+            self._frames_done.set()
+
+    def _offer(self, frame: bytes) -> None:
+        """Queue a frame, dropping the one the encoder has not picked up yet."""
+        try:
+            self._pending.put_nowait(frame)
+        except queue.Full:
+            with suppress(queue.Empty):
+                self._pending.get_nowait()
+            self._pending.put_nowait(frame)
+
+    def _encode_frames(self) -> None:
+        """Encode frames on the worker thread until the stream ends or fails."""
+        previous: RgbFrame | None = None
+        while self._acquire_slot():
+            frame = self._next_frame()
+            if frame is None:
+                if not self._frames_done.is_set():
+                    self._free_slot.release()
+                    continue
+                self._publish(self._frames_error or _STREAM_ENDED)
+                return
+            try:
+                previous, packet, metrics = encode_update(
+                    frame, previous, self._settings
+                )
+            except Exception as error:
+                self._publish(error)
+                return
+            if packet is None:
+                # Nothing changed, so there is nothing to send and the consumer
+                # keeps waiting on the slot it never got to use.
+                self._free_slot.release()
+                continue
+            self._publish(EncodedUpdate(packet, metrics))
+
+    def _acquire_slot(self) -> bool:
+        """Wait for the consumer to take the previous packet, unless stopped."""
+        while not self._stopped.is_set():
+            if self._free_slot.acquire(timeout=self._POLL_INTERVAL):
+                return True
+        return False
+
+    def _next_frame(self) -> bytes | None:
+        try:
+            return self._pending.get(timeout=self._POLL_INTERVAL)
+        except queue.Empty:
+            return None
+
+    def _publish(self, update: _Update) -> None:
+        with suppress(RuntimeError):
+            self._loop.call_soon_threadsafe(self._updates.put_nowait, update)
+
+    async def _join(self, encoder: threading.Thread) -> None:
+        deadline = self._loop.time() + self._THREAD_STOP_TIMEOUT
+        while encoder.is_alive() and self._loop.time() < deadline:
+            await asyncio.sleep(0.01)
+        if encoder.is_alive():
+            logger.warning(
+                "Dirty JPEG encoder thread did not stop within %d seconds",
+                self._THREAD_STOP_TIMEOUT,
+            )
 
 
-def _acquire_output_slot(
-    output_slot: threading.Semaphore,
-    stop: threading.Event,
-) -> bool:
-    while not stop.is_set():
-        if output_slot.acquire(timeout=0.05):
-            return True
-    return False
-
-
-def _send_to_event_loop(
-    loop: asyncio.AbstractEventLoop,
-    output_queue: asyncio.Queue[EncodedUpdate | Exception | object],
-    item: EncodedUpdate | Exception | object,
-) -> None:
-    with suppress(RuntimeError):
-        loop.call_soon_threadsafe(output_queue.put_nowait, item)
-
-
-async def _wait_for_thread(worker: threading.Thread) -> None:
-    deadline = asyncio.get_running_loop().time() + 2
-    while worker.is_alive() and asyncio.get_running_loop().time() < deadline:
-        await asyncio.sleep(0.01)
-    if worker.is_alive():
-        logger.warning("Dirty JPEG encoder thread did not stop within two seconds")
+def _log_update(update: EncodedUpdate) -> None:
+    logger.debug(
+        "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
+        "dirty=%.1f%% patches=%d payload=%dB",
+        update.metrics.decode_ms,
+        update.metrics.diff_ms,
+        update.metrics.encode_ms,
+        update.metrics.dirty_ratio * 100,
+        update.metrics.patches,
+        len(update.packet),
+    )

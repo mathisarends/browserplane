@@ -14,7 +14,6 @@ from browser_worker.features.browser.presentation.errors import (
     BROWSER_NOT_FOUND,
     BROWSER_STARTUP_FAILED,
 )
-from browser_worker.features.browser.presentation.mapper import to_browser_response
 from browser_worker.features.browser.presentation.schemas import (
     BrowserResponse,
     CreateBrowserRequest,
@@ -39,7 +38,9 @@ async def create_browser(
 ) -> BrowserResponse:
     browser_id = await service.create(request.id, request.generation)
     await downloads.start(browser_id)
-    return to_browser_response(service.inspect(), settings.public_base_url)
+    return BrowserResponse.from_browser(
+        browser=service.inspect(), public_base_url=settings.public_base_url
+    )
 
 
 @browser_router.get(
@@ -51,7 +52,9 @@ async def inspect_browser(
     service: FromDishka[BrowserService],
     settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
-    return to_browser_response(service.inspect(), settings.public_base_url)
+    return BrowserResponse.from_browser(
+        browser=service.inspect(), public_base_url=settings.public_base_url
+    )
 
 
 @browser_router.websocket("/browser/{browser_id}/cdp")

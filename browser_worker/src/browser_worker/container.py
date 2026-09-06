@@ -18,11 +18,7 @@ def create_container(
         if provider_type not in overridden_types
     ]
     return make_async_container(
-        *_create_core_providers(),
+        WorkspaceProvider(),
         *feature_providers,
         *provider_overrides,
     )
-
-
-def _create_core_providers() -> tuple[Provider, ...]:
-    return (WorkspaceProvider(),)

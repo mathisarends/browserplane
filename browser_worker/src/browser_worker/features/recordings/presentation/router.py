@@ -5,7 +5,6 @@ from fastapi import APIRouter, status
 from fastapi.responses import FileResponse
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
-from browser_worker.features.recordings.application.models import RecordingFile
 from browser_worker.features.recordings.application.service import RecordingService
 from browser_worker.features.recordings.presentation.errors import (
     RECORDING_ALREADY_EXISTS,
@@ -14,7 +13,6 @@ from browser_worker.features.recordings.presentation.errors import (
     RECORDING_NOT_FOUND,
     RECORDING_NOT_RUNNING,
 )
-from browser_worker.features.recordings.presentation.mapper import to_recording_response
 from browser_worker.features.recordings.presentation.schemas import RecordingResponse
 from browser_worker.presentation.api_errors import api_error_responses
 
@@ -36,7 +34,7 @@ async def start_recording(
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
     recording = await service.start(browser_id)
-    return to_recording_response(recording)
+    return RecordingResponse.model_validate(recording)
 
 
 @recording_router.post(
@@ -54,7 +52,7 @@ async def stop_recording(
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
     recording = await service.stop(browser_id, recording_id)
-    return to_recording_response(recording)
+    return RecordingResponse.model_validate(recording)
 
 
 @recording_router.get(
@@ -67,8 +65,7 @@ async def inspect_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    recording = service.get(browser_id, recording_id)
-    return to_recording_response(recording)
+    return RecordingResponse.model_validate(service.get(browser_id, recording_id))
 
 
 @recording_router.get(
@@ -87,10 +84,6 @@ async def download_recording(
 ) -> FileResponse:
     """Download the completed recording as one video file."""
     video = service.file(browser_id, recording_id)
-    return _to_file_response(video)
-
-
-def _to_file_response(video: RecordingFile) -> FileResponse:
     return FileResponse(
         video.path,
         media_type=video.media_type,

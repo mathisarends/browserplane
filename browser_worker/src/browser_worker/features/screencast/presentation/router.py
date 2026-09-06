@@ -49,18 +49,23 @@ async def browser_screencast(
     on the wire - which makes them one endpoint with a mode rather than three
     routes that would each have to be kept in step with the others.
     """
-    frames = await resolve_frames(websocket, browser_id, browsers, screencasts)
+    frames = await resolve_frames(
+        websocket,
+        browser_id=browser_id,
+        browsers=browsers,
+        screencasts=screencasts,
+    )
     if frames is None:
         return
     await stream_to_websocket(
         websocket,
-        _packaged(frames, mode, settings),
+        _packaged(frames, mode=mode, settings=settings),
         name=f"Browser screencast ({mode})",
     )
 
 
 def _packaged(
-    frames: FrameStream, mode: ScreencastMode, settings: DirtyRectangleSettings
+    frames: FrameStream, *, mode: ScreencastMode, settings: DirtyRectangleSettings
 ) -> FrameStream:
     match mode:
         case ScreencastMode.JPEG:

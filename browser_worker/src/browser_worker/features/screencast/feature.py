@@ -3,7 +3,7 @@ from browser_worker.features.screencast.presentation.router import screencast_ro
 from browser_worker.shared.feature import Feature
 
 feature = Feature(
-    name='screencast',
+    name="screencast",
     routers=(screencast_router,),
     providers=(ScreencastProvider,),
 )

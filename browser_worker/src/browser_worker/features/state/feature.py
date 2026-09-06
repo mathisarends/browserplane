@@ -4,7 +4,7 @@ from browser_worker.features.state.presentation.router import browser_state_rout
 from browser_worker.shared.feature import Feature
 
 feature = Feature(
-    name='state',
+    name="state",
     routers=(browser_state_router,),
     providers=(BrowserStateProvider,),
     api_errors=API_ERRORS,

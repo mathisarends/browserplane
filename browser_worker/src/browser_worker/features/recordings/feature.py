@@ -4,7 +4,7 @@ from browser_worker.features.recordings.presentation.router import recording_rou
 from browser_worker.shared.feature import Feature
 
 feature = Feature(
-    name='recordings',
+    name="recordings",
     routers=(recording_router,),
     providers=(RecordingProvider,),
     api_errors=API_ERRORS,

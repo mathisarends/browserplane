@@ -7,7 +7,6 @@ from fastapi.responses import FileResponse
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
 from browser_worker.features.downloads.application.service import DownloadService
 from browser_worker.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
-from browser_worker.features.downloads.presentation.mapper import to_download_response
 from browser_worker.features.downloads.presentation.schemas import DownloadResponse
 from browser_worker.presentation.api_errors import api_error_responses
 
@@ -25,7 +24,10 @@ async def list_downloads(
     service: FromDishka[DownloadService],
 ) -> list[DownloadResponse]:
     response.headers["Cache-Control"] = "no-store"
-    return [to_download_response(item) for item in service.list(browser_id)]
+    return [
+        DownloadResponse.model_validate(download)
+        for download in service.list(browser_id)
+    ]
 
 
 @download_router.delete(

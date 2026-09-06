@@ -4,7 +4,7 @@ from browser_worker.features.downloads.presentation.router import download_route
 from browser_worker.shared.feature import Feature
 
 feature = Feature(
-    name='downloads',
+    name="downloads",
     routers=(download_router,),
     providers=(DownloadProvider,),
     api_errors=API_ERRORS,

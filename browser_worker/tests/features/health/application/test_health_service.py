@@ -11,8 +11,8 @@ def test_readiness_checks_worker_capabilities(tmp_path: Path) -> None:
     browser = FakeBrowserProcess()
     service = HealthService(Workspace(tmp_path), browser)
 
-    assert service.liveness().status is HealthStatus.OK
-    assert service.readiness().status is HealthStatus.OK
+    assert service.liveness() is HealthStatus.OK
+    assert service.readiness() is HealthStatus.OK
 
     browser.available = False
-    assert service.readiness().status is HealthStatus.NOT_READY
+    assert service.readiness() is HealthStatus.NOT_READY

@@ -21,6 +21,7 @@ _INTERNAL_ERROR_CLOSE_CODE = 1011
 
 async def resolve_frames(
     websocket: WebSocket,
+    *,
     browser_id: UUID,
     browsers: BrowserService,
     screencasts: ScreencastService,

@@ -1,7 +1,10 @@
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
+
+from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +234,51 @@ class Fmp4Livestream:
         self._init_boxes.clear()
         self._fragment_boxes.clear()
         _discard_queued_chunks(self._frame_queue)
+
+
+class Fmp4FrameStream:
+    """Adapt complete image frames to fragmented MP4 chunks.
+
+    Every subscription drives its own encoder, so a late consumer receives an
+    init segment before the fragments that depend on it.
+    """
+
+    def __init__(self, source: FrameStream) -> None:
+        self._source = source
+
+    @contextlib.asynccontextmanager
+    async def subscribe(self) -> AsyncGenerator[AsyncIterator[bytes]]:
+        livestream = Fmp4Livestream()
+        publisher: asyncio.Task[None] | None = None
+        try:
+            await livestream.start()
+            async with (
+                self._source.subscribe() as frames,
+                livestream.stream() as chunks,
+            ):
+                publisher = asyncio.create_task(
+                    _publish_frames(frames, livestream),
+                    name="screencast:fmp4-publisher",
+                )
+                yield chunks
+        finally:
+            if publisher is not None:
+                await cancel_and_wait(publisher)
+            await livestream.stop()
+
+    async def close(self) -> None:
+        """Close the wrapped frame stream."""
+        await self._source.close()
+
+
+async def _publish_frames(
+    frames: AsyncIterator[bytes], livestream: Fmp4Livestream
+) -> None:
+    try:
+        async for frame in frames:
+            await livestream.publish_frame(frame)
+    finally:
+        await livestream.stop()
 
 
 def _build_ffmpeg_command(keyframe_interval_seconds: int) -> list[str]:

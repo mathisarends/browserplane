@@ -12,7 +12,6 @@ from browser_worker.features.recordings.application.exceptions import (
     RecordingNotRunningException,
 )
 from browser_worker.features.recordings.application.models import (
-    RecordedVideo,
     Recording,
     RecordingFile,
     RecordingState,
@@ -62,7 +61,7 @@ class RecordingService:
 
     async def stop(self, browser_id: UUID, recording_id: UUID) -> Recording:
         async with self._lock:
-            recording = self._get(browser_id, recording_id)
+            recording = self.get(browser_id, recording_id)
             recorder = self._recorder
             if recording.state is not RecordingState.RECORDING or recorder is None:
                 raise RecordingNotRunningException
@@ -94,10 +93,25 @@ class RecordingService:
             return completed
 
     def get(self, browser_id: UUID, recording_id: UUID) -> Recording:
-        return self._get(browser_id, recording_id)
+        recording = self._recording
+        if (
+            recording is None
+            or recording.id != recording_id
+            or recording.browser_id != browser_id
+        ):
+            raise RecordingNotFoundException
+        return recording
 
     def file(self, browser_id: UUID, recording_id: UUID) -> RecordingFile:
-        return _to_file(recording_id, self._completed_video(browser_id, recording_id))
+        recording = self.get(browser_id, recording_id)
+        video = recording.video
+        if recording.state is not RecordingState.COMPLETED or video is None:
+            raise RecordingNotCompletedException
+        return RecordingFile(
+            path=video.path,
+            media_type=video.format.media_type,
+            filename=f"{recording_id}.{video.format.value}",
+        )
 
     async def release(self) -> None:
         """Close the active recorder and forget the in-memory history.
@@ -109,31 +123,3 @@ class RecordingService:
             self._recording = None
             if recorder is not None:
                 await recorder.close()
-
-    def _completed_video(
-        self,
-        browser_id: UUID,
-        recording_id: UUID,
-    ) -> RecordedVideo:
-        recording = self._get(browser_id, recording_id)
-        if recording.state is not RecordingState.COMPLETED or recording.video is None:
-            raise RecordingNotCompletedException
-        return recording.video
-
-    def _get(self, browser_id: UUID, recording_id: UUID) -> Recording:
-        recording = self._recording
-        if (
-            recording is None
-            or recording.id != recording_id
-            or recording.browser_id != browser_id
-        ):
-            raise RecordingNotFoundException
-        return recording
-
-
-def _to_file(recording_id: UUID, video: RecordedVideo) -> RecordingFile:
-    return RecordingFile(
-        path=video.path,
-        media_type=video.format.media_type,
-        filename=f"{recording_id}.{video.format.value}",
-    )

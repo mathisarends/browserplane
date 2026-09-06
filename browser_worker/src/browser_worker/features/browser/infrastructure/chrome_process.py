@@ -27,7 +27,7 @@ class ChromeProcess(BrowserProcess):
         return _find_executable(self._settings) is not None
 
     async def start(self) -> str:
-        executable = self._find_executable()
+        executable = self._require_executable()
         self._profile = tempfile.TemporaryDirectory(prefix="browser-worker-")
         profile_path = Path(self._profile.name)
         args = [
@@ -98,7 +98,7 @@ class ChromeProcess(BrowserProcess):
             await asyncio.sleep(0.05)
         raise BrowserStartupException("Timed out waiting for Chromium's CDP endpoint")
 
-    def _find_executable(self) -> str:
+    def _require_executable(self) -> str:
         executable = _find_executable(self._settings)
         if executable is None:
             raise BrowserStartupException(

@@ -28,9 +28,7 @@ from browser_worker.features.screencast.infrastructure.events import (
     VisibleTarget,
 )
 from browser_worker.features.screencast.infrastructure.settings import ScreencastOptions
-from browser_worker.features.screencast.infrastructure.tasks import (
-    cancel_and_wait,
-)
+from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)
 

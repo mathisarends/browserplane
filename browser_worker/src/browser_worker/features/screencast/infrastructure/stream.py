@@ -10,9 +10,7 @@ from browser_worker.features.screencast.infrastructure.cdp import (
     ActiveTabBridge,
 )
 from browser_worker.features.screencast.infrastructure.settings import ScreencastOptions
-from browser_worker.features.screencast.infrastructure.tasks import (
-    cancel_and_wait,
-)
+from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +41,6 @@ class CdpFrameStream(FrameStream):
         self._subscribers: set[_Subscriber] = set()
         self._latest: bytes | None = None
         self._lock = asyncio.Lock()
-
-    @property
-    def cdp_url(self) -> str:
-        return self._cdp_url
 
     @asynccontextmanager
     async def subscribe(self) -> AsyncGenerator[AsyncGenerator[bytes]]:
@@ -80,32 +74,28 @@ class CdpFrameStream(FrameStream):
     async def _leave(self, subscriber: _Subscriber) -> None:
         async with self._lock:
             self._subscribers.discard(subscriber)
-            if self._subscribers:
-                return
-            publisher, self._publisher = self._publisher, None
-            client, self._client = self._client, None
-            self._bridge = None
-            if publisher is not None:
-                await cancel_and_wait(publisher)
-            if client is not None:
-                with suppress(Exception):
-                    await client.disconnect()
+            if not self._subscribers:
+                await self._disconnect()
 
     async def close(self) -> None:
         """Stop publishing and disconnect even while consumers are subscribed."""
         async with self._lock:
-            publisher, self._publisher = self._publisher, None
-            client, self._client = self._client, None
-            self._bridge = None
+            await self._disconnect()
             self._latest = None
-            if publisher is not None:
-                await cancel_and_wait(publisher)
-            if client is not None:
-                with suppress(Exception):
-                    await client.disconnect()
             error = ScreencastStoppedException("Browser was released")
             for subscriber in tuple(self._subscribers):
                 subscriber.fail(error)
+
+    async def _disconnect(self) -> None:
+        """Stop the publisher and drop the connection; the caller holds the lock."""
+        publisher, self._publisher = self._publisher, None
+        client, self._client = self._client, None
+        self._bridge = None
+        if publisher is not None:
+            await cancel_and_wait(publisher)
+        if client is not None:
+            with suppress(Exception):
+                await client.disconnect()
 
     async def _request_frame(self) -> None:
         """Ask the browser for a frame a joining consumer could not be given.

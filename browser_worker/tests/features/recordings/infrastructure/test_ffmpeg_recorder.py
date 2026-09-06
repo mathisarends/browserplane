@@ -7,8 +7,8 @@ from tests.fakes import FakeFrameStream
 from browser_worker.features.recordings.application.exceptions import (
     RecordingFailedException,
 )
-from browser_worker.features.recordings.infrastructure.ffmpeg import Ffmpeg
-from browser_worker.features.recordings.infrastructure.ffmpeg_recorder import (
+from browser_worker.features.recordings.infrastructure.ffmpeg import (
+    Ffmpeg,
     FfmpegScreenRecorder,
 )
 from browser_worker.features.recordings.infrastructure.settings import RecordingSettings

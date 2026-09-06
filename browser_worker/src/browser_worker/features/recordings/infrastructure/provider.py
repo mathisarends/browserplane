@@ -8,7 +8,7 @@ from browser_worker.features.recordings.application.service import (
     RecorderFactory,
     RecordingService,
 )
-from browser_worker.features.recordings.infrastructure.ffmpeg_recorder import (
+from browser_worker.features.recordings.infrastructure.ffmpeg import (
     FfmpegScreenRecorder,
 )
 from browser_worker.features.recordings.infrastructure.settings import RecordingSettings
