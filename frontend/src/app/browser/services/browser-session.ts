@@ -16,7 +16,7 @@ import {
   type DirtyRectangleEvent,
   type DirtyRectangleScreencastState,
 } from "./dirty-rectangle-screencast";
-import { ScreencastModeState } from "./screencast-mode";
+import { ScreencastModeState, type ScreencastMode } from "./screencast-mode";
 import {
   BackendBrowserClient,
   WebSocketRpcTransport,
@@ -269,9 +269,10 @@ export class BrowserSession {
     this.transport = transport;
     this.client = client;
     await transport.connect();
-    const screencast = socketUrl(session.screencast_path);
-    await (this.transportMode() === "dirty-rectangles"
-      ? this.connectDirtyRectangleScreencast(dirtyRectangleUrl(screencast))
+    const mode = this.transportMode();
+    const screencast = screencastUrl(session.screencast_path, mode);
+    await (mode === "dirty-rectangles"
+      ? this.connectDirtyRectangleScreencast(screencast)
       : this.connectScreencast(screencast));
     this.connectionState.set("connected");
     void this.receiveNotifications();
@@ -490,10 +491,10 @@ function socketUrl(path: string): URL {
   return url;
 }
 
-/** The changed-tile stream lives one level below the full-frame screencast. */
-function dirtyRectangleUrl(screencast: URL): URL {
-  const url = new URL(screencast);
-  url.pathname = `${url.pathname.replace(/\/$/, "")}/dirty-rectangles`;
+/** One screencast endpoint serves every packaging; the mode picks one. */
+function screencastUrl(path: string, mode: ScreencastMode): URL {
+  const url = socketUrl(path);
+  url.searchParams.set("mode", mode);
   return url;
 }
 
