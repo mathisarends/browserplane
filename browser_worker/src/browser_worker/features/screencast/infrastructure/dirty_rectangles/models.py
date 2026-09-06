@@ -14,6 +14,7 @@ class EncodingMetrics:
     diff_ms: float
     encode_ms: float
     dirty_ratio: float
+    patches: int
 
 
 @dataclass(frozen=True, slots=True)

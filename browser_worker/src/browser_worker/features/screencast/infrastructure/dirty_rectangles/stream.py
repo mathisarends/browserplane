@@ -89,11 +89,12 @@ class DirtyRectangleJpegStream:
                 assert isinstance(item, EncodedUpdate)
                 logger.debug(
                     "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
-                    "dirty=%.1f%% payload=%dB",
+                    "dirty=%.1f%% patches=%d payload=%dB",
                     item.metrics.decode_ms,
                     item.metrics.diff_ms,
                     item.metrics.encode_ms,
                     item.metrics.dirty_ratio * 100,
+                    item.metrics.patches,
                     len(item.packet),
                 )
                 try:
