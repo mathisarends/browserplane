@@ -162,7 +162,8 @@ first, so restored tabs navigate logged in. See
 
 ```text
 ws /api/v1/sessions/{session_id}/tunnel      JSON-RPC 2.0, relayed to CDP
-ws /api/v1/browser/{browser_id}/screencast   binary JPEG frames from the worker
+ws /api/v1/browser/{browser_id}/screencast   captured frames from the worker
+   ?mode=jpeg | dirty-rectangles | fmp4       how those frames are packaged
 ```
 
 ```json
