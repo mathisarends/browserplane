@@ -117,10 +117,9 @@ class SessionService:
     async def mount_authentication_profile(
         self, session_id: UUID, profile_id: UUID
     ) -> None:
-        session, profile = await asyncio.gather(
-            self.get_active(session_id),
-            self.get_authentication_profile(profile_id),
-        )
+        # AsyncSession is request-scoped and does not allow concurrent DB work.
+        session = await self.get_active(session_id)
+        profile = await self.get_authentication_profile(profile_id)
         await self._browser_state.mount_authentication(
             session.browser, profile.authentication_state
         )
@@ -202,10 +201,8 @@ class SessionService:
     async def update_authentication_profile(
         self, profile_id: UUID, *, session_id: UUID, name: str
     ) -> AuthenticationProfile:
-        current, session = await asyncio.gather(
-            self.get_authentication_profile(profile_id),
-            self.get_active(session_id),
-        )
+        current = await self.get_authentication_profile(profile_id)
+        session = await self.get_active(session_id)
         state = await self._browser_state.capture_authentication(session.browser)
         return await self._authentication_profiles.save(
             AuthenticationProfile(

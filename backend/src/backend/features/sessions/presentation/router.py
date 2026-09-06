@@ -416,7 +416,7 @@ async def session_tunnel(
             session_id,
             session.owner_id,
             session.browser_id,
-            session.browser.slot,
+            session.browser.slot.id,
             session.lease_generation,
             session.expires_at.isoformat() if session.expires_at else None,
         )
@@ -438,10 +438,7 @@ async def session_tunnel(
         # State capture is an independent HTTP operation. Keep the lease alive
         # when this transport drops so state can still be read from the worker.
         # DELETE /sessions/{id} or the TTL releases the browser.
-        logger.info(
-            "Session tunnel disconnected; lease remains active session_id=%s",
-            session_id,
-        )
+        await _log_disconnect(lease_keeper, session_id)
 
 
 @session_router.websocket("/sessions/{session_id}/screencast")
@@ -458,7 +455,7 @@ async def session_screencast(
         logger.info(
             "Screencast connected session_id=%s slot=%s",
             session_id,
-            session.browser.slot,
+            session.browser.slot.id,
         )
         try:
             await proxy_stream(websocket, url, name="Screencast")
@@ -480,7 +477,7 @@ async def session_fmp4_screencast(
         logger.info(
             "fMP4 screencast connected session_id=%s slot=%s",
             session_id,
-            session.browser.slot,
+            session.browser.slot.id,
         )
         try:
             await proxy_stream(websocket, url, name="fMP4 screencast")
@@ -502,3 +499,25 @@ async def _resolve(
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")
         return None
+
+
+async def _log_disconnect(lease_keeper: SessionLeaseKeeper, session_id: UUID) -> None:
+    """Say when the unheartbeated lease falls to the reaper, not just that it will."""
+    try:
+        session = await lease_keeper.resolve(session_id)
+    except (
+        LeaseNotFoundException,
+        BrowserNotFoundException,
+        SessionNotActiveException,
+    ):
+        logger.info(
+            "Session tunnel disconnected; lease already gone session_id=%s", session_id
+        )
+        return
+    logger.info(
+        "Session tunnel disconnected; no more heartbeats, lease left to its TTL "
+        "session_id=%s expires_at=%s reclaim_after=%s",
+        session_id,
+        session.expires_at.isoformat() if session.expires_at else None,
+        session.reclaim_after.isoformat() if session.reclaim_after else None,
+    )
