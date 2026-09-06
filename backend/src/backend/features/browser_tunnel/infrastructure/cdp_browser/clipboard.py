@@ -1,23 +1,23 @@
 import json
 import logging
 
+from cdpify import CDPSession
+
 from backend.features.browser_tunnel.application import BrowserClipboard
-from backend.features.browser_tunnel.infrastructure.cdp_browser.active_target import (
-    ActiveTarget,
-)
 
 logger = logging.getLogger(__name__)
 
 _CONTROL_MODIFIER = 2
 _VIRTUAL_KEY_C = 67
 
+
 class ClipboardUnavailableError(RuntimeError):
     """Raised when the page refuses to hand over or accept clipboard text."""
 
 
 class CdpClipboard(BrowserClipboard):
-    def __init__(self, target: ActiveTarget) -> None:
-        self._target = target
+    def __init__(self, session: CDPSession) -> None:
+        self._session = session
 
     async def copy(self) -> str:
         """Run the page's own copy command and hand the copied text back.
@@ -26,9 +26,9 @@ class CdpClipboard(BrowserClipboard):
         is authoritative afterwards, but reading it can be denied, so the raw
         selection serves as a fallback.
         """
-        session = self._target.session()
+
         for event_type in ("rawKeyDown", "keyUp"):
-            await session.input.dispatch_key_event(
+            await self._session.input.dispatch_key_event(
                 type=event_type,
                 key="c",
                 code="KeyC",
@@ -44,7 +44,7 @@ class CdpClipboard(BrowserClipboard):
         return copied or await self._selection_text()
 
     async def read(self) -> str:
-        result = await self._target.session().runtime.evaluate(
+        result = await self._session.runtime.evaluate(
             expression="navigator.clipboard.readText()",
             await_promise=True,
             return_by_value=True,
@@ -55,7 +55,7 @@ class CdpClipboard(BrowserClipboard):
         return str(result.result.value or "")
 
     async def write(self, text: str) -> None:
-        result = await self._target.session().runtime.evaluate(
+        result = await self._session.runtime.evaluate(
             expression="""
 ((text) => {
   const active = document.activeElement;
@@ -101,7 +101,7 @@ class CdpClipboard(BrowserClipboard):
             raise ClipboardUnavailableError("The page denied clipboard write access")
 
     async def _selection_text(self) -> str:
-        result = await self._target.session().runtime.evaluate(
+        result = await self._session.runtime.evaluate(
             expression="""
 (() => {
   const active = document.activeElement;

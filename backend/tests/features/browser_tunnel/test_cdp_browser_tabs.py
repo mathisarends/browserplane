@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -6,12 +7,17 @@ from backend.features.browser_tunnel.infrastructure.cdp_browser.tabs import CdpT
 
 
 def page(tab_id: str) -> SimpleNamespace:
-    return SimpleNamespace(target_id=tab_id, title=tab_id, url="about:blank")
+    return SimpleNamespace(
+        target_id=tab_id, title=tab_id, url="about:blank", type="page"
+    )
 
 
 class FakeTargetDomain:
     def __init__(self, pages: list[SimpleNamespace]) -> None:
         self.pages = pages
+
+    async def get_targets(self):
+        return SimpleNamespace(target_infos=self.pages)
 
     async def create_target(self, *, url: str) -> SimpleNamespace:
         created = page("new-tab")
@@ -19,7 +25,7 @@ class FakeTargetDomain:
         return created
 
 
-class FakeActiveTarget:
+class FakeBrowser:
     def __init__(self) -> None:
         self.target_id = "tab-2"
         self.pages = [page("tab-1"), page("tab-2"), page("tab-3")]
@@ -34,12 +40,12 @@ class FakeActiveTarget:
 
 @pytest.mark.asyncio
 async def test_create_places_new_tab_to_the_right_of_the_active_tab() -> None:
-    target = FakeActiveTarget()
+    target = FakeBrowser()
 
     async def select(tab_id: str) -> None:
         target.target_id = tab_id
 
-    tabs = CdpTabs(target, select)
+    tabs = CdpTabs(target.client, lambda: target.target_id, select, AsyncMock())
 
     result = await tabs.create("about:blank")
 
@@ -49,8 +55,8 @@ async def test_create_places_new_tab_to_the_right_of_the_active_tab() -> None:
 
 @pytest.mark.asyncio
 async def test_discovered_tab_is_inserted_to_the_right_of_the_active_tab() -> None:
-    target = FakeActiveTarget()
-    tabs = CdpTabs(target, lambda tab_id: None)
+    target = FakeBrowser()
+    tabs = CdpTabs(target.client, lambda: target.target_id, AsyncMock(), AsyncMock())
     await tabs.list()
     target.pages.insert(0, page("popup"))
 

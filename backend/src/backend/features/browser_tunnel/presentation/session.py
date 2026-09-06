@@ -1,8 +1,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager, suppress
+from contextlib import suppress
 
 import pyrpckit as rpc
 from fastapi import WebSocket, WebSocketDisconnect
@@ -37,9 +36,19 @@ class BrowserSession:
 
     async def run(self) -> None:
         await self._websocket.accept()
-        async with self._streaming():
+        tasks = (
+            asyncio.create_task(self._stream_events()),
+            asyncio.create_task(self._serve_requests()),
+        )
+        try:
             with suppress(WebSocketDisconnect):
-                await self._serve_requests()
+                done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    task.result()
+        finally:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _serve_requests(self) -> None:
         while True:
@@ -52,17 +61,6 @@ class BrowserSession:
             response = await self._server.handle(request)
             if response is not None:
                 await self._send(response)
-
-    @asynccontextmanager
-    async def _streaming(self) -> AsyncGenerator[None]:
-        tasks = (asyncio.create_task(self._stream_events()),)
-        try:
-            yield
-        finally:
-            for task in tasks:
-                task.cancel()
-            with suppress(asyncio.CancelledError):
-                await asyncio.gather(*tasks)
 
     async def _stream_events(self) -> None:
         async for event in self._browser.events():

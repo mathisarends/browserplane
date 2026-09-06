@@ -1,20 +1,18 @@
+from cdpify import CDPSession
 from cdpify.exceptions import CDPCommandException
 
 from backend.features.browser_tunnel.application import BrowserPageMetadata
-from backend.features.browser_tunnel.infrastructure.cdp_browser.active_target import (
-    ActiveTarget,
-)
 
 
 class CdpPageMetadata(BrowserPageMetadata):
-    """Read page metadata through the currently mirrored CDP target."""
+    """Read page metadata through this page's fixed CDP session."""
 
-    def __init__(self, target: ActiveTarget) -> None:
-        self._target = target
+    def __init__(self, session: CDPSession) -> None:
+        self._session = session
 
     async def favicon_url(self) -> str | None:
         try:
-            result = await self._target.session().runtime.evaluate(
+            result = await self._session.runtime.evaluate(
                 expression="""
 (() => {
   const links = Array.from(document.querySelectorAll('link[rel~="icon"][href]'));

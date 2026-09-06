@@ -1,12 +1,11 @@
 import logging
 
+from cdpify import CDPSession
+
 from backend.features.browser_tunnel.application import (
     BrowserInput,
     KeyEventType,
     MouseEventType,
-)
-from backend.features.browser_tunnel.infrastructure.cdp_browser.active_target import (
-    ActiveTarget,
 )
 from backend.features.browser_tunnel.infrastructure.cdp_browser.clipboard import (
     CdpClipboard,
@@ -26,8 +25,8 @@ _CDP_MOUSE_EVENT = {
 
 
 class CdpInput(BrowserInput):
-    def __init__(self, target: ActiveTarget, clipboard: CdpClipboard) -> None:
-        self._target = target
+    def __init__(self, session: CDPSession, clipboard: CdpClipboard) -> None:
+        self._session = session
         self._clipboard = clipboard
 
     async def mouse(
@@ -41,7 +40,7 @@ class CdpInput(BrowserInput):
         modifiers: int,
         click_count: int,
     ) -> None:
-        await self._target.session().input.dispatch_mouse_event(
+        await self._session.input.dispatch_mouse_event(
             type=_CDP_MOUSE_EVENT[event_type],
             x=x,
             y=y,
@@ -54,7 +53,7 @@ class CdpInput(BrowserInput):
     async def scroll(
         self, *, x: float, y: float, delta_x: float, delta_y: float
     ) -> None:
-        await self._target.session().input.dispatch_mouse_event(
+        await self._session.input.dispatch_mouse_event(
             type="mouseWheel",
             x=x,
             y=y,
@@ -78,7 +77,7 @@ class CdpInput(BrowserInput):
         is_keypad: bool,
         is_system_key: bool,
     ) -> None:
-        await self._target.session().input.dispatch_key_event(
+        await self._session.input.dispatch_key_event(
             type=event_type,
             key=key,
             code=code,
@@ -94,7 +93,7 @@ class CdpInput(BrowserInput):
         )
 
     async def insert_text(self, text: str) -> None:
-        await self._target.session().input.insert_text(text=text)
+        await self._session.input.insert_text(text=text)
 
     async def paste(self, text: str) -> None:
         """Put text on the page clipboard and let the page paste it natively.
@@ -102,7 +101,7 @@ class CdpInput(BrowserInput):
         Pasting through the natural Ctrl+V chord keeps the page's own paste handling
         intact, which plain text insertion would bypass.
         """
-        session = self._target.session()
+
         try:
             await self._clipboard.write(text)
         except ClipboardUnavailableError:
@@ -110,7 +109,7 @@ class CdpInput(BrowserInput):
             await self.insert_text(text)
             return
         for event_type in ("rawKeyDown", "keyUp"):
-            await session.input.dispatch_key_event(
+            await self._session.input.dispatch_key_event(
                 type=event_type,
                 key="v",
                 code="KeyV",

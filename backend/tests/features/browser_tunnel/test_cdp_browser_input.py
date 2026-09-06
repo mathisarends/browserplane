@@ -1,14 +1,13 @@
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
+from cdpify import CDPSession
 
 from backend.features.browser_tunnel.application import KeyEventType, MouseEventType
 from backend.features.browser_tunnel.infrastructure.cdp_browser import (
     CdpClipboard,
     CdpInput,
-)
-from backend.features.browser_tunnel.infrastructure.cdp_browser.active_target import (
-    ActiveTarget,
 )
 
 
@@ -32,18 +31,16 @@ class ClipboardRuntime:
         )
 
 
-def recording_target() -> tuple[ActiveTarget, RecordingInput]:
+def recording_session() -> tuple[CDPSession, RecordingInput]:
     input_domain = RecordingInput()
-    target = ActiveTarget()
     session = SimpleNamespace(input=input_domain, runtime=ClipboardRuntime())
-    target.mirror(session, "tab-1")
-    return target, input_domain
+    return cast(CDPSession, session), input_domain
 
 
 @pytest.mark.asyncio
 async def test_mouse_primitives_preserve_the_held_button_during_a_drag() -> None:
-    target, input_domain = recording_target()
-    browser_input = CdpInput(target, CdpClipboard(target))
+    session, input_domain = recording_session()
+    browser_input = CdpInput(session, CdpClipboard(session))
 
     for event_type, x, y, button, buttons in (
         (MouseEventType.DOWN, 10, 20, "left", 1),
@@ -78,8 +75,8 @@ async def test_mouse_primitives_preserve_the_held_button_during_a_drag() -> None
 
 @pytest.mark.asyncio
 async def test_special_key_metadata_is_forwarded_unchanged_to_cdp() -> None:
-    target, input_domain = recording_target()
-    browser_input = CdpInput(target, CdpClipboard(target))
+    session, input_domain = recording_session()
+    browser_input = CdpInput(session, CdpClipboard(session))
 
     await browser_input.key(
         event_type=KeyEventType.RAW_DOWN,
@@ -116,9 +113,9 @@ async def test_special_key_metadata_is_forwarded_unchanged_to_cdp() -> None:
 
 @pytest.mark.asyncio
 async def test_copy_uses_natural_ctrl_c_without_editing_commands() -> None:
-    target, input_domain = recording_target()
+    session, input_domain = recording_session()
 
-    assert await CdpClipboard(target).copy() == "selected text"
+    assert await CdpClipboard(session).copy() == "selected text"
 
     assert [event["type"] for event in input_domain.key_events] == [
         "rawKeyDown",

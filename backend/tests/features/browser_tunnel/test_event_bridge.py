@@ -1,22 +1,17 @@
 import asyncio
-from dataclasses import dataclass
 from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 from cdpify import Client
 from cdpify.domains.target.events import TargetCrashedEvent as CdpTargetCrashedEvent
 from cdpify.domains.target.events import TargetEvent
 
-from backend.features.browser_tunnel.application import TargetCrashed
-from backend.features.browser_tunnel.infrastructure.events import EventBus
-from backend.features.browser_tunnel.infrastructure.listener_event_bridge import (
-    ListenerEventBridge,
+from backend.features.browser_tunnel.application import BrowserEvent, TargetCrashed
+from backend.features.browser_tunnel.infrastructure.events import BrowserEventStream
+from backend.features.browser_tunnel.infrastructure.target_event_bridge import (
+    TargetEventBridge,
 )
-
-
-@dataclass(frozen=True)
-class ExampleEvent:
-    value: int
 
 
 class FakeListenerSource:
@@ -39,32 +34,26 @@ class FakeListenerSource:
         await self.queues[event_name].put(event)
 
 
-class FakePageMetadata:
-    async def favicon_url(self) -> str | None:
-        return "https://example.com/favicon.ico"
-
-
 @pytest.mark.asyncio
-async def test_event_bus_dispatches_typed_events_to_subscribers() -> None:
-    event_bus = EventBus()
-    received: list[int] = []
-
-    async def collect(event: ExampleEvent) -> None:
-        received.append(event.value)
-
-    event_bus.on(ExampleEvent, collect)
-
-    await event_bus.dispatch(ExampleEvent(1))
-    await event_bus.dispatch(ExampleEvent(2))
-
-    assert received == [1, 2]
+async def test_event_stream_delivers_events_to_subscribers() -> None:
+    stream = BrowserEventStream()
+    event = TargetCrashed("tab-1", "crashed", 7)
+    with stream.subscribe() as queue:
+        stream.publish(event)
+        assert await queue.get() == event
 
 
 @pytest.mark.asyncio
 async def test_target_bridge_owns_cdp_listener_registration() -> None:
-    event_bus = EventBus()
+    domain_events: list[BrowserEvent] = []
+    received = asyncio.Event()
+
+    def collect(event: BrowserEvent) -> None:
+        domain_events.append(event)
+        received.set()
+
     source = FakeListenerSource()
-    bridge = ListenerEventBridge(event_bus, FakePageMetadata())
+    bridge = TargetEventBridge(collect, AsyncMock(), AsyncMock(), lambda: None)
     await bridge.start(cast(Client, source))
     try:
         assert source.event_names == {
@@ -78,14 +67,6 @@ async def test_target_bridge_owns_cdp_listener_registration() -> None:
             )
         }
 
-        domain_events: list[object] = []
-        received = asyncio.Event()
-
-        async def collect(event: object) -> None:
-            domain_events.append(event)
-            received.set()
-
-        event_bus.on_all(collect)
         cdp_event = CdpTargetCrashedEvent(
             target_id="tab-1", status="crashed", error_code=7
         )

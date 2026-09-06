@@ -4,9 +4,10 @@ from contextlib import suppress
 
 from cdpify import CDPSession
 from cdpify.domains.runtime.events import BindingCalledEvent, RuntimeEvent
+from cdpify.exceptions import CDPCommandException
 
 from backend.features.browser_tunnel.application import CursorChanged, CursorStyle
-from backend.features.browser_tunnel.infrastructure.events import EventBus
+from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
 
 logger = logging.getLogger(__name__)
 
@@ -43,47 +44,41 @@ _OBSERVER_SOURCE = """
     return hit.isContentEditable || overText(hit, x, y) ? "text" : "default";
   };
 
-  addEventListener(
-    "mousemove",
-    (event) => report(resolve(event.clientX, event.clientY)),
-    { capture: true, passive: true },
-  );
+  if (globalThis.__browserTunnelCursorObserver) {
+    removeEventListener("mousemove", globalThis.__browserTunnelCursorObserver, true);
+  }
+  globalThis.__browserTunnelCursorObserver =
+    (event) => report(resolve(event.clientX, event.clientY));
+  addEventListener("mousemove", globalThis.__browserTunnelCursorObserver,
+    { capture: true, passive: true });
 })();
 """.replace("__BINDING__", _BINDING_NAME)
 
 
 class CursorEventBridge:
-    """Mirror the active page's CSS cursor onto the application event bus.
-
-    A page-side observer resolves the cursor under the pointer and reports it
-    through a CDP binding, which keeps the work out of the command path that
-    querying the computed style per pointer move would need.
-
-    Every frame of the page runs its own observer, so deduplication belongs
-    here rather than in the observer: a frame that suppressed a repeat of what
-    it last reported would keep silent about a cursor another frame has since
-    replaced, leaving the viewer stuck on a stale cursor.
-    """
-
-    def __init__(self, event_bus: EventBus) -> None:
-        self._event_bus = event_bus
+    def __init__(self, publish: PublishEvent) -> None:
+        self._publish = publish
         self._task: asyncio.Task[None] | None = None
         self._target_id: str | None = None
         self._cursor = CursorStyle.DEFAULT
+        self._session: CDPSession | None = None
+        self._script_id: str | None = None
 
     async def start(self, session: CDPSession, target_id: str) -> None:
         await self.stop()
+        self._session = session
         self._target_id = target_id
         self._cursor = CursorStyle.DEFAULT
         await session.runtime.enable()
         await session.runtime.add_binding(
             name=_BINDING_NAME, execution_context_name=_ISOLATED_WORLD
         )
-        await session.page.add_script_to_evaluate_on_new_document(
+        script = await session.page.add_script_to_evaluate_on_new_document(
             source=_OBSERVER_SOURCE,
             world_name=_ISOLATED_WORLD,
             run_immediately=True,
         )
+        self._script_id = script.identifier
         self._task = asyncio.create_task(self._pump(session), name="active-page:cursor")
 
     async def stop(self) -> None:
@@ -94,6 +89,20 @@ class CursorEventBridge:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+
+        session, self._session = self._session, None
+        script_id, self._script_id = self._script_id, None
+        if session is not None:
+            with suppress(CDPCommandException):
+                if script_id is not None:
+                    await session.page.remove_script_to_evaluate_on_new_document(
+                        identifier=script_id
+                    )
+                await session.runtime.remove_binding(name=_BINDING_NAME)
+
+    @property
+    def cursor(self) -> CursorStyle:
+        return self._cursor
 
     async def _pump(self, session: CDPSession) -> None:
         try:
@@ -112,4 +121,4 @@ class CursorEventBridge:
         if target_id is None or cursor == self._cursor:
             return
         self._cursor = cursor
-        await self._event_bus.dispatch(CursorChanged(target_id, cursor))
+        self._publish(CursorChanged(target_id, cursor))

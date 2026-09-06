@@ -5,19 +5,26 @@ from typing import cast
 import pytest
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import CursorChanged, CursorStyle
+from backend.features.browser_tunnel.application import (
+    BrowserEvent,
+    CursorChanged,
+    CursorStyle,
+)
 from backend.features.browser_tunnel.infrastructure.cursor_event_bridge import (
     CursorEventBridge,
 )
-from backend.features.browser_tunnel.infrastructure.events import EventBus
 
 
 class FakePage:
     def __init__(self) -> None:
         self.injected_with: dict | None = None
 
-    async def add_script_to_evaluate_on_new_document(self, **kwargs) -> None:
+    async def add_script_to_evaluate_on_new_document(self, **kwargs):
         self.injected_with = kwargs
+        return SimpleNamespace(identifier="cursor-script")
+
+    async def remove_script_to_evaluate_on_new_document(self, **kwargs) -> None:
+        pass
 
 
 class FakeRuntime:
@@ -30,6 +37,9 @@ class FakeRuntime:
 
     async def add_binding(self, **kwargs) -> None:
         self.binding_with = kwargs
+
+    async def remove_binding(self, **kwargs) -> None:
+        pass
 
 
 class FakeSession:
@@ -47,25 +57,15 @@ class FakeSession:
         await asyncio.Future()
 
 
-async def drain(received: list[CursorChanged], expected: int) -> None:
+async def drain(received: list[BrowserEvent], expected: int) -> None:
     async with asyncio.timeout(1):
         while len(received) < expected:
             await asyncio.sleep(0)
 
 
-async def collect(event_bus: EventBus) -> list[CursorChanged]:
-    received: list[CursorChanged] = []
-
-    async def handler(event: CursorChanged) -> None:
-        received.append(event)
-
-    event_bus.on(CursorChanged, handler)
-    return received
-
-
 @pytest.mark.asyncio
 async def test_cursor_bridge_installs_observer_in_an_isolated_world() -> None:
-    bridge = CursorEventBridge(EventBus())
+    bridge = CursorEventBridge(lambda event: None)
     session = FakeSession()
 
     await bridge.start(cast(CDPSession, session), "tab-1")
@@ -84,9 +84,8 @@ async def test_cursor_bridge_installs_observer_in_an_isolated_world() -> None:
 
 @pytest.mark.asyncio
 async def test_cursor_bridge_dispatches_only_actual_changes() -> None:
-    event_bus = EventBus()
-    received = await collect(event_bus)
-    bridge = CursorEventBridge(event_bus)
+    received: list[BrowserEvent] = []
+    bridge = CursorEventBridge(received.append)
     session = FakeSession("pointer", "pointer", "text")
 
     await bridge.start(cast(CDPSession, session), "tab-1")
@@ -101,9 +100,8 @@ async def test_cursor_bridge_dispatches_only_actual_changes() -> None:
 
 @pytest.mark.asyncio
 async def test_cursor_bridge_falls_back_to_default_for_unknown_cursors() -> None:
-    event_bus = EventBus()
-    received = await collect(event_bus)
-    bridge = CursorEventBridge(event_bus)
+    received: list[BrowserEvent] = []
+    bridge = CursorEventBridge(received.append)
     session = FakeSession("pointer", 'url("evil.png"), pointer')
 
     await bridge.start(cast(CDPSession, session), "tab-1")

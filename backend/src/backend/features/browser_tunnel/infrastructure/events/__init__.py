@@ -1,5 +1,3 @@
-from .bus import EventBus
-from .forwarder import BrowserEventForwarder
-from .models import EventHandler
+from .stream import BrowserEventStream, PublishEvent
 
-__all__ = ["BrowserEventForwarder", "EventBus", "EventHandler"]
+__all__ = ["BrowserEventStream", "PublishEvent"]
