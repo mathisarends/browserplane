@@ -3,12 +3,12 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, delete, select
 
-from backend.features.browsers.application.models import (
+from backend.features.browsers.application.ports import BrowserRepository
+from backend.features.browsers.domain.models import (
     Browser,
     BrowserSlot,
     BrowserState,
 )
-from backend.features.browsers.application.ports import BrowserRepository
 from backend.infrastructure.database.models import BrowserModel
 from backend.infrastructure.database.repository import SqlRepository
 
@@ -43,7 +43,7 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
         pool is an upsert: the fresh row also resets the state, which is what we
         want, because the leases that referenced it are gone.
         """
-        return await self.save_entity(browser)
+        return await super().save(browser)
 
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None:
         return await self.find_by_id(browser_id)

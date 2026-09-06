@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.application.models import Lease
 from backend.features.leases.application.ports import BrowserAllocator, LeaseStore
+from backend.features.leases.domain.models import Lease
 
 logger = logging.getLogger(__name__)
 

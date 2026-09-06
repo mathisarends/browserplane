@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from uuid import UUID
 
-from backend.features.browsers.application.models import Browser, BrowserSlot
+from backend.features.browsers.domain.models import Browser, BrowserSlot
 
 
 class BrowserProvisioner(ABC):

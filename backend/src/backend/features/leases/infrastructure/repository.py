@@ -3,8 +3,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.features.leases.application.models import Lease
 from backend.features.leases.application.ports import LeaseStore
+from backend.features.leases.domain.models import Lease
 from backend.infrastructure.database.models import LeaseModel
 from backend.infrastructure.database.repository import SqlRepository
 
@@ -32,7 +32,7 @@ class SqlLeaseStore(SqlRepository[LeaseModel, Lease], LeaseStore):
         )
 
     async def add(self, lease: Lease) -> None:
-        await self.save_entity(lease)
+        await super().save(lease)
 
     async def list(self) -> tuple[Lease, ...]:
         statement = select(LeaseModel).order_by(LeaseModel.created_at.desc())
@@ -43,4 +43,4 @@ class SqlLeaseStore(SqlRepository[LeaseModel, Lease], LeaseStore):
         return await self.find_by_id(lease_id)
 
     async def remove(self, lease_id: UUID) -> None:
-        await self.delete_entity(lease_id)
+        await super().delete(lease_id)

@@ -29,13 +29,13 @@ class SqlRepository[ModelT: DatabaseModel, DomainT](ABC):
         model = await self._session.scalar(statement)
         return self.to_domain(model) if model is not None else None
 
-    async def save_entity(self, entity: DomainT) -> DomainT:
+    async def save(self, entity: DomainT) -> DomainT:
         model = await self._session.merge(self.to_model(entity))
         await self._session.flush()
         await self._session.refresh(model)
         return self.to_domain(model)
 
-    async def delete_entity(self, entity_id: UUID) -> bool:
+    async def delete(self, entity_id: UUID) -> bool:
         model = await self._session.get(self._model, entity_id)
         if model is None:
             return False

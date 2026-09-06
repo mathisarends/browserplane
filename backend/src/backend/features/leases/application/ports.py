@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from backend.features.leases.application.models import Lease
+from backend.features.leases.domain.models import Lease
 
 
 class LeaseStore(ABC):

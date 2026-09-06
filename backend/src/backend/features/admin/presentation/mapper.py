@@ -3,7 +3,7 @@ from backend.features.admin.presentation.schemas import (
     BrowserLeaseSummary,
     PooledBrowserResponse,
 )
-from backend.features.browsers.application.models import Browser
+from backend.features.browsers.domain.models import Browser
 
 
 def to_pooled_browser_response(pooled: PooledBrowser) -> PooledBrowserResponse:

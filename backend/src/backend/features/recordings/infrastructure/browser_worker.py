@@ -6,7 +6,7 @@ from uuid import UUID
 from httpx2 import AsyncClient, HTTPError
 from pydantic import ValidationError
 
-from backend.features.browsers.application.models import Browser
+from backend.features.browsers.domain.models import Browser
 from backend.features.recordings.application.exceptions import (
     RecordingAlreadyExistsException,
     RecordingNotFoundException,

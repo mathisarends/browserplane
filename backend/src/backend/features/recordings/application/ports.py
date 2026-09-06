@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from backend.features.browsers.application.models import Browser
+from backend.features.browsers.domain.models import Browser
 from backend.features.recordings.application.models import Recording
 
 

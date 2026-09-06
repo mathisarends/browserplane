@@ -3,8 +3,8 @@ from typing import Any, cast
 
 from httpx2 import AsyncClient
 
-from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
+from backend.features.browsers.domain.models import BrowserSlot
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from backend.features.browsers.application.models import BrowserState
+from backend.features.browsers.domain.models import BrowserState
 
 
 class BrowserLeaseSummary(BaseModel):

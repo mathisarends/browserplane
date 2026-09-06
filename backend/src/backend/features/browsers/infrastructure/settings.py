@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from backend.features.browsers.application.models import BrowserSlot
+from backend.features.browsers.domain.models import BrowserSlot
 
 
 class BrowserPoolSettings(BaseSettings):
