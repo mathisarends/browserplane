@@ -7,6 +7,7 @@ from browser_worker.features.downloads.application.service import DownloadServic
 from browser_worker.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
 from browser_worker.features.downloads.presentation.schemas import DownloadResponse
 from browser_worker.presentation.api_errors import api_error_responses
+from browser_worker.presentation.api_files import OCTET_STREAM, api_file_response
 
 download_router = APIRouter(tags=["downloads"], route_class=DishkaRoute)
 
@@ -45,14 +46,7 @@ async def clear_downloads(
     operation_id="download_file",
     response_class=FileResponse,
     responses={
-        200: {
-            "content": {
-                "application/octet-stream": {
-                    "schema": {"type": "string", "format": "binary"}
-                }
-            },
-            "description": "Downloaded file",
-        },
+        **api_file_response("Downloaded file"),
         **api_error_responses(BROWSER_NOT_FOUND, DOWNLOAD_NOT_FOUND),
     },
 )
@@ -63,6 +57,6 @@ async def download_file(
     download = service.file(download_id)
     return FileResponse(
         download.path,
-        media_type="application/octet-stream",
+        media_type=OCTET_STREAM,
         filename=download.filename,
     )

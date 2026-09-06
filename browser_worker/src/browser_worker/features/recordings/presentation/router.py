@@ -5,6 +5,7 @@ from fastapi import APIRouter, status
 from fastapi.responses import FileResponse
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
+from browser_worker.features.recordings.application.models import RecordingFormat
 from browser_worker.features.recordings.application.service import RecordingService
 from browser_worker.features.recordings.presentation.errors import (
     RECORDING_ALREADY_EXISTS,
@@ -15,6 +16,7 @@ from browser_worker.features.recordings.presentation.errors import (
 )
 from browser_worker.features.recordings.presentation.schemas import RecordingResponse
 from browser_worker.presentation.api_errors import api_error_responses
+from browser_worker.presentation.api_files import api_file_response
 
 recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 
@@ -70,10 +72,16 @@ async def inspect_recording(
     "/browser/recordings/{recording_id}/file",
     operation_id="download_recording",
     response_class=FileResponse,
-    responses=api_error_responses(
-        RECORDING_NOT_FOUND,
-        RECORDING_NOT_COMPLETED,
-    ),
+    responses={
+        **api_file_response(
+            "Recorded video",
+            *(fmt.media_type for fmt in RecordingFormat),
+        ),
+        **api_error_responses(
+            RECORDING_NOT_FOUND,
+            RECORDING_NOT_COMPLETED,
+        ),
+    },
 )
 async def download_recording(
     recording_id: UUID,
