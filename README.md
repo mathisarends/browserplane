@@ -156,8 +156,6 @@ stored separately.
 ## Backend protocol
 
 - `ws://127.0.0.1:8000/api/v1/sessions/{session_id}/tunnel` — JSON-RPC 2.0
-- JSON Schema: `/api/v1/browser/schema.json`
-- OpenRPC: `/api/v1/browser/openrpc.json`
 - Browser worker frames: `/api/v1/browser/{browser_id}/screencast`
 
 ```json

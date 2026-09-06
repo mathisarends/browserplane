@@ -5,7 +5,6 @@ from fastapi import FastAPI
 from backend.features.admin.infrastructure import AdminProvider
 from backend.features.admin.presentation.router import admin_router
 from backend.features.browser_tunnel.infrastructure import BrowserTunnelProvider
-from backend.features.browser_tunnel.presentation import browser_rpc_router
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
@@ -47,7 +46,6 @@ ROUTERS = (
     session_router,
     recording_router,
     admin_router,
-    browser_rpc_router,
 )
 
 
