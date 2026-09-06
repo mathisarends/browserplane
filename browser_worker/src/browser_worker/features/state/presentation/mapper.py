@@ -3,18 +3,18 @@ from collections.abc import Iterable
 from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserCookie,
-    BrowserOriginState,
     BrowserState,
     BrowserTabState,
+    OriginLocalStorage,
     ScrollPosition,
     StorageItem,
 )
 from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserCookieSchema,
-    BrowserOriginStateSchema,
     BrowserStateSchema,
     BrowserTabStateSchema,
+    OriginLocalStorageSchema,
     ScrollPositionSchema,
     StorageItemSchema,
 )
@@ -39,12 +39,12 @@ def to_authentication_state_response(
 ) -> AuthenticationStateSchema:
     return AuthenticationStateSchema(
         cookies=[_to_cookie_schema(cookie) for cookie in state.cookies],
-        origins=[
-            BrowserOriginStateSchema(
+        local_storage=[
+            OriginLocalStorageSchema(
                 origin=origin.origin,
                 local_storage=_to_item_schemas(origin.local_storage),
             )
-            for origin in state.origins
+            for origin in state.local_storage
         ],
     )
 
@@ -54,12 +54,12 @@ def to_authentication_state(
 ) -> AuthenticationState:
     return AuthenticationState(
         cookies=tuple(_to_cookie(cookie) for cookie in schema.cookies),
-        origins=tuple(
-            BrowserOriginState(
+        local_storage=tuple(
+            OriginLocalStorage(
                 origin=origin.origin,
                 local_storage=_to_items(origin.local_storage),
             )
-            for origin in schema.origins
+            for origin in schema.local_storage
         ),
     )
 

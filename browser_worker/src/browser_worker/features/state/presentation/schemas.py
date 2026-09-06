@@ -12,7 +12,7 @@ class StorageItemSchema(StateModel):
     value: str
 
 
-class BrowserOriginStateSchema(StateModel):
+class OriginLocalStorageSchema(StateModel):
     origin: str
     local_storage: list[StorageItemSchema] = Field(default=[], alias="localStorage")
 
@@ -32,7 +32,9 @@ class AuthenticationStateSchema(StateModel):
     """A Playwright ``storage_state``: what makes the browser logged in."""
 
     cookies: list[BrowserCookieSchema] = []
-    origins: list[BrowserOriginStateSchema] = []
+    local_storage: list[OriginLocalStorageSchema] = Field(
+        default=[], alias="localStorage"
+    )
 
 
 class ScrollPositionSchema(StateModel):

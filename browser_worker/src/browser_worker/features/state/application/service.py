@@ -48,7 +48,7 @@ class BrowserStateService:
     async def mount_authentication(
         self, browser_id: UUID, state: AuthenticationState
     ) -> None:
-        for origin in state.origins:
+        for origin in state.local_storage:
             _validate_origin(origin.origin)
         await self._store(browser_id).restore_authentication(state)
 

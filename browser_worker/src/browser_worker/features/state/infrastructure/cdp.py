@@ -19,9 +19,9 @@ from browser_worker.features.state.application.exceptions import (
 from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserCookie,
-    BrowserOriginState,
     BrowserState,
     BrowserTabState,
+    OriginLocalStorage,
     ScrollPosition,
     StorageItem,
 )
@@ -88,11 +88,11 @@ async def _capture_authentication_state(
     client: Client, *, extra_origins: Sequence[str]
 ) -> AuthenticationState:
     targets = await _page_targets(client)
-    cookies, origins = await asyncio.gather(
+    cookies, local_storage = await asyncio.gather(
         _capture_cookies(client),
-        _capture_origins(client, _origins_of(targets) | set(extra_origins)),
+        _capture_local_storage(client, _origins_of(targets) | set(extra_origins)),
     )
-    return AuthenticationState(cookies=cookies, origins=origins)
+    return AuthenticationState(cookies=cookies, local_storage=local_storage)
 
 
 async def _capture_browser_state(client: Client) -> BrowserState:
@@ -143,17 +143,17 @@ async def _capture_cookies(client: Client) -> tuple[BrowserCookie, ...]:
     )
 
 
-async def _capture_origins(
+async def _capture_local_storage(
     client: Client,
     origins: set[str],
-) -> tuple[BrowserOriginState, ...]:
+) -> tuple[OriginLocalStorage, ...]:
     """Read the localStorage of every origin we know about.
 
     CDP cannot list the origins that hold localStorage, so they come from the
     open tabs plus whatever the caller asked for. Sorted, so two captures of
     the same browser produce the same document.
     """
-    captured: list[BrowserOriginState] = []
+    captured: list[OriginLocalStorage] = []
     for origin in sorted(origins):
         try:
             async with _loaded_origin(client, origin) as session:
@@ -168,7 +168,7 @@ async def _capture_origins(
             continue
         items = _to_storage_items(result.entries)
         if items:
-            captured.append(BrowserOriginState(origin=origin, local_storage=items))
+            captured.append(OriginLocalStorage(origin=origin, local_storage=items))
     return tuple(captured)
 
 
@@ -248,14 +248,14 @@ async def _restore_authentication(client: Client, auth: AuthenticationState) -> 
             cookies=[_to_cookie_param(cookie) for cookie in auth.cookies]
         )
     failed = 0
-    for origin in auth.origins:
+    for origin in auth.local_storage:
         try:
             await _restore_origin(client, origin)
         except Exception:
             failed += 1
             logger.warning("Could not write localStorage of %s", origin.origin)
             logger.debug("localStorage restore failed", exc_info=True)
-    if auth.origins and failed == len(auth.origins):
+    if auth.local_storage and failed == len(auth.local_storage):
         raise BrowserStateFailedException("Could not write localStorage")
 
 
@@ -272,7 +272,7 @@ def _to_cookie_param(cookie: BrowserCookie) -> CookieParam:
     )
 
 
-async def _restore_origin(client: Client, origin: BrowserOriginState) -> None:
+async def _restore_origin(client: Client, origin: OriginLocalStorage) -> None:
     """Write an origin's localStorage through a throwaway background tab.
 
     DOMStorage needs a document of that origin to exist, and writing through

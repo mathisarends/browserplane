@@ -8,7 +8,7 @@ class StorageItem:
 
 
 @dataclass(frozen=True, slots=True)
-class BrowserOriginState:
+class OriginLocalStorage:
     origin: str
     local_storage: tuple[StorageItem, ...] = ()
 
@@ -28,11 +28,11 @@ class BrowserCookie:
 @dataclass(frozen=True, slots=True)
 class AuthenticationState:
     cookies: tuple[BrowserCookie, ...] = ()
-    origins: tuple[BrowserOriginState, ...] = ()
+    local_storage: tuple[OriginLocalStorage, ...] = ()
 
     @property
     def is_empty(self) -> bool:
-        return not self.cookies and not self.origins
+        return not self.cookies and not self.local_storage
 
 
 @dataclass(frozen=True, slots=True)

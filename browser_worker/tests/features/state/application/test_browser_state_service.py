@@ -30,7 +30,7 @@ from browser_worker.features.state.presentation.schemas import (
     BrowserStateSchema,
 )
 
-PLAYWRIGHT_STATE = {
+BROWSER_STATE = {
     "tabs": [
         {
             "url": "https://example.com/inbox",
@@ -54,7 +54,7 @@ AUTHENTICATION_STATE = {
             "sameSite": "Lax",
         }
     ],
-    "origins": [
+    "localStorage": [
         {
             "origin": "https://example.com",
             "localStorage": [{"name": "token", "value": "abc"}],
@@ -106,12 +106,12 @@ async def _running_service(
 async def test_state_survives_a_mount_and_capture_roundtrip() -> None:
     service, browser_id = await _running_service(FakeStore())
 
-    state = to_browser_state(BrowserStateSchema(**PLAYWRIGHT_STATE))
+    state = to_browser_state(BrowserStateSchema(**BROWSER_STATE))
 
     await service.mount_browser(browser_id, state)
     captured = to_browser_state_response(await service.capture_browser(browser_id))
 
-    assert captured.model_dump(by_alias=True) == PLAYWRIGHT_STATE
+    assert captured.model_dump(by_alias=True) == BROWSER_STATE
 
 
 @pytest.mark.asyncio

@@ -11,9 +11,9 @@ from browser_worker.features.browser.infrastructure.chrome_process import Chrome
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
 from browser_worker.features.state.application.models import (
     AuthenticationState,
-    BrowserOriginState,
     BrowserState,
     BrowserTabState,
+    OriginLocalStorage,
     StorageItem,
 )
 from browser_worker.features.state.infrastructure.cdp import (
@@ -69,8 +69,8 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
             BrowserStateSettings(_env_file=None, restore_timeout=5),
         )
         authentication = AuthenticationState(
-            origins=(
-                BrowserOriginState(
+            local_storage=(
+                OriginLocalStorage(
                     origin=origin,
                     local_storage=(StorageItem("token", "secret"),),
                 ),
@@ -94,7 +94,7 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
         finally:
             await browser.stop()
 
-    assert captured_authentication.origins == authentication.origins
+    assert captured_authentication.local_storage == authentication.local_storage
     assert len(captured_state.tabs) == 1
     assert captured_state.tabs[0].url == state.tabs[0].url
     assert captured_state.tabs[0].session_storage == state.tabs[0].session_storage
