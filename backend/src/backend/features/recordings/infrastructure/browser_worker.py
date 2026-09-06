@@ -7,6 +7,7 @@ from httpx2 import AsyncClient, HTTPError
 from pydantic import ValidationError
 
 from backend.features.browsers.domain.models import Browser
+from backend.features.browsers.infrastructure import routes
 from backend.features.recordings.application.exceptions import (
     RecordingAlreadyExistsException,
     RecordingNotFoundException,
@@ -98,9 +99,8 @@ class BrowserWorkerRecorder(Recorder):
         browser: Browser,
         recording_id: UUID,
     ) -> None:
-        path = f"/api/v1/browser/{browser.id}/recordings/{recording_id}/file"
         try:
-            url = f"{browser.slot.browser_worker_url.rstrip('/')}/{path.lstrip('/')}"
+            url = routes.recording_file_url(browser.slot, recording_id)
             async with self._http.stream(
                 "GET",
                 url,

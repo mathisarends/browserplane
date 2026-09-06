@@ -337,15 +337,6 @@ class SessionService:
             await self._leases.release(session_id, reason="session_closed")
         await self._sessions.save(aggregate.close())
 
-    async def upstream_cdp_url(self, session_id: UUID) -> str:
-        return (await self.get_active(session_id)).browser.slot.cdp_url
-
-    async def upstream_screencast_url(self, session_id: UUID) -> str:
-        return (await self.get_active(session_id)).browser.slot.screencast_url
-
-    async def upstream_fmp4_screencast_url(self, session_id: UUID) -> str:
-        return (await self.get_active(session_id)).browser.slot.fmp4_screencast_url
-
     async def _session(self, session_id: UUID) -> Session:
         session = await self._sessions.get_by_id(session_id=session_id)
         if session is None:

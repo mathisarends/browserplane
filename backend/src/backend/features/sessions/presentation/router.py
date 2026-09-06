@@ -1,8 +1,7 @@
 import logging
-from collections.abc import AsyncGenerator, Callable, Coroutine
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Any
 from urllib.parse import quote
 from uuid import UUID
 
@@ -12,12 +11,14 @@ from fastapi import APIRouter, Response, WebSocket, status
 
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
+from backend.features.browsers.infrastructure import routes
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
     SessionNotActiveException,
 )
 from backend.features.sessions.application.service import SessionService
+from backend.features.sessions.domain.models import ActiveSession
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
     AUTHENTICATION_PROFILE_NOT_FOUND,
@@ -442,14 +443,12 @@ async def session_tunnel(
     container: FromDishka[AsyncContainer],
     tunnel: FromDishka[BrowserTunnel],
 ) -> None:
-    cdp_url = await _resolve(
-        websocket, container, lambda service: service.upstream_cdp_url(session_id)
-    )
-    if cdp_url is None:
+    session = await _resolve(websocket, container, session_id)
+    if session is None:
         return
     try:
         logger.info("Session tunnel connected session_id=%s", session_id)
-        await tunnel.serve(websocket, cdp_url)
+        await tunnel.serve(websocket, routes.cdp_url(session.browser.slot))
     finally:
         # State capture is an independent HTTP operation. Keep the lease alive
         # when this transport drops so state can still be read from the worker.
@@ -465,13 +464,10 @@ async def session_tunnel(
 async def session_screencast(
     session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
 ) -> None:
-    upstream_url = await _resolve(
-        websocket,
-        container,
-        lambda service: service.upstream_screencast_url(session_id),
-    )
-    if upstream_url is not None:
-        await proxy_stream(websocket, upstream_url, name="Screencast")
+    session = await _resolve(websocket, container, session_id)
+    if session is not None:
+        url = routes.screencast_url(session.browser.slot)
+        await proxy_stream(websocket, url, name="Screencast")
 
 
 @session_router.websocket("/sessions/{session_id}/screencast/fmp4")
@@ -479,13 +475,10 @@ async def session_screencast(
 async def session_fmp4_screencast(
     session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
 ) -> None:
-    upstream_url = await _resolve(
-        websocket,
-        container,
-        lambda service: service.upstream_fmp4_screencast_url(session_id),
-    )
-    if upstream_url is not None:
-        await proxy_stream(websocket, upstream_url, name="fMP4 screencast")
+    session = await _resolve(websocket, container, session_id)
+    if session is not None:
+        url = routes.fmp4_screencast_url(session.browser.slot)
+        await proxy_stream(websocket, url, name="fMP4 screencast")
 
 
 @asynccontextmanager
@@ -505,12 +498,12 @@ async def _session_service(
 async def _resolve(
     websocket: WebSocket,
     container: AsyncContainer,
-    resolve: Callable[[SessionService], Coroutine[Any, Any, str]],
-) -> str | None:
-    """Look up an upstream URL, closing the socket in session terms when it is gone."""
+    session_id: UUID,
+) -> ActiveSession | None:
+    """Look up the live session, closing the socket in session terms when it is gone."""
     try:
         async with _session_service(container) as service:
-            return await resolve(service)
+            return await service.get_active(session_id)
     except LeaseNotFoundException, BrowserNotFoundException, SessionNotActiveException:
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")

@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID
 
 
@@ -20,32 +19,6 @@ class BrowserSlot:
 
     id: UUID
     browser_worker_url: str
-
-    @property
-    def cdp_url(self) -> str:
-        return self._websocket_url("cdp")
-
-    @property
-    def screencast_url(self) -> str:
-        return self._websocket_url("screencast")
-
-    @property
-    def fmp4_screencast_url(self) -> str:
-        return f"{self.screencast_url}/fmp4"
-
-    def _websocket_url(self, stream: str) -> str:
-        parsed = urlsplit(self.browser_worker_url)
-        scheme = "wss" if parsed.scheme == "https" else "ws"
-        base_path = parsed.path.rstrip("/")
-        return urlunsplit(
-            (
-                scheme,
-                parsed.netloc,
-                f"{base_path}/api/v1/browser/{self.id}/{stream}",
-                "",
-                "",
-            )
-        )
 
 
 @dataclass(slots=True)
