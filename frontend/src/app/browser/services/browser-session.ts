@@ -1,8 +1,8 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
 import {
-  cancelBrowserRequest,
+  cancelSessionRequest,
   closeSession,
-  getBrowserRequest,
+  getSessionRequest,
   getSession,
   openSession,
   resumeSession,
@@ -38,7 +38,7 @@ export type ConnectionState = "connecting" | "connected" | "disconnected";
 const SESSION_REQUEST_TIMEOUT_SECONDS = 60;
 const DUCKDUCKGO_SEARCH_URL = "https://duckduckgo.com/?q=";
 
-interface PendingBrowserRequest {
+interface PendingSessionRequest {
   readonly id: string;
   readonly controller: AbortController;
 }
@@ -50,7 +50,7 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BackendBrowserClient;
   private screencast?: WebSocket;
-  private pendingRequest?: PendingBrowserRequest;
+  private pendingRequest?: PendingSessionRequest;
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly BrowserTabState[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
@@ -154,7 +154,7 @@ export class BrowserSession {
     screencast?.close();
     await client?.close().catch(() => undefined);
     if (request) {
-      await cancelBrowserRequest(request.id, { owner_id: this.identity.ownerId }).catch(
+      await cancelSessionRequest(request.id, { owner_id: this.identity.ownerId }).catch(
         () => undefined,
       );
     }
@@ -271,7 +271,7 @@ export class BrowserSession {
     }
   }
 
-  private beginRequest(): PendingBrowserRequest {
+  private beginRequest(): PendingSessionRequest {
     const request = { id: crypto.randomUUID(), controller: new AbortController() };
     this.pendingRequest = request;
     this.requestStatusState.set(undefined);
@@ -279,19 +279,19 @@ export class BrowserSession {
     return request;
   }
 
-  private finishRequest(request: PendingBrowserRequest): void {
+  private finishRequest(request: PendingSessionRequest): void {
     if (this.pendingRequest !== request) return;
     this.pendingRequest = undefined;
     this.requestStatusState.set(undefined);
     request.controller.abort();
   }
 
-  private async watchRequest(request: PendingBrowserRequest): Promise<void> {
+  private async watchRequest(request: PendingSessionRequest): Promise<void> {
     try {
       while (this.pendingRequest === request) {
         await delay(500);
         if (this.pendingRequest !== request) return;
-        const response = await getBrowserRequest(
+        const response = await getSessionRequest(
           request.id,
           { owner_id: this.identity.ownerId },
           { signal: request.controller.signal },
@@ -443,7 +443,9 @@ function socketOpened(socket: WebSocket): Promise<void> {
 }
 
 function openSessionError(response: openSessionResponse): string {
-  if (response.status === 503) return response.data.message;
+  // A queued request that ran out of time or was ended says so itself; the
+  // rest are input errors this client should not have sent.
+  if (response.status === 408 || response.status === 409) return response.data.message;
   return `Session could not be opened (${response.status})`;
 }
 

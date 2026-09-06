@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CancelBrowserRequestParams = {
-owner_id: string;
-};
+export interface SessionRequestConflictError {
+  code: 'session_request_conflict';
+  message: string;
+}

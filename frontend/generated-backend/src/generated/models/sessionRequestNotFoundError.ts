@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface NoBrowserAvailableError {
-  code: 'no_browser_available';
+export interface SessionRequestNotFoundError {
+  code: 'session_request_not_found';
   message: string;
 }

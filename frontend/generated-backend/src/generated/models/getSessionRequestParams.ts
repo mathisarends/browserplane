@@ -5,6 +5,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GetBrowserRequestParams = {
+export type GetSessionRequestParams = {
 owner_id: string;
 };

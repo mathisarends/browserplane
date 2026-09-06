@@ -6,12 +6,15 @@
  */
 import type { RequestStatus } from './requestStatus';
 
-export interface BrowserRequestResponse {
+/**
+ * What a queued request looks like from outside, before it holds a session.
+ */
+export interface SessionRequestResponse {
   id: string;
   owner_id: string;
   status: RequestStatus;
   created_at: string;
   expires_at: string;
-  lease_id: string | null;
+  session_id: string | null;
   test_run_id: string | null;
 }

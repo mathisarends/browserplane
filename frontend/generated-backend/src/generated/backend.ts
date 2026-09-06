@@ -11,21 +11,19 @@ import type {
   BrowserCheckpointResponse,
   BrowserNotFoundError,
   BrowserProvisioningFailedError,
-  BrowserRequestResponse,
   BrowserStateSchema,
   BrowserStateTransferFailedError,
-  CancelBrowserRequestParams,
+  CancelSessionRequestParams,
   CreateAuthenticationProfileRequest,
   CreateBrowserCheckpointRequest,
   DownloadNotFoundError,
   DownloadResponse,
-  GetBrowserRequestParams,
+  GetSessionRequestParams,
   HTTPValidationError,
   Health,
   ListOwnerSessionsParams,
   MountAuthenticationProfileRequest,
   MountBrowserCheckpointRequest,
-  NoBrowserAvailableError,
   OpenSessionRequest,
   OpenSessionResponse,
   OwnerSessionsResponse,
@@ -39,127 +37,14 @@ import type {
   SessionNotActiveError,
   SessionNotFoundError,
   SessionNotSuspendedError,
+  SessionRequestCancelledError,
+  SessionRequestConflictError,
+  SessionRequestNotFoundError,
+  SessionRequestResponse,
+  SessionRequestTimedOutError,
   SessionResponse,
   UpdateAuthenticationProfileRequest
 } from './models';
-
-
-export type getBrowserRequestResponse200 = {
-  data: BrowserRequestResponse
-  status: 200
-}
-
-export type getBrowserRequestResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getBrowserRequestResponseSuccess = (getBrowserRequestResponse200) & {
-  headers: Headers;
-};
-export type getBrowserRequestResponseError = (getBrowserRequestResponse422) & {
-  headers: Headers;
-};
-
-export type getBrowserRequestResponse = (getBrowserRequestResponseSuccess | getBrowserRequestResponseError)
-
-export const getGetBrowserRequestUrl = (requestId: string,
-    params: GetBrowserRequestParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/browser-requests/${requestId}?${stringifiedParams}` : `/api/v1/browser-requests/${requestId}`
-}
-
-/**
- * @summary Get Browser Request
- */
-export const getBrowserRequest = async (requestId: string,
-    params: GetBrowserRequestParams, options?: RequestInit): Promise<getBrowserRequestResponse> => {
-
-  const res = await fetch(getGetBrowserRequestUrl(requestId,params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: getBrowserRequestResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as getBrowserRequestResponse
-}
-
-
-
-export type cancelBrowserRequestResponse200 = {
-  data: BrowserRequestResponse
-  status: 200
-}
-
-export type cancelBrowserRequestResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type cancelBrowserRequestResponseSuccess = (cancelBrowserRequestResponse200) & {
-  headers: Headers;
-};
-export type cancelBrowserRequestResponseError = (cancelBrowserRequestResponse422) & {
-  headers: Headers;
-};
-
-export type cancelBrowserRequestResponse = (cancelBrowserRequestResponseSuccess | cancelBrowserRequestResponseError)
-
-export const getCancelBrowserRequestUrl = (requestId: string,
-    params: CancelBrowserRequestParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/browser-requests/${requestId}?${stringifiedParams}` : `/api/v1/browser-requests/${requestId}`
-}
-
-/**
- * @summary Cancel Browser Request
- */
-export const cancelBrowserRequest = async (requestId: string,
-    params: CancelBrowserRequestParams, options?: RequestInit): Promise<cancelBrowserRequestResponse> => {
-
-  const res = await fetch(getCancelBrowserRequestUrl(requestId,params),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: cancelBrowserRequestResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as cancelBrowserRequestResponse
-}
-
 
 
 export type healthResponse200 = {
@@ -248,67 +133,6 @@ export const readiness = async ( options?: RequestInit): Promise<readinessRespon
 
 
 
-export type openSessionResponse201 = {
-  data: OpenSessionResponse
-  status: 201
-}
-
-export type openSessionResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type openSessionResponse503 = {
-  data: NoBrowserAvailableError
-  status: 503
-}
-
-export type openSessionResponseSuccess = (openSessionResponse201) & {
-  headers: Headers;
-};
-export type openSessionResponseError = (openSessionResponse422 | openSessionResponse503) & {
-  headers: Headers;
-};
-
-export type openSessionResponse = (openSessionResponseSuccess | openSessionResponseError)
-
-export const getOpenSessionUrl = () => {
-
-
-
-
-  return `/api/v1/sessions`
-}
-
-/**
- * @summary Open Session
- */
-export const openSession = async (openSessionRequest: OpenSessionRequest, options?: RequestInit): Promise<openSessionResponse> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-const res = await fetch(getOpenSessionUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(openSessionRequest)
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: openSessionResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as openSessionResponse
-}
-
-
-
 export type listOwnerSessionsResponse200 = {
   data: OwnerSessionsResponse
   status: 200
@@ -368,6 +192,78 @@ export const listOwnerSessions = async (params: ListOwnerSessionsParams, options
 
   const data: listOwnerSessionsResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as listOwnerSessionsResponse
+}
+
+
+
+export type openSessionResponse201 = {
+  data: OpenSessionResponse
+  status: 201
+}
+
+export type openSessionResponse404 = {
+  data: AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  status: 404
+}
+
+export type openSessionResponse408 = {
+  data: SessionRequestTimedOutError
+  status: 408
+}
+
+export type openSessionResponse409 = {
+  data: SessionRequestConflictError | SessionRequestCancelledError
+  status: 409
+}
+
+export type openSessionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type openSessionResponseSuccess = (openSessionResponse201) & {
+  headers: Headers;
+};
+export type openSessionResponseError = (openSessionResponse404 | openSessionResponse408 | openSessionResponse409 | openSessionResponse422) & {
+  headers: Headers;
+};
+
+export type openSessionResponse = (openSessionResponseSuccess | openSessionResponseError)
+
+export const getOpenSessionUrl = () => {
+
+
+
+
+  return `/api/v1/sessions`
+}
+
+/**
+ * Queue for a browser and answer once one carries the new session.
+ * @summary Open Session
+ */
+export const openSession = async (openSessionRequest: OpenSessionRequest, options?: RequestInit): Promise<openSessionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getOpenSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(openSessionRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: openSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as openSessionResponse
 }
 
 
@@ -1369,79 +1265,6 @@ export const suspendSession = async (sessionId: string, options?: RequestInit): 
 
 
 
-export type resumeSessionResponse200 = {
-  data: SessionResponse
-  status: 200
-}
-
-export type resumeSessionResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
-  status: 404
-}
-
-export type resumeSessionResponse409 = {
-  data: SessionNotSuspendedError
-  status: 409
-}
-
-export type resumeSessionResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type resumeSessionResponse503 = {
-  data: NoBrowserAvailableError | BrowserStateTransferFailedError
-  status: 503
-}
-
-export type resumeSessionResponseSuccess = (resumeSessionResponse200) & {
-  headers: Headers;
-};
-export type resumeSessionResponseError = (resumeSessionResponse404 | resumeSessionResponse409 | resumeSessionResponse422 | resumeSessionResponse503) & {
-  headers: Headers;
-};
-
-export type resumeSessionResponse = (resumeSessionResponseSuccess | resumeSessionResponseError)
-
-export const getResumeSessionUrl = (sessionId: string,) => {
-
-
-
-
-  return `/api/v1/sessions/${sessionId}/resume`
-}
-
-/**
- * Mount a parked session onto whichever browser is free now.
- * @summary Resume Session
- */
-export const resumeSession = async (sessionId: string,
-    resumeSessionRequest: ResumeSessionRequest, options?: RequestInit): Promise<resumeSessionResponse> => {
-
-    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
-    if (!h) return {};
-    if (h instanceof Headers) return Object.fromEntries(h.entries());
-    if (Array.isArray(h)) return Object.fromEntries(h);
-    return h;
-  };
-const res = await fetch(getResumeSessionUrl(sessionId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(resumeSessionRequest)
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as resumeSessionResponse
-}
-
-
-
 export type renewSessionLeaseResponse200 = {
   data: SessionResponse
   status: 200
@@ -1498,6 +1321,209 @@ export const renewSessionLease = async (sessionId: string, options?: RequestInit
 
   const data: renewSessionLeaseResponse['data'] = body ? JSON.parse(body) : {}
   return { data, status: res.status, headers: res.headers } as renewSessionLeaseResponse
+}
+
+
+
+export type resumeSessionResponse200 = {
+  data: SessionResponse
+  status: 200
+}
+
+export type resumeSessionResponse404 = {
+  data: SessionNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  status: 404
+}
+
+export type resumeSessionResponse408 = {
+  data: SessionRequestTimedOutError
+  status: 408
+}
+
+export type resumeSessionResponse409 = {
+  data: SessionRequestConflictError | SessionRequestCancelledError | SessionNotSuspendedError | SessionNotActiveError
+  status: 409
+}
+
+export type resumeSessionResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type resumeSessionResponseSuccess = (resumeSessionResponse200) & {
+  headers: Headers;
+};
+export type resumeSessionResponseError = (resumeSessionResponse404 | resumeSessionResponse408 | resumeSessionResponse409 | resumeSessionResponse422) & {
+  headers: Headers;
+};
+
+export type resumeSessionResponse = (resumeSessionResponseSuccess | resumeSessionResponseError)
+
+export const getResumeSessionUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/resume`
+}
+
+/**
+ * Mount a parked session onto whichever browser becomes free next.
+ * @summary Resume Session
+ */
+export const resumeSession = async (sessionId: string,
+    resumeSessionRequest: ResumeSessionRequest, options?: RequestInit): Promise<resumeSessionResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getResumeSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(resumeSessionRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resumeSessionResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as resumeSessionResponse
+}
+
+
+
+export type getSessionRequestResponse200 = {
+  data: SessionRequestResponse
+  status: 200
+}
+
+export type getSessionRequestResponse404 = {
+  data: SessionRequestNotFoundError
+  status: 404
+}
+
+export type getSessionRequestResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getSessionRequestResponseSuccess = (getSessionRequestResponse200) & {
+  headers: Headers;
+};
+export type getSessionRequestResponseError = (getSessionRequestResponse404 | getSessionRequestResponse422) & {
+  headers: Headers;
+};
+
+export type getSessionRequestResponse = (getSessionRequestResponseSuccess | getSessionRequestResponseError)
+
+export const getGetSessionRequestUrl = (requestId: string,
+    params: GetSessionRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/session-requests/${requestId}?${stringifiedParams}` : `/api/v1/session-requests/${requestId}`
+}
+
+/**
+ * Follow a request that is still waiting, or find out how it ended.
+ * @summary Get Session Request
+ */
+export const getSessionRequest = async (requestId: string,
+    params: GetSessionRequestParams, options?: RequestInit): Promise<getSessionRequestResponse> => {
+
+  const res = await fetch(getGetSessionRequestUrl(requestId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getSessionRequestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getSessionRequestResponse
+}
+
+
+
+export type cancelSessionRequestResponse200 = {
+  data: SessionRequestResponse
+  status: 200
+}
+
+export type cancelSessionRequestResponse404 = {
+  data: SessionRequestNotFoundError
+  status: 404
+}
+
+export type cancelSessionRequestResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type cancelSessionRequestResponseSuccess = (cancelSessionRequestResponse200) & {
+  headers: Headers;
+};
+export type cancelSessionRequestResponseError = (cancelSessionRequestResponse404 | cancelSessionRequestResponse422) & {
+  headers: Headers;
+};
+
+export type cancelSessionRequestResponse = (cancelSessionRequestResponseSuccess | cancelSessionRequestResponseError)
+
+export const getCancelSessionRequestUrl = (requestId: string,
+    params: CancelSessionRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/session-requests/${requestId}?${stringifiedParams}` : `/api/v1/session-requests/${requestId}`
+}
+
+/**
+ * Give up a waiting request. A session it already holds stays open.
+ * @summary Cancel Session Request
+ */
+export const cancelSessionRequest = async (requestId: string,
+    params: CancelSessionRequestParams, options?: RequestInit): Promise<cancelSessionRequestResponse> => {
+
+  const res = await fetch(getCancelSessionRequestUrl(requestId,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: cancelSessionRequestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as cancelSessionRequestResponse
 }
 
 
