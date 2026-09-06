@@ -6,12 +6,6 @@ type SelectTarget = Callable[[str], Awaitable[None]]
 
 
 class ActiveTarget:
-    """The CDP client plus the page session the tunnel currently mirrors.
-
-    The command namespaces share this handle instead of the browser itself, so
-    switching tabs stays the one place that decides what "active" means.
-    """
-
     def __init__(self) -> None:
         self._client: Client | None = None
         self._session: CDPSession | None = None
@@ -25,7 +19,6 @@ class ActiveTarget:
         self._client = client
 
     def detach(self) -> Client | None:
-        """Forget the mirrored page and hand back the client to shut down."""
         client = self._client
         self._client = None
         self._session = None

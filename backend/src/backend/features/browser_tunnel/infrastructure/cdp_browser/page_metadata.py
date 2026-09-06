@@ -5,8 +5,18 @@ from backend.features.browser_tunnel.infrastructure.cdp_browser.active_target im
     ActiveTarget,
 )
 
-_FAVICON_SOURCE = """
-() => {
+
+class CdpPageMetadata(BrowserPageMetadata):
+    """Read page metadata through the currently mirrored CDP target."""
+
+    def __init__(self, target: ActiveTarget) -> None:
+        self._target = target
+
+    async def favicon_url(self) -> str | None:
+        try:
+            result = await self._target.session().runtime.evaluate(
+                expression="""
+(() => {
   const links = Array.from(document.querySelectorAll('link[rel~="icon"][href]'));
   const candidate = links.at(-1)?.href || (
     location.protocol === "http:" || location.protocol === "https:"
@@ -20,20 +30,8 @@ _FAVICON_SOURCE = """
   } catch {
     return null;
   }
-}
-"""
-
-
-class CdpPageMetadata(BrowserPageMetadata):
-    """Read page metadata through the currently mirrored CDP target."""
-
-    def __init__(self, target: ActiveTarget) -> None:
-        self._target = target
-
-    async def favicon_url(self) -> str | None:
-        try:
-            result = await self._target.session().runtime.evaluate(
-                expression=f"({_FAVICON_SOURCE})()",
+})()
+""",
                 return_by_value=True,
             )
         except CDPCommandException, RuntimeError:

@@ -7,8 +7,6 @@ from cdpify import CDPSession
 
 from backend.features.browser_tunnel.application import CursorChanged, CursorStyle
 from backend.features.browser_tunnel.infrastructure.cursor_event_bridge import (
-    BINDING_NAME,
-    ISOLATED_WORLD,
     CursorEventBridge,
 )
 from backend.features.browser_tunnel.infrastructure.events import EventBus
@@ -35,7 +33,7 @@ class FakeRuntime:
 
 
 class FakeSession:
-    def __init__(self, *payloads: str, name: str = BINDING_NAME) -> None:
+    def __init__(self, *payloads: str, name: str = "__browserTunnelCursor") -> None:
         self.page = FakePage()
         self.runtime = FakeRuntime()
         self._payloads = payloads
@@ -76,11 +74,11 @@ async def test_cursor_bridge_installs_observer_in_an_isolated_world() -> None:
 
     assert session.runtime.enabled
     assert session.runtime.binding_with == {
-        "name": BINDING_NAME,
-        "execution_context_name": ISOLATED_WORLD,
+        "name": "__browserTunnelCursor",
+        "execution_context_name": "browsertunnel:cursor",
     }
     assert session.page.injected_with is not None
-    assert session.page.injected_with["world_name"] == ISOLATED_WORLD
+    assert session.page.injected_with["world_name"] == "browsertunnel:cursor"
     assert session.page.injected_with["run_immediately"] is True
 
 

@@ -134,11 +134,6 @@ class CdpBrowser(Browser):
             await self._cursor_bridge.start(session, target_id)
 
     async def _apply_viewport(self, session: CDPSession) -> None:
-        """Pin the page viewport so screencast frames match the configured size.
-
-        Chromium's --window-size covers the whole window, so the visible page is
-        smaller than requested and frames arrive with a different aspect ratio.
-        """
         await session.emulation.set_device_metrics_override(
             width=self._settings.width,
             height=self._settings.height,

@@ -24,7 +24,7 @@ Beide Ebenen müssen funktionieren. Nur einen Prozess zu beenden oder nur einen
 Datenbankstatus auf `READY` zu setzen reicht nicht aus.
 
 ## Konkrete Schwachstellen im aktuellen Code
-
+w
 ### 1. Lease-Ablauf kann den Pool dauerhaft blockieren
 
 `SessionService.open()` ruft zuerst `_pick_available_browser()` auf. Erst wenn

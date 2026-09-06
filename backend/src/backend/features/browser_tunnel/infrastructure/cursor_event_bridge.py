@@ -10,8 +10,8 @@ from backend.features.browser_tunnel.infrastructure.events import EventBus
 
 logger = logging.getLogger(__name__)
 
-BINDING_NAME = "__browserTunnelCursor"
-ISOLATED_WORLD = "browsertunnel:cursor"
+_BINDING_NAME = "__browserTunnelCursor"
+_ISOLATED_WORLD = "browsertunnel:cursor"
 
 _OBSERVER_SOURCE = """
 (() => {
@@ -49,7 +49,7 @@ _OBSERVER_SOURCE = """
     { capture: true, passive: true },
   );
 })();
-""".replace("__BINDING__", BINDING_NAME)
+""".replace("__BINDING__", _BINDING_NAME)
 
 
 class CursorEventBridge:
@@ -77,11 +77,11 @@ class CursorEventBridge:
         self._cursor = CursorStyle.DEFAULT
         await session.runtime.enable()
         await session.runtime.add_binding(
-            name=BINDING_NAME, execution_context_name=ISOLATED_WORLD
+            name=_BINDING_NAME, execution_context_name=_ISOLATED_WORLD
         )
         await session.page.add_script_to_evaluate_on_new_document(
             source=_OBSERVER_SOURCE,
-            world_name=ISOLATED_WORLD,
+            world_name=_ISOLATED_WORLD,
             run_immediately=True,
         )
         self._task = asyncio.create_task(self._pump(session), name="active-page:cursor")
@@ -100,7 +100,7 @@ class CursorEventBridge:
             async for event in session.listen(
                 RuntimeEvent.BINDING_CALLED, BindingCalledEvent
             ):
-                if event.name == BINDING_NAME:
+                if event.name == _BINDING_NAME:
                     await self._dispatch(CursorStyle.parse(event.payload))
         except asyncio.CancelledError:
             raise

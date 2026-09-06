@@ -11,55 +11,6 @@ logger = logging.getLogger(__name__)
 _CONTROL_MODIFIER = 2
 _VIRTUAL_KEY_C = 67
 
-_SELECTION_SOURCE = """
-() => {
-  const active = document.activeElement;
-  const start = active && "selectionStart" in active ? active.selectionStart : null;
-  if (start !== null && start !== active.selectionEnd) {
-    return active.value.slice(start, active.selectionEnd);
-  }
-  return String(document.getSelection() ?? "");
-}
-"""
-
-_COPY_SOURCE = """
-(text) => {
-  const active = document.activeElement;
-  const selection = document.getSelection();
-  const ranges = [];
-  for (let i = 0; selection && i < selection.rangeCount; i += 1) {
-    ranges.push(selection.getRangeAt(i));
-  }
-  const start = active && "selectionStart" in active ? active.selectionStart : null;
-  const end = active && "selectionEnd" in active ? active.selectionEnd : null;
-
-  const carrier = document.createElement("textarea");
-  carrier.value = text;
-  carrier.setAttribute(
-    "style",
-    "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0",
-  );
-  document.body.append(carrier);
-  carrier.select();
-  let copied = false;
-  try {
-    copied = document.execCommand("copy");
-  } finally {
-    carrier.remove();
-  }
-
-  if (active && active.focus) active.focus();
-  if (start !== null && active.setSelectionRange) {
-    active.setSelectionRange(start, end);
-  } else if (selection && ranges.length) {
-    selection.removeAllRanges();
-    for (const range of ranges) selection.addRange(range);
-  }
-  return copied;
-}
-"""
-
-
 class ClipboardUnavailableError(RuntimeError):
     """Raised when the page refuses to hand over or accept clipboard text."""
 
@@ -105,7 +56,44 @@ class CdpClipboard(BrowserClipboard):
 
     async def write(self, text: str) -> None:
         result = await self._target.session().runtime.evaluate(
-            expression=f"({_COPY_SOURCE})({json.dumps(text)})",
+            expression="""
+((text) => {
+  const active = document.activeElement;
+  const selection = document.getSelection();
+  const ranges = [];
+  for (let i = 0; selection && i < selection.rangeCount; i += 1) {
+    ranges.push(selection.getRangeAt(i));
+  }
+  const start = active && "selectionStart" in active ? active.selectionStart : null;
+  const end = active && "selectionEnd" in active ? active.selectionEnd : null;
+
+  const carrier = document.createElement("textarea");
+  carrier.value = text;
+  carrier.setAttribute(
+    "style",
+    "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0",
+  );
+  document.body.append(carrier);
+  carrier.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    carrier.remove();
+  }
+
+  if (active && active.focus) active.focus();
+  if (start !== null && active.setSelectionRange) {
+    active.setSelectionRange(start, end);
+  } else if (selection && ranges.length) {
+    selection.removeAllRanges();
+    for (const range of ranges) selection.addRange(range);
+  }
+  return copied;
+})(
+"""
+            + json.dumps(text)
+            + ")",
             return_by_value=True,
             user_gesture=True,
         )
@@ -114,7 +102,16 @@ class CdpClipboard(BrowserClipboard):
 
     async def _selection_text(self) -> str:
         result = await self._target.session().runtime.evaluate(
-            expression=f"({_SELECTION_SOURCE})()",
+            expression="""
+(() => {
+  const active = document.activeElement;
+  const start = active && "selectionStart" in active ? active.selectionStart : null;
+  if (start !== null && start !== active.selectionEnd) {
+    return active.value.slice(start, active.selectionEnd);
+  }
+  return String(document.getSelection() ?? "");
+})()
+""",
             return_by_value=True,
         )
         if result.exception_details is not None:
