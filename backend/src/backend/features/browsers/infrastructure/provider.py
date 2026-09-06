@@ -16,15 +16,6 @@ from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class BrowserProvider(Provider):
-    def __init__(
-        self,
-        provisioner: BrowserProvisioner | None = None,
-        repository: BrowserRepository | None = None,
-    ) -> None:
-        super().__init__()
-        self._provisioner = provisioner
-        self._repository = repository
-
     @provide(scope=Scope.APP)
     def settings(self) -> BrowserPoolSettings:
         return BrowserPoolSettings()
@@ -36,15 +27,11 @@ class BrowserProvider(Provider):
         http: AsyncClient,
         worker_settings: BrowserWorkerSettings,
     ) -> BrowserProvisioner:
-        return self._provisioner or BrowserWorkerProvisioner(
-            settings,
-            http,
-            worker_settings,
-        )
+        return BrowserWorkerProvisioner(settings, http, worker_settings)
 
     @provide(scope=Scope.REQUEST, provides=BrowserRepository)
     def repository(self, session: AsyncSession) -> BrowserRepository:
-        return self._repository or SqlBrowserRepository(session)
+        return SqlBrowserRepository(session)
 
     @provide(scope=Scope.REQUEST)
     def browser_service(

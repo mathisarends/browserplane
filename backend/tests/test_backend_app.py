@@ -11,10 +11,12 @@ from fakes.session_repositories import (
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
-from backend.features.browsers.application.ports import BrowserProvisioner
+from backend.features.browsers.application.ports import (
+    BrowserProvisioner,
+    BrowserRepository,
+)
 from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.browsers.infrastructure import BrowserProvider
-from backend.features.leases.infrastructure import LeaseProvider
+from backend.features.leases.application.ports import LeaseStore
 from backend.features.sessions.application.ports import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
@@ -99,6 +101,33 @@ class FakeBrowserRuntime(BrowserRuntime):
         raise AssertionError("No fake download exists")
 
 
+class FakeBrowserProvider(Provider):
+    def __init__(
+        self, provisioner: BrowserProvisioner, repository: BrowserRepository
+    ) -> None:
+        super().__init__()
+        self._provisioner = provisioner
+        self._repository = repository
+
+    @provide(scope=Scope.APP, provides=BrowserProvisioner)
+    def provisioner(self) -> BrowserProvisioner:
+        return self._provisioner
+
+    @provide(scope=Scope.REQUEST, provides=BrowserRepository)
+    def repository(self) -> BrowserRepository:
+        return self._repository
+
+
+class FakeLeaseProvider(Provider):
+    def __init__(self, store: LeaseStore) -> None:
+        super().__init__()
+        self._store = store
+
+    @provide(scope=Scope.REQUEST, provides=LeaseStore)
+    def store(self) -> LeaseStore:
+        return self._store
+
+
 class FakeSessionProvider(Provider):
     def __init__(
         self,
@@ -140,20 +169,18 @@ def create_test_app(
     sessions: InMemorySessionRepository,
     browser_state: BrowserRuntime,
     checkpoints: InMemoryBrowserCheckpointRepository | None = None,
-    authentication_profiles: InMemoryAuthenticationProfileRepository
-    | None = None,
+    authentication_profiles: InMemoryAuthenticationProfileRepository | None = None,
 ):
     return create_app(
         (
-            BrowserProvider(provisioner, repository),
-            LeaseProvider(InMemoryLeaseStore()),
+            FakeBrowserProvider(provisioner, repository),
+            FakeLeaseProvider(InMemoryLeaseStore()),
             FakeSessionProvider(
                 sessions=sessions,
                 browser_runtime=browser_state,
                 checkpoints=checkpoints or InMemoryBrowserCheckpointRepository(),
                 authentication_profiles=(
-                    authentication_profiles
-                    or InMemoryAuthenticationProfileRepository()
+                    authentication_profiles or InMemoryAuthenticationProfileRepository()
                 ),
             ),
         )
