@@ -3,14 +3,14 @@ from urllib.parse import urlsplit
 from uuid import UUID
 
 from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.browser.state.application.exceptions import (
+from browser_worker.features.state.application.exceptions import (
     BrowserStateInvalidException,
 )
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserState,
 )
-from browser_worker.features.browser.state.application.ports import BrowserStateStore
+from browser_worker.features.state.application.ports import BrowserStateStore
 
 StateStoreFactory = Callable[[str], BrowserStateStore]
 

@@ -8,13 +8,6 @@ from browser_worker.features.browser.presentation.errors import (
     API_ERRORS as BROWSER_API_ERRORS,
 )
 from browser_worker.features.browser.presentation.router import browser_router
-from browser_worker.features.browser.state.infrastructure import BrowserStateProvider
-from browser_worker.features.browser.state.presentation.errors import (
-    API_ERRORS as BROWSER_STATE_API_ERRORS,
-)
-from browser_worker.features.browser.state.presentation.router import (
-    browser_state_router,
-)
 from browser_worker.features.downloads.infrastructure import DownloadProvider
 from browser_worker.features.downloads.presentation.errors import (
     API_ERRORS as DOWNLOAD_API_ERRORS,
@@ -29,6 +22,13 @@ from browser_worker.features.recordings.presentation.errors import (
 from browser_worker.features.recordings.presentation.router import recording_router
 from browser_worker.features.screencast.infrastructure import ScreencastProvider
 from browser_worker.features.screencast.presentation.router import screencast_router
+from browser_worker.features.state.infrastructure import BrowserStateProvider
+from browser_worker.features.state.presentation.errors import (
+    API_ERRORS as BROWSER_STATE_API_ERRORS,
+)
+from browser_worker.features.state.presentation.router import (
+    browser_state_router,
+)
 from browser_worker.features.workspace.infrastructure import WorkspaceProvider
 from browser_worker.lifespan import lifespan
 from browser_worker.presentation.api_errors import register_api_error_handlers

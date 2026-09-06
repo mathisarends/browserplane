@@ -2,7 +2,7 @@ from typing import Literal
 
 from fastapi import status
 
-from browser_worker.features.browser.state.application.exceptions import (
+from browser_worker.features.state.application.exceptions import (
     BrowserStateFailedException,
     BrowserStateInvalidException,
 )

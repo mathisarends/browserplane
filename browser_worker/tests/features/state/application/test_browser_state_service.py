@@ -5,27 +5,27 @@ import pytest
 from tests.fakes import FakeBrowserProcess
 
 from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.browser.state.application.exceptions import (
+from browser_worker.features.state.application.exceptions import (
     BrowserStateInvalidException,
 )
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserState,
 )
-from browser_worker.features.browser.state.application.ports import BrowserStateStore
-from browser_worker.features.browser.state.application.service import (
+from browser_worker.features.state.application.ports import BrowserStateStore
+from browser_worker.features.state.application.service import (
     BrowserStateService,
 )
-from browser_worker.features.browser.state.infrastructure.settings import (
+from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
-from browser_worker.features.browser.state.presentation.mapper import (
+from browser_worker.features.state.presentation.mapper import (
     to_authentication_state,
     to_authentication_state_response,
     to_browser_state,
     to_browser_state_response,
 )
-from browser_worker.features.browser.state.presentation.schemas import (
+from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )

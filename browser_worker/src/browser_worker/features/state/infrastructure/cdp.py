@@ -13,10 +13,10 @@ from cdpify.domains.network.types import CookieParam
 from cdpify.domains.page.events import LoadEventFiredEvent, PageEvent
 from cdpify.domains.target.types import TargetInfo
 
-from browser_worker.features.browser.state.application.exceptions import (
+from browser_worker.features.state.application.exceptions import (
     BrowserStateFailedException,
 )
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserCookie,
     BrowserOriginState,
@@ -25,8 +25,8 @@ from browser_worker.features.browser.state.application.models import (
     ScrollPosition,
     StorageItem,
 )
-from browser_worker.features.browser.state.application.ports import BrowserStateStore
-from browser_worker.features.browser.state.infrastructure.settings import (
+from browser_worker.features.state.application.ports import BrowserStateStore
+from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
 

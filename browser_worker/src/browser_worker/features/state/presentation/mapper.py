@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserCookie,
     BrowserOriginState,
@@ -9,7 +9,7 @@ from browser_worker.features.browser.state.application.models import (
     ScrollPosition,
     StorageItem,
 )
-from browser_worker.features.browser.state.presentation.schemas import (
+from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserCookieSchema,
     BrowserOriginStateSchema,

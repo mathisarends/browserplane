@@ -1,15 +1,15 @@
 from dishka import Provider, Scope, provide
 
 from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.browser.state.application.ports import BrowserStateStore
-from browser_worker.features.browser.state.application.service import (
+from browser_worker.features.state.application.ports import BrowserStateStore
+from browser_worker.features.state.application.service import (
     BrowserStateService,
     StateStoreFactory,
 )
-from browser_worker.features.browser.state.infrastructure.cdp import (
+from browser_worker.features.state.infrastructure.cdp import (
     CdpBrowserStateStore,
 )
-from browser_worker.features.browser.state.infrastructure.settings import (
+from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
 

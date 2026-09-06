@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserState,
 )

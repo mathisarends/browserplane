@@ -1,23 +1,23 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class PlaywrightModel(BaseModel):
-    """Accepts and emits the camelCase names Playwright's storage state uses."""
+class StateModel(BaseModel):
+    """Accept API aliases as well as snake_case Python field names."""
 
     model_config = ConfigDict(populate_by_name=True)
 
 
-class StorageItemSchema(PlaywrightModel):
+class StorageItemSchema(StateModel):
     name: str
     value: str
 
 
-class BrowserOriginStateSchema(PlaywrightModel):
+class BrowserOriginStateSchema(StateModel):
     origin: str
     local_storage: list[StorageItemSchema] = Field(default=[], alias="localStorage")
 
 
-class BrowserCookieSchema(PlaywrightModel):
+class BrowserCookieSchema(StateModel):
     name: str
     value: str
     domain: str
@@ -28,25 +28,25 @@ class BrowserCookieSchema(PlaywrightModel):
     same_site: str | None = Field(default=None, alias="sameSite")
 
 
-class AuthenticationStateSchema(PlaywrightModel):
+class AuthenticationStateSchema(StateModel):
     """A Playwright ``storage_state``: what makes the browser logged in."""
 
     cookies: list[BrowserCookieSchema] = []
     origins: list[BrowserOriginStateSchema] = []
 
 
-class ScrollPositionSchema(PlaywrightModel):
+class ScrollPositionSchema(StateModel):
     x: int = 0
     y: int = 0
 
 
-class BrowserTabStateSchema(PlaywrightModel):
+class BrowserTabStateSchema(StateModel):
     url: str
     scroll: ScrollPositionSchema = ScrollPositionSchema()
     session_storage: list[StorageItemSchema] = Field(default=[], alias="sessionStorage")
 
 
-class BrowserStateSchema(PlaywrightModel):
+class BrowserStateSchema(StateModel):
     """Restorable tabs and their UI state, independent of authentication."""
 
     tabs: list[BrowserTabStateSchema] = []

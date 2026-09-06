@@ -11,17 +11,17 @@ import pytest
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
-from browser_worker.features.browser.state.application.models import (
+from browser_worker.features.downloads.application.service import DownloadService
+from browser_worker.features.state.application.models import (
     BrowserState,
     BrowserTabState,
 )
-from browser_worker.features.browser.state.infrastructure.cdp import (
+from browser_worker.features.state.infrastructure.cdp import (
     CdpBrowserStateStore,
 )
-from browser_worker.features.browser.state.infrastructure.settings import (
+from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
-from browser_worker.features.downloads.application.service import DownloadService
 from browser_worker.features.workspace.application.workspace import Workspace
 
 

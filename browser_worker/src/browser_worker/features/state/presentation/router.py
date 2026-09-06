@@ -5,20 +5,20 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, Response, status
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
-from browser_worker.features.browser.state.application.service import (
+from browser_worker.features.state.application.service import (
     BrowserStateService,
 )
-from browser_worker.features.browser.state.presentation.errors import (
+from browser_worker.features.state.presentation.errors import (
     BROWSER_STATE_FAILED,
     BROWSER_STATE_INVALID,
 )
-from browser_worker.features.browser.state.presentation.mapper import (
+from browser_worker.features.state.presentation.mapper import (
     to_authentication_state,
     to_authentication_state_response,
     to_browser_state,
     to_browser_state_response,
 )
-from browser_worker.features.browser.state.presentation.schemas import (
+from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )
