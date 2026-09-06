@@ -7,8 +7,8 @@ design decision that makes "continue where I left off" work without also meaning
 ```text
 authentication state              browser state
 ────────────────────              ─────────────────────────────
-cookies                           tabs and their urls
-origin localStorage               active tab index
+cookies, including partition keys tabs and their urls
+origin localStorage + IndexedDB   active tab index
                                   scroll positions
                                   per-tab sessionStorage
 
@@ -37,7 +37,7 @@ profile, so restoring one implies the other.
 
 ```text
 1. clear downloads        a recycled slot must not leak the last tenant's files
-2. mount authentication   cookies and localStorage before anything navigates
+2. mount authentication   cookies, localStorage and IndexedDB before navigation
 3. mount browser state    tabs now load already logged in
 ```
 
@@ -86,6 +86,15 @@ persistence        Postgres: authentication_profiles (encrypted bytes)
 The worker only reads and writes what the browser holds — it stores nothing.
 Capture and mount are therefore repeatable, and a running session can be
 re-pointed at a different profile at any time.
+
+Origin storage is accessed through an inert document served by CDP. This grants
+storage access without running application code or triggering redirects.
+IndexedDB snapshots retain database versions, object-store and index definitions,
+keys, and structured-clone values including binary data, dates, maps, sets, and
+cyclic objects. Service workers and Cache Storage are deliberately excluded:
+restoring cached executable application code would make a profile stale and
+unsafe. Per-tab sessionStorage remains part of the browser checkpoint because it
+has no origin-global lifetime.
 
 ## API surface
 

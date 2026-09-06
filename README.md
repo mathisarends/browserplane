@@ -152,8 +152,8 @@ Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
 Full contract: `schemas/backend-openapi.json`, or Swagger UI on
 `http://localhost:8000/docs`.
 
-Session state is two independent documents — `authentication_state` (cookies and
-origin-localStorage; a reusable, encrypted profile) and `browser_state` (tabs,
+Session state is two independent documents — `authentication_state` (cookies,
+origin-localStorage, and IndexedDB; a reusable, encrypted profile) and `browser_state` (tabs,
 active tab, scroll, sessionStorage; a checkpoint). Authentication is mounted
 first, so restored tabs navigate logged in. See
 [docs/session-state.md](docs/session-state.md).

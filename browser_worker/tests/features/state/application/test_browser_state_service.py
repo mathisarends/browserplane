@@ -52,12 +52,39 @@ AUTHENTICATION_STATE = {
             "httpOnly": True,
             "secure": True,
             "sameSite": "Lax",
+            "priority": "High",
+            "sourceScheme": "Secure",
+            "sourcePort": 443,
+            "partitionKey": {
+                "topLevelSite": "https://example.com",
+                "hasCrossSiteAncestor": False,
+            },
         }
     ],
     "localStorage": [
         {
             "origin": "https://example.com",
             "localStorage": [{"name": "token", "value": "abc"}],
+        }
+    ],
+    "indexedDB": [
+        {
+            "origin": "https://example.com",
+            "databases": [
+                {
+                    "name": "auth",
+                    "version": 1,
+                    "objectStores": [
+                        {
+                            "name": "tokens",
+                            "keyPath": None,
+                            "autoIncrement": False,
+                            "indexes": [],
+                            "records": [{"key": "user", "value": "secret"}],
+                        }
+                    ],
+                }
+            ],
         }
     ],
 }

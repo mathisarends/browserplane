@@ -13,6 +13,10 @@ from browser_worker.features.state.application.models import (
     AuthenticationState,
     BrowserState,
     BrowserTabState,
+    IndexedDbDatabase,
+    IndexedDbObjectStore,
+    IndexedDbRecord,
+    OriginIndexedDb,
     OriginLocalStorage,
     StorageItem,
 )
@@ -74,7 +78,43 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
                     origin=origin,
                     local_storage=(StorageItem("token", "secret"),),
                 ),
-            )
+            ),
+            indexed_db=(
+                OriginIndexedDb(
+                    origin=origin,
+                    databases=(
+                        IndexedDbDatabase(
+                            name="firebaseLocalStorageDb",
+                            version=1,
+                            object_stores=(
+                                IndexedDbObjectStore(
+                                    name="firebaseLocalStorage",
+                                    records=(
+                                        IndexedDbRecord(
+                                            key="firebase:authUser:test:[DEFAULT]",
+                                            value={
+                                                "$id": 1,
+                                                "$type": "object",
+                                                "value": [
+                                                    ["uid", "alice"],
+                                                    [
+                                                        "claims",
+                                                        {
+                                                            "$id": 2,
+                                                            "$type": "array",
+                                                            "value": ["book"],
+                                                        },
+                                                    ],
+                                                ],
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
         )
         state = BrowserState(
             tabs=(

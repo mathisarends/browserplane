@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable, Iterable, Sequence
@@ -9,8 +10,11 @@ from urllib.parse import urlsplit
 
 from cdpify import CDPSession, Client
 from cdpify.domains.domstorage.types import StorageId
-from cdpify.domains.network.types import CookieParam
+from cdpify.domains.fetch.events import FetchEvent, RequestPausedEvent
+from cdpify.domains.fetch.types import HeaderEntry, RequestPattern
+from cdpify.domains.network.types import CookieParam, CookiePartitionKey
 from cdpify.domains.page.events import LoadEventFiredEvent, PageEvent
+from cdpify.domains.runtime.types import CallArgument
 from cdpify.domains.target.types import TargetInfo
 
 from browser_worker.features.state.application.exceptions import (
@@ -21,9 +25,17 @@ from browser_worker.features.state.application.models import (
     BrowserCookie,
     BrowserState,
     BrowserTabState,
+    IndexedDbDatabase,
+    IndexedDbIndex,
+    IndexedDbObjectStore,
+    IndexedDbRecord,
+    OriginIndexedDb,
     OriginLocalStorage,
     ScrollPosition,
     StorageItem,
+)
+from browser_worker.features.state.application.models import (
+    CookiePartitionKey as StateCookiePartitionKey,
 )
 from browser_worker.features.state.application.ports import BrowserStateStore
 from browser_worker.features.state.infrastructure.settings import (
@@ -34,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 _WEB_SCHEMES = frozenset({"http", "https"})
 _BLANK_URL = "about:blank"
+_EMPTY_DOCUMENT = base64.b64encode(b"<!doctype html><title>storage</title>").decode()
 
 
 class CdpBrowserStateStore(BrowserStateStore):
@@ -88,11 +101,17 @@ async def _capture_authentication_state(
     client: Client, *, extra_origins: Sequence[str]
 ) -> AuthenticationState:
     targets = await _page_targets(client)
-    cookies, local_storage = await asyncio.gather(
-        _capture_cookies(client),
-        _capture_local_storage(client, _origins_of(targets) | set(extra_origins)),
+    cookies = await _capture_cookies(client)
+    origins = _origins_of(targets) | _origins_of_cookies(cookies) | set(extra_origins)
+    local_storage, indexed_db = await asyncio.gather(
+        _capture_local_storage(client, origins),
+        _capture_indexed_db(client, origins),
     )
-    return AuthenticationState(cookies=cookies, local_storage=local_storage)
+    return AuthenticationState(
+        cookies=cookies,
+        local_storage=local_storage,
+        indexed_db=indexed_db,
+    )
 
 
 async def _capture_browser_state(client: Client) -> BrowserState:
@@ -117,6 +136,22 @@ def _origins_of(targets: Iterable[TargetInfo]) -> set[str]:
     return {origin for target in targets if (origin := _to_origin(target.url))}
 
 
+def _origins_of_cookies(cookies: Iterable[BrowserCookie]) -> set[str]:
+    origins: set[str] = set()
+    for cookie in cookies:
+        host = cookie.domain.removeprefix(".")
+        if not host:
+            continue
+        scheme = "http" if cookie.source_scheme == "NonSecure" else "https"
+        port = cookie.source_port
+        default_port = 80 if scheme == "http" else 443
+        authority = (
+            f"{host}:{port}" if port and port > 0 and port != default_port else host
+        )
+        origins.add(f"{scheme}://{authority}")
+    return origins
+
+
 def _to_origin(url: str) -> str | None:
     parts = urlsplit(url)
     if parts.scheme not in _WEB_SCHEMES or not parts.netloc:
@@ -138,6 +173,19 @@ async def _capture_cookies(client: Client) -> tuple[BrowserCookie, ...]:
             http_only=cookie.http_only,
             secure=cookie.secure,
             same_site=cookie.same_site,
+            priority=cookie.priority,
+            source_scheme=cookie.source_scheme,
+            source_port=cookie.source_port,
+            partition_key=(
+                StateCookiePartitionKey(
+                    top_level_site=cookie.partition_key.top_level_site,
+                    has_cross_site_ancestor=(
+                        cookie.partition_key.has_cross_site_ancestor
+                    ),
+                )
+                if cookie.partition_key
+                else None
+            ),
         )
         for cookie in result.cookies
     )
@@ -167,9 +215,67 @@ async def _capture_local_storage(
             logger.warning("Could not read localStorage of %s", origin, exc_info=True)
             continue
         items = _to_storage_items(result.entries)
-        if items:
-            captured.append(OriginLocalStorage(origin=origin, local_storage=items))
+        captured.append(OriginLocalStorage(origin=origin, local_storage=items))
     return tuple(captured)
+
+
+async def _capture_indexed_db(
+    client: Client,
+    origins: set[str],
+) -> tuple[OriginIndexedDb, ...]:
+    captured: list[OriginIndexedDb] = []
+    for origin in sorted(origins):
+        try:
+            async with _loaded_origin(client, origin) as session:
+                result = await session.runtime.evaluate(
+                    expression=_CAPTURE_INDEXED_DB_EXPRESSION,
+                    await_promise=True,
+                    return_by_value=True,
+                    silent=True,
+                )
+                raw = result.result.value
+                if not isinstance(raw, list):
+                    raise TypeError("IndexedDB capture returned no value")
+                databases = tuple(_indexed_db_database(item) for item in raw)
+        except Exception:
+            logger.warning("Could not read IndexedDB of %s", origin, exc_info=True)
+            continue
+        captured.append(OriginIndexedDb(origin=origin, databases=databases))
+    return tuple(captured)
+
+
+def _indexed_db_database(value: Any) -> IndexedDbDatabase:
+    return IndexedDbDatabase(
+        name=str(value["name"]),
+        version=int(value["version"]),
+        object_stores=tuple(
+            IndexedDbObjectStore(
+                name=str(store["name"]),
+                key_path=_indexed_db_key_path(store.get("keyPath")),
+                auto_increment=bool(store.get("autoIncrement")),
+                indexes=tuple(
+                    IndexedDbIndex(
+                        name=str(index["name"]),
+                        key_path=_indexed_db_key_path(index.get("keyPath")),
+                        unique=bool(index.get("unique")),
+                        multi_entry=bool(index.get("multiEntry")),
+                    )
+                    for index in store.get("indexes", ())
+                ),
+                records=tuple(
+                    IndexedDbRecord(key=record["key"], value=record["value"])
+                    for record in store.get("records", ())
+                ),
+            )
+            for store in value.get("objectStores", ())
+        ),
+    )
+
+
+def _indexed_db_key_path(value: Any) -> str | tuple[str, ...] | None:
+    if isinstance(value, list):
+        return tuple(str(item) for item in value)
+    return str(value) if value is not None else None
 
 
 def _to_storage_items(entries: Iterable[Any]) -> tuple[StorageItem, ...]:
@@ -255,8 +361,16 @@ async def _restore_authentication(client: Client, auth: AuthenticationState) -> 
             failed += 1
             logger.warning("Could not write localStorage of %s", origin.origin)
             logger.debug("localStorage restore failed", exc_info=True)
-    if auth.local_storage and failed == len(auth.local_storage):
-        raise BrowserStateFailedException("Could not write localStorage")
+    for origin in auth.indexed_db:
+        try:
+            await _restore_indexed_db(client, origin)
+        except Exception:
+            failed += 1
+            logger.warning("Could not write IndexedDB of %s", origin.origin)
+            logger.debug("IndexedDB restore failed", exc_info=True)
+    origin_count = len(auth.local_storage) + len(auth.indexed_db)
+    if origin_count and failed == origin_count:
+        raise BrowserStateFailedException("Could not write origin storage")
 
 
 def _to_cookie_param(cookie: BrowserCookie) -> CookieParam:
@@ -269,6 +383,17 @@ def _to_cookie_param(cookie: BrowserCookie) -> CookieParam:
         http_only=cookie.http_only,
         same_site=cookie.same_site,  # type: ignore[arg-type]
         expires=cookie.expires,
+        priority=cookie.priority,  # type: ignore[arg-type]
+        source_scheme=cookie.source_scheme,  # type: ignore[arg-type]
+        source_port=cookie.source_port,
+        partition_key=(
+            CookiePartitionKey(
+                top_level_site=cookie.partition_key.top_level_site,
+                has_cross_site_ancestor=cookie.partition_key.has_cross_site_ancestor,
+            )
+            if cookie.partition_key
+            else None
+        ),
     )
 
 
@@ -293,6 +418,59 @@ async def _restore_origin(client: Client, origin: OriginLocalStorage) -> None:
             )
 
 
+async def _restore_indexed_db(client: Client, origin: OriginIndexedDb) -> None:
+    """Replace an origin's IndexedDB databases from a portable snapshot."""
+    payload = {
+        "databases": [
+            {
+                "name": database.name,
+                "version": database.version,
+                "objectStores": [
+                    {
+                        "name": store.name,
+                        "keyPath": _key_path_value(store.key_path),
+                        "autoIncrement": store.auto_increment,
+                        "indexes": [
+                            {
+                                "name": index.name,
+                                "keyPath": _key_path_value(index.key_path),
+                                "unique": index.unique,
+                                "multiEntry": index.multi_entry,
+                            }
+                            for index in store.indexes
+                        ],
+                        "records": [
+                            {"key": record.key, "value": record.value}
+                            for record in store.records
+                        ],
+                    }
+                    for store in database.object_stores
+                ],
+            }
+            for database in origin.databases
+        ]
+    }
+    async with _loaded_origin(client, origin.origin) as session:
+        global_object = await session.runtime.evaluate(expression="globalThis")
+        object_id = global_object.result.object_id
+        if object_id is None:
+            raise TypeError("Could not address the origin execution context")
+        result = await session.runtime.call_function_on(
+            object_id=object_id,
+            function_declaration=_RESTORE_INDEXED_DB_FUNCTION,
+            arguments=[CallArgument(value=payload)],
+            await_promise=True,
+            return_by_value=True,
+            silent=True,
+        )
+        if result.exception_details is not None:
+            raise BrowserStateFailedException("IndexedDB restore script failed")
+
+
+def _key_path_value(value: str | tuple[str, ...] | None) -> str | list[str] | None:
+    return list(value) if isinstance(value, tuple) else value
+
+
 @asynccontextmanager
 async def _loaded_origin(
     client: Client,
@@ -302,6 +480,13 @@ async def _loaded_origin(
     try:
         async with _attached(client, created.target_id) as session:
             await session.page.enable()
+            await session.fetch.enable(
+                patterns=[RequestPattern(resource_type="Document")]
+            )
+            document = asyncio.create_task(
+                _fulfill_empty_document(session, timeout=10),
+                name=f"browser-state:document:{created.target_id}",
+            )
             loaded = asyncio.create_task(
                 _wait_for_load(session, timeout=10),
                 name=f"browser-state:origin:{created.target_id}",
@@ -311,15 +496,37 @@ async def _loaded_origin(
                 navigation = await session.page.navigate(url=origin)
                 if navigation.error_text:
                     raise BrowserStateFailedException(navigation.error_text)
+                await document
                 await loaded
             finally:
+                document.cancel()
                 loaded.cancel()
+                with suppress(BaseException):
+                    await document
                 with suppress(BaseException):
                     await loaded
             yield session
     finally:
         with suppress(Exception):
             await client.target.close_target(target_id=created.target_id)
+
+
+async def _fulfill_empty_document(session: CDPSession, timeout: float) -> None:
+    """Create an inert document at an origin without executing that site's app."""
+    async for event in session.listen(
+        FetchEvent.REQUEST_PAUSED,
+        RequestPausedEvent,
+        timeout=timeout,
+    ):
+        await session.fetch.fulfill_request(
+            request_id=event.request_id,
+            response_code=200,
+            response_headers=[
+                HeaderEntry(name="Content-Type", value="text/html; charset=utf-8")
+            ],
+            body=_EMPTY_DOCUMENT,
+        )
+        return
 
 
 async def _restore_tabs(
@@ -459,6 +666,250 @@ _CAPTURE_EXPRESSION = """
         visible: document.visibilityState === "visible",
     };
 })()
+"""
+
+
+_CAPTURE_INDEXED_DB_EXPRESSION = r"""
+(async () => {
+    const request = (value) => new Promise((resolve, reject) => {
+        value.onsuccess = () => resolve(value.result);
+        value.onerror = () => reject(value.error);
+    });
+    const bytes = (value) => {
+        let binary = "";
+        for (const byte of new Uint8Array(value)) binary += String.fromCharCode(byte);
+        return btoa(binary);
+    };
+    const seen = new Map();
+    let nextId = 1;
+    const encode = async (value) => {
+        if (value === undefined) return {$type: "undefined"};
+        if (typeof value === "bigint") return {$type: "bigint", value: String(value)};
+        if (typeof value === "number" && !Number.isFinite(value)) {
+            return {$type: "number", value: String(value)};
+        }
+        if (value === null || typeof value !== "object") return value;
+        if (seen.has(value)) return {$ref: seen.get(value)};
+        const id = nextId++;
+        seen.set(value, id);
+        if (value instanceof Date) {
+            return {$id: id, $type: "date", value: value.getTime()};
+        }
+        if (value instanceof RegExp) {
+            return {$id: id, $type: "regexp", source: value.source, flags: value.flags};
+        }
+        if (value instanceof ArrayBuffer) {
+            return {$id: id, $type: "arrayBuffer", value: bytes(value)};
+        }
+        if (ArrayBuffer.isView(value)) {
+            const buffer = value.buffer.slice(
+                value.byteOffset, value.byteOffset + value.byteLength,
+            );
+            return {
+                $id: id, $type: "view", name: value.constructor.name,
+                value: bytes(buffer),
+            };
+        }
+        if (value instanceof Blob) {
+            return {
+                $id: id,
+                $type: "blob",
+                mimeType: value.type,
+                value: bytes(await value.arrayBuffer()),
+            };
+        }
+        if (value instanceof Map) {
+            const entries = [];
+            for (const [key, item] of value) {
+                entries.push([await encode(key), await encode(item)]);
+            }
+            return {$id: id, $type: "map", value: entries};
+        }
+        if (value instanceof Set) {
+            const items = [];
+            for (const item of value) items.push(await encode(item));
+            return {$id: id, $type: "set", value: items};
+        }
+        if (Array.isArray(value)) {
+            const items = await Promise.all(value.map(encode));
+            return {$id: id, $type: "array", value: items};
+        }
+        const entries = [];
+        for (const key of Object.keys(value)) {
+            entries.push([key, await encode(value[key])]);
+        }
+        return {$id: id, $type: "object", value: entries};
+    };
+
+    if (!indexedDB.databases) throw new Error("IndexedDB enumeration is unavailable");
+    const databases = [];
+    for (const info of await indexedDB.databases()) {
+        if (!info.name) continue;
+        const db = await request(indexedDB.open(info.name));
+        try {
+            const names = Array.from(db.objectStoreNames);
+            const transaction = names.length ? db.transaction(names, "readonly") : null;
+            const objectStores = [];
+            for (const name of names) {
+                const store = transaction.objectStore(name);
+                const [keys, values] = await Promise.all([
+                    request(store.getAllKeys()), request(store.getAll()),
+                ]);
+                const records = [];
+                for (let index = 0; index < values.length; index++) {
+                    records.push({
+                        key: await encode(keys[index]),
+                        value: await encode(values[index]),
+                    });
+                }
+                objectStores.push({
+                    name,
+                    keyPath: store.keyPath,
+                    autoIncrement: store.autoIncrement,
+                    indexes: Array.from(store.indexNames, (indexName) => {
+                        const item = store.index(indexName);
+                        return {
+                            name: item.name,
+                            keyPath: item.keyPath,
+                            unique: item.unique,
+                            multiEntry: item.multiEntry,
+                        };
+                    }),
+                    records,
+                });
+            }
+            databases.push({name: db.name, version: db.version, objectStores});
+        } finally {
+            db.close();
+        }
+    }
+    return databases;
+})()
+"""
+
+
+_RESTORE_INDEXED_DB_FUNCTION = r"""
+async function(payload) {
+    const request = (value) => new Promise((resolve, reject) => {
+        value.onsuccess = () => resolve(value.result);
+        value.onerror = () => reject(value.error);
+        value.onblocked = () => reject(new Error("IndexedDB request was blocked"));
+    });
+    const transaction = (value) => new Promise((resolve, reject) => {
+        value.oncomplete = () => resolve();
+        value.onerror = () => reject(value.error);
+        value.onabort = () => reject(
+            value.error || new Error("IndexedDB transaction aborted"),
+        );
+    });
+    const binary = (value) => {
+        const decoded = atob(value);
+        const bytes = new Uint8Array(decoded.length);
+        for (let index = 0; index < decoded.length; index++) {
+            bytes[index] = decoded.charCodeAt(index);
+        }
+        return bytes;
+    };
+    const references = new Map();
+    const decode = (value) => {
+        if (value === null || typeof value !== "object") return value;
+        if ("$ref" in value) return references.get(value.$ref);
+        if (!("$type" in value)) return value;
+        if (value.$type === "undefined") return undefined;
+        if (value.$type === "bigint") return BigInt(value.value);
+        if (value.$type === "number") return Number(value.value);
+        if (value.$type === "date") {
+            const result = new Date(value.value);
+            references.set(value.$id, result);
+            return result;
+        }
+        if (value.$type === "regexp") {
+            const result = new RegExp(value.source, value.flags);
+            references.set(value.$id, result);
+            return result;
+        }
+        if (value.$type === "arrayBuffer") {
+            const result = binary(value.value).buffer;
+            references.set(value.$id, result);
+            return result;
+        }
+        if (value.$type === "view") {
+            const buffer = binary(value.value).buffer;
+            const constructor = globalThis[value.name];
+            const result = value.name === "DataView"
+                ? new DataView(buffer)
+                : new constructor(buffer);
+            references.set(value.$id, result);
+            return result;
+        }
+        if (value.$type === "blob") {
+            const result = new Blob([binary(value.value)], {type: value.mimeType});
+            references.set(value.$id, result); return result;
+        }
+        let result;
+        if (value.$type === "array") result = [];
+        else if (value.$type === "map") result = new Map();
+        else if (value.$type === "set") result = new Set();
+        else result = {};
+        references.set(value.$id, result);
+        if (value.$type === "array") {
+            value.value.forEach((item) => result.push(decode(item)));
+        } else if (value.$type === "map") {
+            value.value.forEach(
+                ([key, item]) => result.set(decode(key), decode(item)),
+            );
+        } else if (value.$type === "set") {
+            value.value.forEach((item) => result.add(decode(item)));
+        } else {
+            value.value.forEach(([key, item]) => result[key] = decode(item));
+        }
+        return result;
+    };
+
+    if (indexedDB.databases) {
+        for (const info of await indexedDB.databases()) {
+            if (info.name) await request(indexedDB.deleteDatabase(info.name));
+        }
+    }
+    for (const database of payload.databases) {
+        const opening = indexedDB.open(database.name, database.version);
+        opening.onupgradeneeded = () => {
+            const db = opening.result;
+            for (const definition of database.objectStores) {
+                const store = db.createObjectStore(definition.name, {
+                    keyPath: definition.keyPath,
+                    autoIncrement: definition.autoIncrement,
+                });
+                for (const index of definition.indexes) {
+                    store.createIndex(index.name, index.keyPath, {
+                        unique: index.unique,
+                        multiEntry: index.multiEntry,
+                    });
+                }
+            }
+        };
+        const db = await request(opening);
+        try {
+            const names = database.objectStores.map((store) => store.name);
+            if (!names.length) continue;
+            const writing = db.transaction(names, "readwrite");
+            for (const definition of database.objectStores) {
+                const store = writing.objectStore(definition.name);
+                for (const record of definition.records) {
+                    const value = decode(record.value);
+                    if (definition.keyPath === null) {
+                        store.put(value, decode(record.key));
+                    }
+                    else store.put(value);
+                }
+            }
+            await transaction(writing);
+        } finally {
+            db.close();
+        }
+    }
+    return true;
+}
 """
 
 

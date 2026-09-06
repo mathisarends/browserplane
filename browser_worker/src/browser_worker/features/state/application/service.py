@@ -50,6 +50,8 @@ class BrowserStateService:
     ) -> None:
         for origin in state.local_storage:
             _validate_origin(origin.origin)
+        for origin in state.indexed_db:
+            _validate_origin(origin.origin)
         await self._store(browser_id).restore_authentication(state)
 
     async def capture_browser(self, browser_id: UUID) -> BrowserState:

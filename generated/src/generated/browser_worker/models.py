@@ -13,6 +13,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
+class CookiePartitionKeySchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    top_level_site: str = Field(alias="topLevelSite")
+    has_cross_site_ancestor: bool = Field(alias="hasCrossSiteAncestor")
+
+
 class BrowserCookieSchema(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -24,6 +31,51 @@ class BrowserCookieSchema(BaseModel):
     http_only: bool = Field(False, alias="httpOnly")
     secure: bool = False
     same_site: str | None = Field(None, alias="sameSite")
+    priority: str | None = None
+    source_scheme: str | None = Field(None, alias="sourceScheme")
+    source_port: int | None = Field(None, alias="sourcePort")
+    partition_key: CookiePartitionKeySchema | None = Field(None, alias="partitionKey")
+
+
+class IndexedDbIndexSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str
+    key_path: str | list[str] | None = Field(None, alias="keyPath")
+    unique: bool = False
+    multi_entry: bool = Field(False, alias="multiEntry")
+
+
+class IndexedDbRecordSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    key: Any
+    value: Any
+
+
+class IndexedDbObjectStoreSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str
+    key_path: str | list[str] | None = Field(None, alias="keyPath")
+    auto_increment: bool = Field(False, alias="autoIncrement")
+    indexes: list[IndexedDbIndexSchema] = []
+    records: list[IndexedDbRecordSchema] = []
+
+
+class IndexedDbDatabaseSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    name: str
+    version: int
+    object_stores: list[IndexedDbObjectStoreSchema] = Field([], alias="objectStores")
+
+
+class OriginIndexedDbSchema(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    origin: str
+    databases: list[IndexedDbDatabaseSchema] = []
 
 
 class StorageItemSchema(BaseModel):
@@ -45,6 +97,7 @@ class AuthenticationStateSchema(BaseModel):
 
     cookies: list[BrowserCookieSchema] = []
     local_storage: list[OriginLocalStorageSchema] = Field([], alias="localStorage")
+    indexed_d_b: list[OriginIndexedDbSchema] = Field(alias="indexedDB")
 
 
 class BrowserAlreadyRunningError(BaseModel):
