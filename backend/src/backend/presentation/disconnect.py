@@ -26,7 +26,10 @@ async def while_connected[T](http_request: Request, work: Coroutine[Any, Any, T]
     finally:
         task.cancel()
         watch.cancel()
-        await asyncio.gather(task, watch, return_exceptions=True)
+        # The disconnect watcher is advisory. Some transports take longer to
+        # unwind a cancelled receive operation, which must not delay a result
+        # that the work task has already produced.
+        await asyncio.gather(task, return_exceptions=True)
 
 
 async def _disconnected(http_request: Request) -> None:

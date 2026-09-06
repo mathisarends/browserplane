@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager, suppress
 
 from cdpify import Client
 
-from browser_worker.features.screencast.application.models import ScreencastOptions
 from browser_worker.features.screencast.application.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.cdp import (
     ActiveTabBridge,
 )
+from browser_worker.features.screencast.infrastructure.settings import ScreencastOptions
 from browser_worker.features.screencast.infrastructure.tasks import (
     cancel_and_wait,
 )
@@ -27,14 +27,21 @@ class CdpFrameStream(FrameStream):
     Chromium reports page visibility only while a page is being screencast, so
     the browser is screencast once and every consumer subscribes to the same raw
     frame stream. The connection exists while at least one consumer subscribes.
+
+    Chromium only emits a frame when the page changes, so the newest frame is
+    kept and replayed to consumers as they join. Without it a consumer that
+    connects to a page nobody is touching would stare at nothing until the next
+    repaint.
     """
 
     def __init__(self, cdp_url: str, options: ScreencastOptions) -> None:
         self._cdp_url = cdp_url
         self._options = options
         self._client: Client | None = None
+        self._bridge: ActiveTabBridge | None = None
         self._publisher: asyncio.Task[None] | None = None
         self._subscribers: set[_Subscriber] = set()
+        self._latest: bytes | None = None
         self._lock = asyncio.Lock()
 
     @property
@@ -43,8 +50,10 @@ class CdpFrameStream(FrameStream):
 
     @asynccontextmanager
     async def subscribe(self) -> AsyncGenerator[AsyncGenerator[bytes]]:
-        """Join the browser's raw frame stream."""
+        """Join the browser's raw frame stream, starting at the newest frame."""
         subscriber = await self._join()
+        if subscriber.waiting:
+            await self._request_frame()
         frames = subscriber.frames()
         try:
             yield frames
@@ -59,11 +68,12 @@ class CdpFrameStream(FrameStream):
                 client = Client(self._cdp_url)
                 await client.connect()
                 self._client = client
+                self._bridge = ActiveTabBridge(client, self._options)
                 self._publisher = asyncio.create_task(
-                    self._publish(client),
+                    self._publish(self._bridge),
                     name="screencast:publisher",
                 )
-            subscriber = _Subscriber()
+            subscriber = _Subscriber(self._latest)
             self._subscribers.add(subscriber)
             return subscriber
 
@@ -74,6 +84,7 @@ class CdpFrameStream(FrameStream):
                 return
             publisher, self._publisher = self._publisher, None
             client, self._client = self._client, None
+            self._bridge = None
             if publisher is not None:
                 await cancel_and_wait(publisher)
             if client is not None:
@@ -85,6 +96,8 @@ class CdpFrameStream(FrameStream):
         async with self._lock:
             publisher, self._publisher = self._publisher, None
             client, self._client = self._client, None
+            self._bridge = None
+            self._latest = None
             if publisher is not None:
                 await cancel_and_wait(publisher)
             if client is not None:
@@ -94,11 +107,22 @@ class CdpFrameStream(FrameStream):
             for subscriber in tuple(self._subscribers):
                 subscriber.fail(error)
 
-    async def _publish(self, client: Client) -> None:
-        bridge = ActiveTabBridge(client, self._options)
+    async def _request_frame(self) -> None:
+        """Ask the browser for a frame a joining consumer could not be given.
+
+        Only reached when no frame has ever been seen for this browser, so it
+        costs one repaint per consumer that would otherwise wait indefinitely -
+        never a stream of frames nobody asked for.
+        """
+        bridge = self._bridge
+        if bridge is not None:
+            await bridge.request_frame()
+
+    async def _publish(self, bridge: ActiveTabBridge) -> None:
         error: Exception = ScreencastStoppedException("Screencast publisher stopped")
         try:
             async for frame in bridge.frames():
+                self._latest = frame
                 for subscriber in tuple(self._subscribers):
                     subscriber.publish(frame)
         except asyncio.CancelledError:
@@ -113,10 +137,17 @@ class CdpFrameStream(FrameStream):
 class _Subscriber:
     """A mailbox that keeps only the newest frame."""
 
-    def __init__(self) -> None:
-        self._frame: bytes | None = None
+    def __init__(self, frame: bytes | None = None) -> None:
+        self._frame = frame
         self._error: Exception | None = None
         self._ready = asyncio.Event()
+        if frame is not None:
+            self._ready.set()
+
+    @property
+    def waiting(self) -> bool:
+        """Whether this mailbox is still empty and has nothing to yield yet."""
+        return not self._ready.is_set()
 
     def publish(self, frame: bytes) -> None:
         self._frame = frame

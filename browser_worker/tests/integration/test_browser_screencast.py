@@ -4,7 +4,7 @@ import pytest
 
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
-from browser_worker.features.screencast.application.models import ScreencastOptions
+from browser_worker.features.screencast.infrastructure.settings import ScreencastOptions
 from browser_worker.features.screencast.infrastructure.stream import CdpFrameStream
 
 

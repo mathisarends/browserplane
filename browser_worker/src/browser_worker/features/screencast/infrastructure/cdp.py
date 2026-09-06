@@ -18,7 +18,6 @@ from cdpify.domains.target.events import (
     TargetEvent,
 )
 
-from browser_worker.features.screencast.application.models import ScreencastOptions
 from browser_worker.features.screencast.infrastructure.events import (
     Frame,
     StreamEvent,
@@ -28,6 +27,7 @@ from browser_worker.features.screencast.infrastructure.events import (
     VisibilityChanged,
     VisibleTarget,
 )
+from browser_worker.features.screencast.infrastructure.settings import ScreencastOptions
 from browser_worker.features.screencast.infrastructure.tasks import (
     cancel_and_wait,
 )
@@ -48,6 +48,7 @@ class ActiveTabBridge:
         self._options = options
         self._events: asyncio.Queue[StreamEvent] = asyncio.Queue()
         self._page_tasks: dict[str, asyncio.Task[None]] = {}
+        self._sessions: dict[str, CDPSession] = {}
         self._visible_target = VisibleTarget()
 
     async def frames(self) -> AsyncGenerator[bytes]:
@@ -60,6 +61,25 @@ class ActiveTabBridge:
                     yield frame
         finally:
             await cancel_and_wait(*target_listeners, *self._page_tasks.values())
+
+    async def request_frame(self) -> None:
+        """Make the visible page emit its current frame once.
+
+        Chromium sends a screencast frame only when the page changes, so a
+        consumer joining a page nobody is touching would wait for the next
+        repaint. Restarting the screencast produces exactly one frame, with the
+        parameters the stream already runs on, instead of polling for one.
+
+        Does nothing until CDP has reported which page is visible: at that point
+        the screencast has just been started and a frame is on its way anyway.
+        """
+        target_id = self._visible_target.active
+        session = self._sessions.get(target_id) if target_id is not None else None
+        if session is None:
+            return
+        with suppress(Exception):
+            await session.page.stop_screencast()
+            await self._start_screencast(session)
 
     def _start_target_listeners(self) -> tuple[asyncio.Task[None], ...]:
         return (
@@ -124,18 +144,14 @@ class ActiveTabBridge:
                 flatten=True,
             )
             session = self._client.session(attached.session_id)
+            self._sessions[target_id] = session
             await session.page.enable()
             listeners = (
                 asyncio.create_task(self._listen_frames(session, target_id)),
                 asyncio.create_task(self._listen_visibility(session, target_id)),
             )
             await asyncio.sleep(0)
-            await session.page.start_screencast(
-                format="jpeg",
-                quality=self._options.quality,
-                max_width=self._options.width,
-                max_height=self._options.height,
-            )
+            await self._start_screencast(session)
             await asyncio.gather(*listeners)
         except asyncio.CancelledError:
             raise
@@ -147,6 +163,7 @@ class ActiveTabBridge:
             )
         finally:
             await cancel_and_wait(*listeners)
+            self._sessions.pop(target_id, None)
             if session is not None:
                 with suppress(Exception):
                     await session.page.stop_screencast()
@@ -154,6 +171,14 @@ class ActiveTabBridge:
                     await self._client.target.detach_from_target(
                         session_id=session.session_id
                     )
+
+    async def _start_screencast(self, session: CDPSession) -> None:
+        await session.page.start_screencast(
+            format="jpeg",
+            quality=self._options.quality,
+            max_width=self._options.width,
+            max_height=self._options.height,
+        )
 
     async def _listen_frames(self, session: CDPSession, target_id: str) -> None:
         async for event in session.listen(

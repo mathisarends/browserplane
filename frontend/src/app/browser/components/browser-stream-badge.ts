@@ -2,11 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, inject } from "@angular/c
 import { BrowserSession } from "../services/browser-session";
 
 /**
- * What the patch stream is doing, for the transport experiment.
+ * What the patch stream is doing.
  *
- * Only shown when the changed-tile transport is selected (`?screencast=`), and
- * it says the thing a whole-frame stream never has to: whether the canvas on
- * screen is actually complete, and how much traffic it took to get there.
+ * Absent while `?screencast=jpeg` streams whole frames, since it says the thing
+ * only a patched canvas has to answer: whether what is on screen is actually
+ * complete, and how much traffic it took to get there.
  */
 @Component({
   selector: "app-browser-stream-badge",

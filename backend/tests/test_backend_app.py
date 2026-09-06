@@ -1,3 +1,4 @@
+import asyncio
 from uuid import UUID
 
 from dishka import Provider, Scope, provide
@@ -8,6 +9,7 @@ from fakes.session_repositories import (
     InMemoryBrowserCheckpointRepository,
     InMemorySessionRepository,
 )
+from fakes.session_requests import ImmediateSessionRequestRepository
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
@@ -15,8 +17,12 @@ from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
 )
+from backend.features.browsers.application.service import BrowserService
 from backend.features.browsers.domain.models import Browser, BrowserSlot
 from backend.features.leases.application.ports import LeaseStore
+from backend.features.session_requests.application.ports import (
+    SessionRequestRepository,
+)
 from backend.features.sessions.application.ports import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
@@ -163,6 +169,16 @@ class FakeSessionProvider(Provider):
         return self._authentication_profiles
 
 
+class FakeSessionRequestProvider(Provider):
+    def __init__(self, repository: SessionRequestRepository) -> None:
+        super().__init__()
+        self._repository = repository
+
+    @provide(scope=Scope.APP, provides=SessionRequestRepository)
+    def repository(self) -> SessionRequestRepository:
+        return self._repository
+
+
 def create_test_app(
     provisioner: BrowserProvisioner,
     repository: InMemoryBrowserRepository,
@@ -171,17 +187,32 @@ def create_test_app(
     checkpoints: InMemoryBrowserCheckpointRepository | None = None,
     authentication_profiles: InMemoryAuthenticationProfileRepository | None = None,
 ):
+    asyncio.run(BrowserService(provisioner, repository).start())
+    lease_store = InMemoryLeaseStore()
+    checkpoints = checkpoints or InMemoryBrowserCheckpointRepository()
+    authentication_profiles = (
+        authentication_profiles or InMemoryAuthenticationProfileRepository()
+    )
     return create_app(
         (
             FakeBrowserProvider(provisioner, repository),
-            FakeLeaseProvider(InMemoryLeaseStore()),
+            FakeLeaseProvider(lease_store),
             FakeSessionProvider(
                 sessions=sessions,
                 browser_runtime=browser_state,
-                checkpoints=checkpoints or InMemoryBrowserCheckpointRepository(),
-                authentication_profiles=(
-                    authentication_profiles or InMemoryAuthenticationProfileRepository()
-                ),
+                checkpoints=checkpoints,
+                authentication_profiles=authentication_profiles,
+            ),
+            FakeSessionRequestProvider(
+                ImmediateSessionRequestRepository(
+                    repository,
+                    provisioner,
+                    lease_store,
+                    sessions,
+                    browser_state,
+                    checkpoints,
+                    authentication_profiles,
+                )
             ),
         )
     )
@@ -216,10 +247,13 @@ def test_backend_serves_a_session_lifecycle() -> None:
         assert session["browser_id"] == str(UUID(int=1))
         assert session["tunnel_path"] == f"/api/v1/sessions/{session['id']}/tunnel"
 
-        # The only browser is now leased, so a second session has to wait.
-        exhausted = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})
-        assert exhausted.status_code == 503
-        assert exhausted.json()["code"] == "no_browser_available"
+        # The only browser is now leased, so a short queue deadline expires.
+        exhausted = client.post(
+            "/api/v1/sessions",
+            json={"owner_id": OWNER_ID, "timeout_seconds": 0.001},
+        )
+        assert exhausted.status_code == 408
+        assert exhausted.json()["code"] == "session_request_timed_out"
 
         assert client.get(f"/api/v1/sessions/{session['id']}").status_code == 200
         renewed = client.post(f"/api/v1/sessions/{session['id']}/lease/renew")
@@ -228,7 +262,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         assert renewed.json()["expires_at"] > session["expires_at"]
         assert client.delete(f"/api/v1/sessions/{session['id']}").status_code == 204
         assert provisioner.released == [UUID(int=1)]
-        assert provisioner.started == [UUID(int=1), UUID(int=1)]
+        assert provisioner.started == [UUID(int=1)]
 
         closed = client.get(f"/api/v1/sessions/{session['id']}")
         assert closed.status_code == 200
@@ -237,6 +271,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         # Releasing the lease returned the browser to the pool.
         reopened = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})
         assert reopened.status_code == 201
+        assert provisioner.started == [UUID(int=1), UUID(int=1)]
 
 
 def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:

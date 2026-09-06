@@ -2,7 +2,7 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class ScreencastSettings(BaseSettings):
+class ScreencastOptions(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SCREENCAST_",
         env_file=".env",
@@ -15,6 +15,8 @@ class ScreencastSettings(BaseSettings):
     # re-encodes what the capture delivered, so its patches can never be
     # sharper than the frame they were cut from.
     quality: int = Field(default=85, ge=0, le=100)
+    width: int = Field(default=1600, gt=0)
+    height: int = Field(default=900, gt=0)
 
 
 class DirtyRectangleSettings(BaseSettings):
