@@ -56,7 +56,7 @@ class FakeBrowserRuntime(BrowserRuntime):
     async def capture_authentication(
         self, browser: Browser
     ) -> AuthenticationStateDocument:
-        return {"cookies": [], "origins": []}
+        return {"cookies": [], "localStorage": []}
 
     async def mount_authentication(
         self, browser: Browser, state: AuthenticationStateDocument
@@ -105,7 +105,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
             "/api/v1/sessions",
             json={
                 "owner_id": OWNER_ID,
-                "authentication_state": {"cookies": [], "origins": []},
+                "authentication_state": {"cookies": [], "localStorage": []},
                 "browser_state": {
                     "tabs": [
                         {
@@ -121,7 +121,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
         assert created.status_code == 201
         session = created.json()
         assert session["remaining_capacity"] == 0
-        assert state.mounted_authentication == {"cookies": [], "origins": []}
+        assert state.mounted_authentication == {"cookies": [], "localStorage": []}
         assert state.mounted_browser is not None
         assert state.mounted_browser["tabs"][0]["url"].endswith("/profile")
         authentication = client.get(
@@ -225,7 +225,7 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
         assert resumed.json()["status"] == "active"
         # The session kept its id, so the links handed out before still work.
         assert resumed.json()["id"] == opened["id"]
-        assert state.mounted_authentication == {"cookies": [], "origins": []}
+        assert state.mounted_authentication == {"cookies": [], "localStorage": []}
         assert state.mounted_browser is not None
         assert state.mounted_browser["tabs"][0]["url"] == "https://example.com/inbox"
 
