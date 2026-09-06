@@ -16,7 +16,6 @@ from backend.features.sessions.application.models import (
 )
 from backend.features.sessions.application.ports import BrowserRuntime
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
-from backend.presentation.middleware import current_request_id
 from generated.browser_worker import (
     ApiError,
     AuthenticationStateSchema,
@@ -108,12 +107,9 @@ class BrowserWorkerRuntime(BrowserRuntime):
             raise _as_transfer_failure("download file from", error) from error
 
     def _client(self, browser: Browser) -> GeneratedBrowserWorkerClient:
-        request_id = current_request_id()
-        headers = {"X-Request-ID": request_id} if request_id is not None else None
         return GeneratedBrowserWorkerClient(
             cast(Any, self._http),
             browser.slot.browser_worker_url,
-            headers=headers,
             timeout=self._settings.request_timeout_seconds,
         )
 

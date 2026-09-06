@@ -20,7 +20,6 @@ from backend.features.recordings.application.models import (
 from backend.features.recordings.application.ports import Recorder
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.bucket import Bucket, BucketObject
-from backend.presentation.middleware import current_request_id
 from generated.browser_worker import (
     ApiError,
     GeneratedBrowserWorkerClient,
@@ -83,8 +82,6 @@ class BrowserWorkerRecorder(Recorder):
         *,
         transfer: bool = False,
     ) -> GeneratedBrowserWorkerClient:
-        request_id = current_request_id()
-        headers = {"X-Request-ID": request_id} if request_id is not None else None
         timeout = (
             self._settings.transfer_timeout_seconds
             if transfer
@@ -93,7 +90,6 @@ class BrowserWorkerRecorder(Recorder):
         return GeneratedBrowserWorkerClient(
             cast(Any, self._http),
             browser.slot.browser_worker_url,
-            headers=headers,
             timeout=timeout,
         )
 
@@ -105,12 +101,9 @@ class BrowserWorkerRecorder(Recorder):
         path = f"/api/v1/browser/{browser.id}/recordings/{recording_id}/file"
         try:
             url = f"{browser.slot.browser_worker_url.rstrip('/')}/{path.lstrip('/')}"
-            request_id = current_request_id()
-            headers = {"X-Request-ID": request_id} if request_id is not None else None
             async with self._http.stream(
                 "GET",
                 url,
-                headers=headers,
                 timeout=self._settings.transfer_timeout_seconds,
             ) as response:
                 response.raise_for_status()
