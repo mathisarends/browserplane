@@ -12,12 +12,6 @@ from browser_worker.features.state.presentation.errors import (
     BROWSER_STATE_FAILED,
     BROWSER_STATE_INVALID,
 )
-from browser_worker.features.state.presentation.mapper import (
-    to_authentication_state,
-    to_authentication_state_response,
-    to_browser_state,
-    to_browser_state_response,
-)
 from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
@@ -43,7 +37,7 @@ async def capture_browser_state(
 ) -> BrowserStateSchema:
     state = await service.capture_browser(browser_id)
     response.headers["Cache-Control"] = "no-store"
-    return to_browser_state_response(state)
+    return BrowserStateSchema.model_validate(state)
 
 
 @browser_state_router.put(
@@ -61,7 +55,7 @@ async def mount_browser_state(
     state: BrowserStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    await service.mount_browser(browser_id, to_browser_state(state))
+    await service.mount_browser(browser_id, state)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -90,7 +84,7 @@ async def capture_authentication_state(
     """
     state = await service.capture_authentication(browser_id, origins or ())
     response.headers["Cache-Control"] = "no-store"
-    return to_authentication_state_response(state)
+    return AuthenticationStateSchema.model_validate(state)
 
 
 @browser_state_router.put(
@@ -108,5 +102,5 @@ async def mount_authentication_state(
     state: AuthenticationStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    await service.mount_authentication(browser_id, to_authentication_state(state))
+    await service.mount_authentication(browser_id, state)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

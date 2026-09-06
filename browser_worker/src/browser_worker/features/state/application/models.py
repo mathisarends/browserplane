@@ -1,105 +1,101 @@
-from dataclasses import dataclass
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 
-@dataclass(frozen=True, slots=True)
-class StorageItem:
+
+class StateModel(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, frozen=True)
+
+
+class StorageItem(StateModel):
     name: str
     value: str
 
 
-@dataclass(frozen=True, slots=True)
-class OriginLocalStorage:
+class OriginLocalStorage(StateModel):
     origin: str
-    local_storage: tuple[StorageItem, ...] = ()
+    local_storage: tuple[StorageItem, ...] = Field(default=(), alias="localStorage")
 
 
 type IndexedDbKeyPath = str | tuple[str, ...] | None
 
 
-@dataclass(frozen=True, slots=True)
-class IndexedDbIndex:
+class IndexedDbIndex(StateModel):
     name: str
-    key_path: IndexedDbKeyPath = None
+    key_path: IndexedDbKeyPath = Field(default=None, alias="keyPath")
     unique: bool = False
-    multi_entry: bool = False
+    multi_entry: bool = Field(default=False, alias="multiEntry")
 
 
-@dataclass(frozen=True, slots=True)
-class IndexedDbRecord:
+class IndexedDbRecord(StateModel):
     key: Any
     value: Any
 
 
-@dataclass(frozen=True, slots=True)
-class IndexedDbObjectStore:
+class IndexedDbObjectStore(StateModel):
     name: str
-    key_path: IndexedDbKeyPath = None
-    auto_increment: bool = False
+    key_path: IndexedDbKeyPath = Field(default=None, alias="keyPath")
+    auto_increment: bool = Field(default=False, alias="autoIncrement")
     indexes: tuple[IndexedDbIndex, ...] = ()
     records: tuple[IndexedDbRecord, ...] = ()
 
 
-@dataclass(frozen=True, slots=True)
-class IndexedDbDatabase:
+class IndexedDbDatabase(StateModel):
     name: str
     version: int
-    object_stores: tuple[IndexedDbObjectStore, ...] = ()
+    object_stores: tuple[IndexedDbObjectStore, ...] = Field(
+        default=(), alias="objectStores"
+    )
 
 
-@dataclass(frozen=True, slots=True)
-class OriginIndexedDb:
+class OriginIndexedDb(StateModel):
     origin: str
     databases: tuple[IndexedDbDatabase, ...] = ()
 
 
-@dataclass(frozen=True, slots=True)
-class CookiePartitionKey:
-    top_level_site: str
-    has_cross_site_ancestor: bool
+class CookiePartitionKey(StateModel):
+    top_level_site: str = Field(alias="topLevelSite")
+    has_cross_site_ancestor: bool = Field(alias="hasCrossSiteAncestor")
 
 
-@dataclass(frozen=True, slots=True)
-class BrowserCookie:
+class BrowserCookie(StateModel):
     name: str
     value: str
     domain: str
     path: str
     expires: float | None = None
-    http_only: bool = False
+    http_only: bool = Field(default=False, alias="httpOnly")
     secure: bool = False
-    same_site: str | None = None
+    same_site: str | None = Field(default=None, alias="sameSite")
     priority: str | None = None
-    source_scheme: str | None = None
-    source_port: int | None = None
-    partition_key: CookiePartitionKey | None = None
+    source_scheme: str | None = Field(default=None, alias="sourceScheme")
+    source_port: int | None = Field(default=None, alias="sourcePort")
+    partition_key: CookiePartitionKey | None = Field(default=None, alias="partitionKey")
 
 
-@dataclass(frozen=True, slots=True)
-class AuthenticationState:
+class AuthenticationState(StateModel):
     cookies: tuple[BrowserCookie, ...] = ()
-    local_storage: tuple[OriginLocalStorage, ...] = ()
-    indexed_db: tuple[OriginIndexedDb, ...] = ()
+    local_storage: tuple[OriginLocalStorage, ...] = Field(
+        default=(), alias="localStorage"
+    )
+    indexed_db: tuple[OriginIndexedDb, ...] = Field(default=(), alias="indexedDB")
 
     @property
     def is_empty(self) -> bool:
         return not self.cookies and not self.local_storage and not self.indexed_db
 
 
-@dataclass(frozen=True, slots=True)
-class ScrollPosition:
+class ScrollPosition(StateModel):
     x: int = 0
     y: int = 0
 
 
-@dataclass(frozen=True, slots=True)
-class BrowserTabState:
+class BrowserTabState(StateModel):
     url: str
     scroll: ScrollPosition = ScrollPosition()
-    session_storage: tuple[StorageItem, ...] = ()
+    session_storage: tuple[StorageItem, ...] = Field(default=(), alias="sessionStorage")
 
 
-@dataclass(frozen=True, slots=True)
-class BrowserState:
+class BrowserState(StateModel):
     tabs: tuple[BrowserTabState, ...] = ()
     active_tab_index: int = 0

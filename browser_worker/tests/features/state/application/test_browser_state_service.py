@@ -19,16 +19,6 @@ from browser_worker.features.state.application.service import (
 from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
-from browser_worker.features.state.presentation.mapper import (
-    to_authentication_state,
-    to_authentication_state_response,
-    to_browser_state,
-    to_browser_state_response,
-)
-from browser_worker.features.state.presentation.schemas import (
-    AuthenticationStateSchema,
-    BrowserStateSchema,
-)
 
 BROWSER_STATE = {
     "tabs": [
@@ -133,57 +123,55 @@ async def _running_service(
 async def test_state_survives_a_mount_and_capture_roundtrip() -> None:
     service, browser_id = await _running_service(FakeStore())
 
-    state = to_browser_state(BrowserStateSchema(**BROWSER_STATE))
+    state = BrowserState.model_validate(BROWSER_STATE)
 
     await service.mount_browser(browser_id, state)
-    captured = to_browser_state_response(await service.capture_browser(browser_id))
+    captured = await service.capture_browser(browser_id)
 
-    assert captured.model_dump(by_alias=True) == BROWSER_STATE
+    assert captured.model_dump(mode="json", by_alias=True) == BROWSER_STATE
 
 
 @pytest.mark.asyncio
 async def test_authentication_survives_a_mount_and_capture_roundtrip() -> None:
     service, browser_id = await _running_service(FakeStore())
-    state = to_authentication_state(AuthenticationStateSchema(**AUTHENTICATION_STATE))
+    state = AuthenticationState.model_validate(AUTHENTICATION_STATE)
 
     await service.mount_authentication(browser_id, state)
-    captured = to_authentication_state_response(
-        await service.capture_authentication(browser_id)
-    )
+    captured = await service.capture_authentication(browser_id)
 
-    assert captured.model_dump(by_alias=True) == AUTHENTICATION_STATE
+    assert captured.model_dump(mode="json", by_alias=True) == AUTHENTICATION_STATE
 
 
 @pytest.mark.asyncio
 async def test_active_tab_index_outside_the_tabs_is_rejected() -> None:
     service, browser_id = await _running_service(FakeStore())
-    state = BrowserStateSchema(
+    state = BrowserState(
         tabs=[{"url": "https://a.example"}, {"url": "https://b.example"}],
         active_tab_index=3,
     )
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, to_browser_state(state))
+        await service.mount_browser(browser_id, state)
 
 
 @pytest.mark.asyncio
 async def test_non_web_tab_url_is_rejected() -> None:
     service, browser_id = await _running_service(FakeStore())
-    state = BrowserStateSchema(tabs=[{"url": "file:///etc/passwd"}])
+    state = BrowserState(tabs=[{"url": "file:///etc/passwd"}])
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, to_browser_state(state))
+        await service.mount_browser(browser_id, state)
 
 
 @pytest.mark.asyncio
 async def test_browser_state_with_too_many_tabs_is_rejected() -> None:
     service, browser_id = await _running_service(FakeStore(), max_tabs=1)
-    state = BrowserStateSchema(
+    state = BrowserState(
         tabs=[{"url": "https://a.example"}, {"url": "https://b.example"}]
     )
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, to_browser_state(state))
+        await service.mount_browser(browser_id, state)
 
 
 @pytest.mark.asyncio

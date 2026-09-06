@@ -76,7 +76,7 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
             local_storage=(
                 OriginLocalStorage(
                     origin=origin,
-                    local_storage=(StorageItem("token", "secret"),),
+                    local_storage=(StorageItem(name="token", value="secret"),),
                 ),
             ),
             indexed_db=(
@@ -120,7 +120,7 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
             tabs=(
                 BrowserTabState(
                     url=f"{origin}/index.html",
-                    session_storage=(StorageItem("draft", "hello"),),
+                    session_storage=(StorageItem(name="draft", value="hello"),),
                 ),
             )
         )
