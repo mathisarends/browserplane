@@ -15,6 +15,7 @@ import { BrowserCanvas } from "./browser-canvas";
 import { BrowserNavigationBar } from "./browser-navigation-bar";
 import { BrowserSession } from "../services/browser-session";
 import { BrowserStateToolbar } from "./browser-state-toolbar";
+import { BrowserStreamBadge } from "./browser-stream-badge";
 import { BrowserTabStrip } from "./browser-tab-strip";
 import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
 
@@ -24,6 +25,7 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
     BrowserCanvas,
     BrowserNavigationBar,
     BrowserStateToolbar,
+    BrowserStreamBadge,
     BrowserTabStrip,
     BrowserTransferToolbar,
   ],
@@ -63,6 +65,7 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
         </div>
       } @else {
         <app-browser-canvas />
+        <app-browser-stream-badge />
         <app-browser-transfer-toolbar />
         <app-browser-state-toolbar [position]="position()" />
       }

@@ -16,6 +16,9 @@ class BrowserWorkerRoutes:
     def fmp4_screencast_url(self, slot: BrowserSlot) -> str:
         return f"{self.screencast_url(slot)}/fmp4"
 
+    def dirty_rectangle_screencast_url(self, slot: BrowserSlot) -> str:
+        return f"{self.screencast_url(slot)}/dirty-rectangles"
+
     def recording_file_url(self, slot: BrowserSlot, recording_id: UUID) -> str:
         parsed = urlsplit(slot.browser_worker_url)
         return urlunsplit(

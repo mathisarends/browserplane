@@ -463,6 +463,36 @@ async def session_screencast(
             logger.info("Screencast disconnected session_id=%s", session_id)
 
 
+@session_router.websocket("/sessions/{session_id}/screencast/dirty-rectangles")
+@inject
+async def session_dirty_rectangle_screencast(
+    session_id: UUID,
+    websocket: WebSocket,
+    lease_keeper: FromDishka[SessionLeaseKeeper],
+    routes: FromDishka[BrowserWorkerRoutes],
+) -> None:
+    """Relay the worker's changed-tile stream, one fresh subscription per client.
+
+    The worker keeps its diff state per subscription, so every connect - and
+    therefore every reconnect - opens with a packet covering the whole canvas.
+    That is what lets a client that lost its canvas rebuild it from patches.
+    """
+    session = await _resolve(websocket, lease_keeper, session_id)
+    if session is not None:
+        url = routes.dirty_rectangle_screencast_url(session.browser.slot)
+        logger.info(
+            "Dirty rectangle screencast connected session_id=%s slot=%s",
+            session_id,
+            session.browser.slot.id,
+        )
+        try:
+            await proxy_stream(websocket, url, name="Dirty rectangle screencast")
+        finally:
+            logger.info(
+                "Dirty rectangle screencast disconnected session_id=%s", session_id
+            )
+
+
 @session_router.websocket("/sessions/{session_id}/screencast/fmp4")
 @inject
 async def session_fmp4_screencast(

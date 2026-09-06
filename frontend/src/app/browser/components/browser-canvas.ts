@@ -9,6 +9,8 @@ import {
 } from "@angular/core";
 import type { MouseParams } from "@browsertunnel/browser-rpc-client";
 import { BrowserSession } from "../services/browser-session";
+import type { DirtyRectangleUpdate } from "../services/dirty-rectangle-protocol";
+import type { DirtyRectangleEvent } from "../services/dirty-rectangle-screencast";
 
 type MousePoint = Pick<MouseParams, "x" | "y">;
 const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
@@ -70,6 +72,8 @@ export class BrowserCanvas implements OnDestroy {
   private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>("canvas");
   private latestFrame?: Blob;
   private rendering = false;
+  private readonly pendingCanvasEvents: DirtyRectangleEvent[] = [];
+  private patching = false;
   private latestMove?: MouseParams;
   private animationFrame?: number;
   private inputQueue: Promise<void> = Promise.resolve();
@@ -83,6 +87,15 @@ export class BrowserCanvas implements OnDestroy {
       if (!canvas || !frame) return;
       this.latestFrame = frame;
       void this.renderLatestFrame(canvas);
+    });
+    effect(() => {
+      // Read the tick first: it is the dependency, even when there is no
+      // canvas yet to draw on and the work stays queued in the session.
+      this.session.dirtyRectangleTick();
+      const canvas = this.canvas()?.nativeElement;
+      if (!canvas) return;
+      this.pendingCanvasEvents.push(...this.session.takeDirtyRectangleEvents());
+      void this.applyCanvasEvents(canvas);
     });
   }
 
@@ -235,6 +248,56 @@ export class BrowserCanvas implements OnDestroy {
       location: event.location,
       isKeypad: event.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD,
       isSystemKey: event.altKey,
+    });
+  }
+
+  /**
+   * Replay the patch stream onto the canvas, one event at a time.
+   *
+   * Order is the whole point: patches describe a difference against what the
+   * canvas already shows, so overlapping them or letting a reset pass an
+   * update paints a picture the browser never had.
+   */
+  private async applyCanvasEvents(canvas: HTMLCanvasElement): Promise<void> {
+    if (this.patching) return;
+    this.patching = true;
+    try {
+      for (let event = this.pendingCanvasEvents.shift(); event;) {
+        if (event.kind === "reset") this.clearCanvas(canvas);
+        else await this.paintPatches(canvas, event.update);
+        event = this.pendingCanvasEvents.shift();
+      }
+    } catch (error) {
+      this.session.reportError(error);
+    } finally {
+      this.patching = false;
+    }
+  }
+
+  private clearCanvas(canvas: HTMLCanvasElement): void {
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.fillStyle = "#020304";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  private async paintPatches(
+    canvas: HTMLCanvasElement,
+    update: DirtyRectangleUpdate,
+  ): Promise<void> {
+    // Resizing wipes the canvas, which is why the worker sends a whole canvas
+    // whenever its size changes.
+    if (canvas.width !== update.canvasWidth || canvas.height !== update.canvasHeight) {
+      canvas.width = update.canvasWidth;
+      canvas.height = update.canvasHeight;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const bitmaps = await Promise.all(update.patches.map((patch) => createImageBitmap(patch.jpeg)));
+    bitmaps.forEach((bitmap, index) => {
+      const patch = update.patches[index];
+      context.drawImage(bitmap, patch.x, patch.y);
+      bitmap.close();
     });
   }
 
