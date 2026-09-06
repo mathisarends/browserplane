@@ -32,16 +32,17 @@ async def list_pooled_browsers(
     return [to_pooled_browser_response(browser) for browser in pooled]
 
 
-@admin_router.delete(
-    "/browsers/{browser_id}",
+@admin_router.post(
+    "/browsers/{browser_id}/release",
     response_model=PooledBrowserResponse,
-    operation_id="destroy_pooled_browser",
+    operation_id="release_pooled_browser",
     responses=api_error_responses(BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED),
 )
-async def destroy_pooled_browser(
+async def release_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
 ) -> PooledBrowserResponse:
-    return to_browser_response(await service.destroy_browser(browser_id))
+    browser = await service.release_browser(browser_id)
+    return to_browser_response(browser)
 
 
 @admin_router.post(
@@ -53,7 +54,8 @@ async def destroy_pooled_browser(
 async def restart_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
 ) -> PooledBrowserResponse:
-    return to_browser_response(await service.restart_browser(browser_id))
+    browser = await service.restart_browser(browser_id)
+    return to_browser_response(browser)
 
 
 @admin_router.get(

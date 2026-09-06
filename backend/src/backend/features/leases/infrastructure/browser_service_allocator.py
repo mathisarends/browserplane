@@ -14,4 +14,4 @@ class BrowserServiceAllocator(BrowserAllocator):
         await self._browsers.reserve(browser_id)
 
     async def release(self, browser_id: UUID) -> None:
-        await self._browsers.release(browser_id)
+        await self._browsers.recycle(browser_id)

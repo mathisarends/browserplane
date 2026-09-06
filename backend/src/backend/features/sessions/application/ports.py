@@ -22,7 +22,7 @@ class SuspendedSessionRepository(ABC):
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None: ...
 
     @abstractmethod
-    async def list_all(self) -> tuple[SuspendedSession, ...]:
+    async def list(self) -> tuple[SuspendedSession, ...]:
         """Everything parked right now, newest first."""
 
     @abstractmethod
@@ -67,7 +67,7 @@ class BrowserStateSnapshotRepository(ABC):
     async def save(self, *, snapshot: BrowserStateSnapshot) -> BrowserStateSnapshot: ...
 
     @abstractmethod
-    async def list_all(self) -> tuple[BrowserStateSnapshot, ...]: ...
+    async def list(self) -> tuple[BrowserStateSnapshot, ...]: ...
 
 
 class AuthenticationStateSnapshotRepository(ABC):
@@ -79,4 +79,4 @@ class AuthenticationStateSnapshotRepository(ABC):
     ) -> AuthenticationStateSnapshot: ...
 
     @abstractmethod
-    async def list_all(self) -> tuple[AuthenticationStateSnapshot, ...]: ...
+    async def list(self) -> tuple[AuthenticationStateSnapshot, ...]: ...

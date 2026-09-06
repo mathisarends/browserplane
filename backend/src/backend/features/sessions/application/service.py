@@ -108,7 +108,7 @@ class SessionService:
         now = datetime.now(UTC)
         parked = [
             suspended
-            for suspended in await self._suspensions.list_all()
+            for suspended in await self._suspensions.list()
             if not suspended.is_expired(now)
         ]
         sessions = (*active, *parked)
@@ -180,7 +180,7 @@ class SessionService:
         )
 
     async def list_snapshots(self) -> tuple[BrowserStateSnapshot, ...]:
-        return await self._snapshots.list_all()
+        return await self._snapshots.list()
 
     async def capture_authentication_snapshot(
         self, session_id: UUID, *, name: str, source_browser: str
@@ -203,7 +203,7 @@ class SessionService:
     async def list_authentication_snapshots(
         self,
     ) -> tuple[AuthenticationStateSnapshot, ...]:
-        return await self._authentication_snapshots.list_all()
+        return await self._authentication_snapshots.list()
 
     async def suspend(self, session_id: UUID) -> SuspendedSession:
         """Store what the browser holds and give the browser back to the pool.

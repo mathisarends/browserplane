@@ -1,10 +1,10 @@
 import { computed, Injectable, signal } from "@angular/core";
 import {
   closeSession,
-  destroyPooledBrowser,
   listBrowserStateSnapshots,
   listPooledBrowsers,
   listSessions,
+  releasePooledBrowser,
   restartPooledBrowser,
   resumeSession,
   suspendSession,
@@ -24,7 +24,7 @@ export type AdminNotice = { readonly tone: "success" | "error"; readonly text: s
 /**
  * The operator's read of the backend, refreshed as a whole.
  *
- * Every action here changes something another list already shows — destroying
+ * Every action here changes something another list already shows — releasing
  * a browser ends its session — so nothing is patched in place: one refresh
  * after each call keeps the panel honest instead of merely fast.
  */
@@ -89,10 +89,10 @@ export class AdminConsole {
     }
   }
 
-  destroyBrowser(browserId: string): Promise<void> {
-    return this.run(browserId, `Browser ${shortId(browserId)} destroyed`, async () => {
-      const response = await destroyPooledBrowser(browserId);
-      if (response.status !== 200) throw failure("Browser could not be destroyed", response);
+  releaseBrowser(browserId: string): Promise<void> {
+    return this.run(browserId, `Browser ${shortId(browserId)} released`, async () => {
+      const response = await releasePooledBrowser(browserId);
+      if (response.status !== 200) throw failure("Browser could not be released", response);
     });
   }
 

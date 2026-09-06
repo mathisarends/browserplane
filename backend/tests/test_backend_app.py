@@ -28,7 +28,7 @@ OWNER_ID = str(UUID(int=7))
 class FakeProvisioner(BrowserProvisioner):
     def __init__(self) -> None:
         self.started: list[UUID] = []
-        self.stopped: list[UUID] = []
+        self.released: list[UUID] = []
 
     async def provision(self) -> tuple[BrowserSlot, ...]:
         return (
@@ -44,8 +44,8 @@ class FakeProvisioner(BrowserProvisioner):
     async def start(self, slot: BrowserSlot) -> None:
         self.started.append(slot.id)
 
-    async def stop(self, slot: BrowserSlot) -> None:
-        self.stopped.append(slot.id)
+    async def release(self, slot: BrowserSlot) -> None:
+        self.released.append(slot.id)
 
 
 class FakeBrowserRuntime(BrowserRuntime):
@@ -201,10 +201,12 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
         assert sessions.status_code == 200
         assert [entry["id"] for entry in sessions.json()] == [session["id"]]
 
-        destroyed = client.delete(f"/api/v1/admin/browsers/{session['browser_id']}")
-        assert destroyed.status_code == 200
-        assert destroyed.json()["state"] == "stopped"
-        assert provisioner.stopped == [UUID(int=1)]
+        released = client.post(
+            f"/api/v1/admin/browsers/{session['browser_id']}/release"
+        )
+        assert released.status_code == 200
+        assert released.json()["state"] == "stopped"
+        assert provisioner.released == [UUID(int=1)]
         # The browser is gone, so the session that sat on it is gone with it.
         assert client.get("/api/v1/admin/sessions").json() == []
 
@@ -219,7 +221,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
             == 201
         )
 
-        unknown = client.delete(f"/api/v1/admin/browsers/{UUID(int=99)}")
+        unknown = client.post(f"/api/v1/admin/browsers/{UUID(int=99)}/release")
         assert unknown.status_code == 404
         assert unknown.json()["code"] == "browser_not_found"
 

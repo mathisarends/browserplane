@@ -25,7 +25,7 @@ class InMemorySuspendedSessionRepository(SuspendedSessionRepository):
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None:
         return self._suspended.get(session_id)
 
-    async def list_all(self) -> tuple[SuspendedSession, ...]:
+    async def list(self) -> tuple[SuspendedSession, ...]:
         return tuple(
             sorted(
                 self._suspended.values(),
@@ -46,7 +46,7 @@ class InMemoryBrowserStateSnapshotRepository(BrowserStateSnapshotRepository):
         self._snapshots[snapshot.id] = snapshot
         return snapshot
 
-    async def list_all(self) -> tuple[BrowserStateSnapshot, ...]:
+    async def list(self) -> tuple[BrowserStateSnapshot, ...]:
         return tuple(
             sorted(
                 self._snapshots.values(),
@@ -68,7 +68,7 @@ class InMemoryAuthenticationStateSnapshotRepository(
         self._snapshots[snapshot.id] = snapshot
         return snapshot
 
-    async def list_all(self) -> tuple[AuthenticationStateSnapshot, ...]:
+    async def list(self) -> tuple[AuthenticationStateSnapshot, ...]:
         return tuple(
             sorted(
                 self._snapshots.values(),

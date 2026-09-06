@@ -26,5 +26,5 @@ def to_pooled_browser_response(pooled: PooledBrowser) -> PooledBrowserResponse:
 
 
 def to_browser_response(browser: Browser) -> PooledBrowserResponse:
-    """A browser right after it was destroyed or restarted, so never leased."""
+    """A browser right after it was released or restarted, so never leased."""
     return to_pooled_browser_response(PooledBrowser(browser=browser))

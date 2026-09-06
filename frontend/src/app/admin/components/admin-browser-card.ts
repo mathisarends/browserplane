@@ -17,16 +17,16 @@ import { relativeTime, shortId } from "../services/format";
       [busy]="busy()"
     >
       @if (confirming()) {
-        <span class="prompt">Destroy this browser?</span>
+        <span class="prompt">Release this browser?</span>
         <button appAdminAction (click)="confirming.set(false)">Cancel</button>
-        <button appAdminAction tone="danger" [disabled]="busy()" (click)="destroy()">
-          Destroy
+        <button appAdminAction tone="danger" [disabled]="busy()" (click)="release()">
+          Release
         </button>
       } @else {
         <button appAdminAction [disabled]="busy()" (click)="console.restartBrowser(browser().id)">
           Restart
         </button>
-        <button appAdminAction [disabled]="busy()" (click)="confirming.set(true)">Destroy</button>
+        <button appAdminAction [disabled]="busy()" (click)="confirming.set(true)">Release</button>
       }
     </app-admin-card>
   `,
@@ -46,7 +46,7 @@ export class AdminBrowserCard {
   readonly browser = input.required<PooledBrowserResponse>();
 
   protected readonly console = inject(AdminConsole);
-  /** Destroying kills a live browser, so it takes a second, deliberate click. */
+  /** Releasing removes a live runtime, so it takes a second, deliberate click. */
   protected readonly confirming = signal(false);
 
   protected readonly label = computed(() => shortId(this.browser().id));
@@ -71,8 +71,8 @@ export class AdminBrowserCard {
     ];
   });
 
-  protected async destroy(): Promise<void> {
+  protected async release(): Promise<void> {
     this.confirming.set(false);
-    await this.console.destroyBrowser(this.browser().id);
+    await this.console.releaseBrowser(this.browser().id);
   }
 }

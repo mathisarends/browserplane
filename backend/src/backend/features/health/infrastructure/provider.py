@@ -16,4 +16,4 @@ class HealthProvider(Provider):
         lifecycle: Lifecycle,
         browsers: BrowserRepository,
     ) -> HealthService:
-        return HealthService(lifecycle, browsers.list_all)
+        return HealthService(lifecycle, browsers.list)

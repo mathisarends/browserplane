@@ -55,7 +55,7 @@ class SqlSuspendedSessionRepository(
     async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None:
         return await self.find_by_id(session_id)
 
-    async def list_all(self) -> tuple[SuspendedSession, ...]:
+    async def list(self) -> tuple[SuspendedSession, ...]:
         statement = select(SuspendedSessionModel).order_by(
             SuspendedSessionModel.created_at.desc()
         )
@@ -102,7 +102,7 @@ class SqlAuthenticationStateSnapshotRepository(
     ) -> AuthenticationStateSnapshot:
         return await self.save_entity(snapshot)
 
-    async def list_all(self) -> tuple[AuthenticationStateSnapshot, ...]:
+    async def list(self) -> tuple[AuthenticationStateSnapshot, ...]:
         statement = select(AuthenticationStateSnapshotModel).order_by(
             AuthenticationStateSnapshotModel.created_at.desc()
         )
@@ -140,7 +140,7 @@ class SqlBrowserStateSnapshotRepository(
     async def save(self, *, snapshot: BrowserStateSnapshot) -> BrowserStateSnapshot:
         return await self.save_entity(snapshot)
 
-    async def list_all(self) -> tuple[BrowserStateSnapshot, ...]:
+    async def list(self) -> tuple[BrowserStateSnapshot, ...]:
         statement = select(BrowserStateSnapshotModel).order_by(
             BrowserStateSnapshotModel.created_at.desc()
         )

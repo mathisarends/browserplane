@@ -53,7 +53,7 @@ class BrowserService:
 
     async def list(self) -> tuple[Browser, ...]:
         """The whole pool, for operators who need to see it, not lease from it."""
-        return await self._repository.list_all()
+        return await self._repository.list()
 
     async def find_available(self) -> Browser | None:
         """The next browser free to be leased, if the pool still has one."""
@@ -61,26 +61,24 @@ class BrowserService:
 
     async def remaining_capacity(self) -> int:
         """How many healthy pool slots can still be leased right now."""
-        return sum(
-            browser.is_available for browser in await self._repository.list_all()
-        )
+        return sum(browser.is_available for browser in await self._repository.list())
 
-    async def destroy(self, browser_id: UUID) -> Browser:
-        """Tear the browser process down. The slot survives, empty, until restarted."""
+    async def release(self, browser_id: UUID) -> Browser:
+        """Release a worker runtime. Its stable slot remains stopped."""
         browser = await self.get(browser_id)
         async with self._browser_worker(browser.slot):
-            await self._provisioner.stop(browser.slot)
+            await self._provisioner.release(browser.slot)
         browser.state = BrowserState.STOPPED
-        logger.info("Browser destroyed browser_id=%s", browser.id)
+        logger.info("Browser released browser_id=%s", browser.id)
         return await self._repository.save(browser=browser)
 
     async def restart(self, browser_id: UUID) -> Browser:
         """Put a fresh browser process behind a slot, whatever state it was in."""
         browser = await self.get(browser_id)
         async with self._browser_worker(browser.slot):
-            # Stopping first keeps a restart idempotent: a worker refuses a
+            # Releasing first keeps a restart idempotent: a worker refuses a
             # second browser, but takes a new one once the old process is gone.
-            await self._provisioner.stop(browser.slot)
+            await self._provisioner.release(browser.slot)
             await self._provisioner.start(browser.slot)
         browser.state = BrowserState.READY
         logger.info("Browser restarted browser_id=%s", browser.id)
@@ -99,10 +97,13 @@ class BrowserService:
         browser.state = BrowserState.LEASED
         await self._repository.save(browser=browser)
 
-    async def release(self, browser_id: UUID) -> None:
-        """Return a reserved browser to the pool. Unknown browsers are ignored."""
+    async def recycle(self, browser_id: UUID) -> None:
+        """Replace a leased runtime before returning its slot to the pool."""
         browser = await self._repository.get_by_id(browser_id=browser_id)
         if browser is not None and browser.state is BrowserState.LEASED:
+            async with self._browser_worker(browser.slot):
+                await self._provisioner.release(browser.slot)
+                await self._provisioner.start(browser.slot)
             browser.state = BrowserState.READY
             await self._repository.save(browser=browser)
 

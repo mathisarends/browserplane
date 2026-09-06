@@ -7,7 +7,6 @@ from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
-from backend.presentation.middleware import current_request_id
 from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
 
 
@@ -34,23 +33,20 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
 
     async def deprovision(self) -> None:
         for slot in reversed(self._provisioned):
-            await self.stop(slot)
+            await self.release(slot)
         self._provisioned.clear()
 
     async def start(self, slot: BrowserSlot) -> None:
         client = self._client(slot)
         await client.create_browser(CreateBrowserRequest(id=slot.id))
 
-    async def stop(self, slot: BrowserSlot) -> None:
+    async def release(self, slot: BrowserSlot) -> None:
         client = self._client(slot)
-        await client.destroy_browser()
+        await client.release_worker()
 
     def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
-        request_id = current_request_id()
-        headers = {"X-Request-ID": request_id} if request_id is not None else None
         return GeneratedBrowserWorkerClient(
             cast(Any, self._http),
             slot.browser_worker_url,
-            headers=headers,
             timeout=self._worker_settings.request_timeout_seconds,
         )

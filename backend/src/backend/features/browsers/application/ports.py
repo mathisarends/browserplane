@@ -19,8 +19,8 @@ class BrowserProvisioner(ABC):
         """Bring one slot's browser process up, on its own worker."""
 
     @abstractmethod
-    async def stop(self, slot: BrowserSlot) -> None:
-        """Tear one slot's browser process down; the slot itself stays."""
+    async def release(self, slot: BrowserSlot) -> None:
+        """Reset one worker to its empty initial state; the slot itself stays."""
 
 
 class BrowserRepository(ABC):
@@ -33,7 +33,7 @@ class BrowserRepository(ABC):
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None: ...
 
     @abstractmethod
-    async def list_all(self) -> tuple[Browser, ...]:
+    async def list(self) -> tuple[Browser, ...]:
         """The whole pool, oldest slot first, whatever state it is in."""
 
     @abstractmethod

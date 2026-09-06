@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 class AdminService:
-    """The operator's view of the pool: what exists, who holds it, tear it down.
+    """The operator's view of the pool and its worker runtimes.
 
     Everything here spans features, which is why it does not live in any of
-    them: destroying a browser has to end the session sitting on it first.
+    them: releasing a browser has to end the session sitting on it as well.
     """
 
     def __init__(
@@ -40,15 +40,17 @@ class AdminService:
     async def list_sessions(self) -> tuple[Session | SuspendedSession, ...]:
         return await self._sessions.list()
 
-    async def destroy_browser(self, browser_id: UUID) -> Browser:
-        """Stop the browser process and evict whoever was using it."""
-        await self._evict(browser_id, reason="browser_destroyed")
-        return await self._browsers.destroy(browser_id)
+    async def release_browser(self, browser_id: UUID) -> Browser:
+        """Release the worker runtime and evict whoever was using it."""
+        browser = await self._browsers.release(browser_id)
+        await self._evict(browser_id, reason="browser_released")
+        return browser
 
     async def restart_browser(self, browser_id: UUID) -> Browser:
         """Replace the browser process, returning an empty slot to the pool."""
+        browser = await self._browsers.restart(browser_id)
         await self._evict(browser_id, reason="browser_restarted")
-        return await self._browsers.restart(browser_id)
+        return browser
 
     async def _evict(self, browser_id: UUID, *, reason: str) -> None:
         """Drop the lease on a browser we are about to pull out from under it."""
