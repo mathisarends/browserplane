@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from uuid import UUID
@@ -13,7 +14,14 @@ from browser_worker.features.browser.application.exceptions import (
 )
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.screencast.application.service import ScreencastService
+from browser_worker.features.screencast.infrastructure.dirty_rectangles import (
+    DirtyRectangleJpegStream,
+    DirtyRectangleOptions,
+)
 from browser_worker.features.screencast.infrastructure.fmp4 import Fmp4Livestream
+from browser_worker.features.screencast.infrastructure.settings import (
+    DirtyRectangleSettings,
+)
 from browser_worker.features.screencast.infrastructure.tasks import cancel_and_wait
 
 screencast_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
@@ -44,6 +52,49 @@ async def browser_screencast(
     except Exception:
         logger.exception("Screencast websocket stopped unexpectedly")
         await _close_if_connected(websocket, reason="Browser screencast unavailable")
+
+
+@screencast_router.websocket("/browser/{browser_id}/screencast/dirty-rectangles")
+@inject
+async def browser_dirty_rectangle_screencast(
+    browser_id: UUID,
+    websocket: WebSocket,
+    browsers: FromDishka[BrowserService],
+    screencasts: FromDishka[ScreencastService],
+    settings: FromDishka[DirtyRectangleSettings],
+) -> None:
+    try:
+        source = screencasts.for_browser(browsers.upstream_cdp_url(browser_id))
+    except BrowserNotFoundException:
+        await websocket.close(code=1008, reason="Unknown browser")
+        return
+
+    stream = DirtyRectangleJpegStream(
+        source,
+        DirtyRectangleOptions(
+            tile_width=settings.tile_width,
+            tile_height=settings.tile_height,
+            jpeg_quality=settings.jpeg_quality,
+        ),
+    )
+    await websocket.accept()
+    try:
+        async with stream.subscribe() as packets:
+            async for packet in packets:
+                started = time.perf_counter()
+                await websocket.send_bytes(packet)
+                logger.debug(
+                    "Dirty JPEG websocket send=%.2fms payload=%dB",
+                    (time.perf_counter() - started) * 1000,
+                    len(packet),
+                )
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        logger.exception("Dirty rectangle screencast websocket stopped unexpectedly")
+        await _close_if_connected(
+            websocket, reason="Dirty rectangle screencast unavailable"
+        )
 
 
 @screencast_router.websocket("/browser/{browser_id}/screencast/fmp4")

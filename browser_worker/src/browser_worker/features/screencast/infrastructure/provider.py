@@ -5,6 +5,7 @@ from browser_worker.features.screencast.application.models import ScreencastOpti
 from browser_worker.features.screencast.application.ports import FrameStreamFactory
 from browser_worker.features.screencast.application.service import ScreencastService
 from browser_worker.features.screencast.infrastructure.settings import (
+    DirtyRectangleSettings,
     ScreencastSettings,
 )
 from browser_worker.features.screencast.infrastructure.stream import CdpFrameStream
@@ -14,6 +15,10 @@ class ScreencastProvider(Provider):
     @provide(scope=Scope.APP)
     def settings(self) -> ScreencastSettings:
         return ScreencastSettings()
+
+    @provide(scope=Scope.APP)
+    def dirty_rectangle_settings(self) -> DirtyRectangleSettings:
+        return DirtyRectangleSettings()
 
     @provide(scope=Scope.APP)
     def stream_factory(
