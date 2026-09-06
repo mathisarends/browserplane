@@ -1,140 +1,147 @@
-import asyncio
-from contextlib import suppress
-from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Request, status
 
-from backend.features.browser_requests.application import (
-    ControlPlane,
-    RequestRepository,
+from backend.features.session_requests.application.acquisition import (
+    OpenSessionCommand,
+    ResumeSessionCommand,
+    SessionAcquisition,
 )
-from backend.features.browser_requests.domain import (
-    BrowserRequest,
-    RequestConflict,
-    RequestEnded,
-    RequestStatus,
+from backend.features.session_requests.application.control_plane import ControlPlane
+from backend.features.session_requests.presentation.errors import (
+    SESSION_REQUEST_CANCELLED,
+    SESSION_REQUEST_CONFLICT,
+    SESSION_REQUEST_NOT_FOUND,
+    SESSION_REQUEST_TIMED_OUT,
 )
-from backend.features.browser_requests.presentation.schemas import (
-    BrowserRequestResponse,
+from backend.features.session_requests.presentation.schemas import (
+    SessionRequestResponse,
 )
-from backend.features.sessions.application.exceptions import (
-    SessionNotSuspendedException,
+from backend.features.sessions.presentation.errors import (
+    AUTHENTICATION_PROFILE_NOT_FOUND,
+    BROWSER_CHECKPOINT_NOT_FOUND,
+    SESSION_NOT_ACTIVE,
+    SESSION_NOT_FOUND,
+    SESSION_NOT_SUSPENDED,
 )
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import SessionStatus
+from backend.features.sessions.presentation.mapper import (
+    to_open_session_response,
+    to_session_response,
+)
+from backend.features.sessions.presentation.schemas import (
+    OpenSessionRequest,
+    OpenSessionResponse,
+    ResumeSessionRequest,
+    SessionResponse,
+)
+from backend.presentation.api_errors import api_error_responses
+from backend.presentation.disconnect import while_connected
 
-router = APIRouter(route_class=DishkaRoute, tags=["browser-requests"])
+# Taking a browser is a request that waits; everything a session does
+# afterwards is immediate. The two live apart for that reason, not because
+# their URLs differ.
+acquisition_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
+session_request_router = APIRouter(route_class=DishkaRoute, tags=["session-requests"])
 
-
-@router.get("/browser-requests/{request_id}", operation_id="get_browser_request")
-async def get_browser_request(
-    request_id: UUID, owner_id: UUID, repository: FromDishka[RequestRepository]
-) -> BrowserRequestResponse:
-    request = await owned_request(repository, request_id, owner_id)
-    return BrowserRequestResponse.model_validate(request)
-
-
-@router.delete("/browser-requests/{request_id}", operation_id="cancel_browser_request")
-async def cancel_browser_request(
-    request_id: UUID, owner_id: UUID, repository: FromDishka[RequestRepository]
-) -> BrowserRequestResponse:
-    await owned_request(repository, request_id, owner_id)
-    request = await repository.end(request_id, RequestStatus.CANCELLED)
-    return BrowserRequestResponse.model_validate(request)
-
-
-async def owned_request(repository, request_id, owner_id):
-    try:
-        request = await repository.get(request_id)
-    except LookupError as error:
-        raise HTTPException(404, "Browser request not found") from error
-    if request.owner_id != owner_id:
-        raise HTTPException(404, "Browser request not found")
-    return request
+ACQUIRE_ERRORS = (
+    SESSION_REQUEST_CONFLICT,
+    SESSION_REQUEST_TIMED_OUT,
+    SESSION_REQUEST_CANCELLED,
+)
 
 
-async def acquire_session(
+@acquisition_router.post(
+    "/sessions",
+    response_model=OpenSessionResponse,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="open_session",
+    responses=api_error_responses(
+        *ACQUIRE_ERRORS,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
+    ),
+)
+async def open_session(
+    request: OpenSessionRequest,
     http_request: Request,
-    container: AsyncContainer,
-    control: ControlPlane,
-    *,
-    owner_id: UUID | None = None,
-    request_id: UUID | None = None,
-    timeout_seconds: float = 60,
-    test_run_id: UUID | None = None,
-    authentication_profile_id: UUID | None = None,
-    browser_checkpoint_id: UUID | None = None,
-    resume_session_id: UUID | None = None,
-) -> UUID:
-    existing = None
-    if request_id is not None:
-        repository = await container.get(RequestRepository)
-        with suppress(LookupError):
-            existing = await repository.get(request_id)
-    if existing is not None:
-        # The original operation may already have resumed the session, or its
-        # saved profile may have been removed. Enqueue still checks all inputs.
-        owner_id = owner_id or existing.owner_id
-        if resume_session_id is not None:
-            browser_checkpoint_id = existing.browser_checkpoint_id
-    else:
-        # Validate resources in an independent scope, released before waiting.
-        async with container(scope=Scope.REQUEST) as scoped:
-            sessions = await scoped.get(SessionService)
-            if resume_session_id is not None:
-                aggregate = await sessions.get(resume_session_id)
-                if aggregate.status is not SessionStatus.SUSPENDED:
-                    raise SessionNotSuspendedException()
-                owner_id = aggregate.owner_id
-                browser_checkpoint_id = aggregate.session.browser_checkpoint_id
-            checkpoint = (
-                await sessions.get_browser_checkpoint(browser_checkpoint_id)
-                if browser_checkpoint_id
-                else None
+    acquisition: FromDishka[SessionAcquisition],
+) -> OpenSessionResponse:
+    """Queue for a browser and answer once one carries the new session."""
+    acquired = await while_connected(
+        http_request,
+        acquisition.open(
+            OpenSessionCommand(
+                owner_id=request.owner_id,
+                request_id=request.request_id,
+                timeout_seconds=request.timeout_seconds,
+                test_run_id=request.test_run_id,
+                authentication_profile_id=request.authentication_profile_id,
+                browser_checkpoint_id=request.browser_checkpoint_id,
             )
-            profile_id = authentication_profile_id or (
-                checkpoint.authentication_profile_id if checkpoint else None
-            )
-            if profile_id is not None:
-                await sessions.get_authentication_profile(profile_id)
-    assert owner_id is not None
-    now = datetime.now(UTC)
-    request = BrowserRequest(
-        id=request_id or uuid4(),
-        owner_id=owner_id,
-        status=RequestStatus.QUEUED,
-        created_at=now,
-        expires_at=now + timedelta(seconds=timeout_seconds),
-        test_run_id=test_run_id,
-        authentication_profile_id=authentication_profile_id,
-        browser_checkpoint_id=browser_checkpoint_id,
-        resume_session_id=resume_session_id,
+        ),
+    )
+    return to_open_session_response(
+        acquired.session, remaining_capacity=acquired.remaining_capacity
     )
 
-    async def disconnected():
-        while not await http_request.is_disconnected():
-            await asyncio.sleep(0.5)
 
-    acquire = asyncio.create_task(control.acquire_browser(request))
-    disconnect = asyncio.create_task(disconnected())
-    try:
-        done, _ = await asyncio.wait(
-            (acquire, disconnect), return_when=asyncio.FIRST_COMPLETED
-        )
-        if acquire in done:
-            return acquire.result()
-        raise HTTPException(499, "Browser request disconnected")
-    except RequestConflict as error:
-        raise HTTPException(409, str(error)) from error
-    except RequestEnded as error:
-        raise HTTPException(
-            408 if error.request.status is RequestStatus.EXPIRED else 409,
-            {"request_id": str(request.id), "status": error.request.status},
-        ) from error
-    finally:
-        acquire.cancel()
-        disconnect.cancel()
-        await asyncio.gather(acquire, disconnect, return_exceptions=True)
+@acquisition_router.post(
+    "/sessions/{session_id}/resume",
+    response_model=SessionResponse,
+    operation_id="resume_session",
+    responses=api_error_responses(
+        *ACQUIRE_ERRORS,
+        SESSION_NOT_FOUND,
+        SESSION_NOT_SUSPENDED,
+        SESSION_NOT_ACTIVE,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
+    ),
+)
+async def resume_session(
+    session_id: UUID,
+    request: ResumeSessionRequest,
+    http_request: Request,
+    acquisition: FromDishka[SessionAcquisition],
+) -> SessionResponse:
+    """Mount a parked session onto whichever browser becomes free next."""
+    session = await while_connected(
+        http_request,
+        acquisition.resume(
+            ResumeSessionCommand(
+                session_id=session_id,
+                request_id=request.request_id,
+                timeout_seconds=request.timeout_seconds,
+            )
+        ),
+    )
+    return to_session_response(session)
+
+
+@session_request_router.get(
+    "/session-requests/{request_id}",
+    operation_id="get_session_request",
+    responses=api_error_responses(SESSION_REQUEST_NOT_FOUND),
+)
+async def get_session_request(
+    request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]
+) -> SessionRequestResponse:
+    """Follow a request that is still waiting, or find out how it ended."""
+    return SessionRequestResponse.model_validate(
+        await control.get(request_id, owner_id)
+    )
+
+
+@session_request_router.delete(
+    "/session-requests/{request_id}",
+    operation_id="cancel_session_request",
+    responses=api_error_responses(SESSION_REQUEST_NOT_FOUND),
+)
+async def cancel_session_request(
+    request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]
+) -> SessionRequestResponse:
+    """Give up a waiting request. A session it already holds stays open."""
+    return SessionRequestResponse.model_validate(
+        await control.cancel(request_id, owner_id)
+    )

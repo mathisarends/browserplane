@@ -3,10 +3,8 @@ from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Request, Response, WebSocket, status
+from fastapi import APIRouter, Response, WebSocket, status
 
-from backend.features.browser_requests.application import ControlPlane
-from backend.features.browser_requests.presentation.router import acquire_session
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
@@ -24,15 +22,12 @@ from backend.features.sessions.presentation.errors import (
     BROWSER_CHECKPOINT_NOT_FOUND,
     BROWSER_STATE_TRANSFER_FAILED,
     DOWNLOAD_NOT_FOUND,
-    NO_BROWSER_AVAILABLE,
     SESSION_NOT_ACTIVE,
     SESSION_NOT_FOUND,
-    SESSION_NOT_SUSPENDED,
 )
 from backend.features.sessions.presentation.mapper import (
     to_authentication_profile_response,
     to_browser_checkpoint_response,
-    to_open_session_response,
     to_owner_sessions_response,
     to_session_response,
 )
@@ -43,10 +38,7 @@ from backend.features.sessions.presentation.schemas import (
     CreateBrowserCheckpointRequest,
     MountAuthenticationProfileRequest,
     MountBrowserCheckpointRequest,
-    OpenSessionRequest,
-    OpenSessionResponse,
     OwnerSessionsResponse,
-    ResumeSessionRequest,
     SessionResponse,
     UpdateAuthenticationProfileRequest,
 )
@@ -55,36 +47,6 @@ from generated.browser_worker import BrowserStateSchema, DownloadResponse
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
 logger = logging.getLogger(__name__)
-
-
-@session_router.post(
-    "/sessions",
-    response_model=OpenSessionResponse,
-    status_code=status.HTTP_201_CREATED,
-    operation_id="open_session",
-    responses=api_error_responses(NO_BROWSER_AVAILABLE),
-)
-async def open_session(
-    request: OpenSessionRequest,
-    http_request: Request,
-    service: FromDishka[SessionService],
-    control: FromDishka[ControlPlane],
-) -> OpenSessionResponse:
-    session_id = await acquire_session(
-        http_request,
-        http_request.app.state.dishka_container,
-        control,
-        owner_id=request.owner_id,
-        request_id=request.request_id,
-        timeout_seconds=request.timeout_seconds,
-        test_run_id=request.test_run_id,
-        authentication_profile_id=request.authentication_profile_id,
-        browser_checkpoint_id=request.browser_checkpoint_id,
-    )
-    session = await service.get_active(session_id)
-    return to_open_session_response(
-        session, remaining_capacity=await service.remaining_capacity()
-    )
 
 
 @session_router.get(
@@ -407,38 +369,6 @@ async def suspend_session(
     """Park a session: store what its browser holds and free the browser."""
     suspended = await service.suspend(session_id)
     return to_session_response(suspended)
-
-
-@session_router.post(
-    "/sessions/{session_id}/resume",
-    response_model=SessionResponse,
-    operation_id="resume_session",
-    responses=api_error_responses(
-        SESSION_NOT_FOUND,
-        BROWSER_NOT_FOUND,
-        SESSION_NOT_SUSPENDED,
-        NO_BROWSER_AVAILABLE,
-        BROWSER_STATE_TRANSFER_FAILED,
-    ),
-)
-async def resume_session(
-    session_id: UUID,
-    request: ResumeSessionRequest,
-    service: FromDishka[SessionService],
-    http_request: Request,
-    control: FromDishka[ControlPlane],
-) -> SessionResponse:
-    """Mount a parked session onto whichever browser is free now."""
-    await acquire_session(
-        http_request,
-        http_request.app.state.dishka_container,
-        control,
-        resume_session_id=session_id,
-        request_id=request.request_id,
-        timeout_seconds=request.timeout_seconds,
-    )
-    session = await service.get_active(session_id)
-    return to_session_response(session)
 
 
 @session_router.post(

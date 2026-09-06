@@ -3,7 +3,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from backend.features.browser_requests.infrastructure.notifications import PostgresListener
+from backend.features.session_requests.infrastructure.notifications import (
+    PostgresListener,
+)
 from backend.lifecycle import Lifecycle
 
 

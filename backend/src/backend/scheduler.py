@@ -1,11 +1,15 @@
 """Run with python -m backend.scheduler, independently of the HTTP API."""
+
 import asyncio
 import logging
+from contextlib import suppress
 
 from backend.app import FEATURES
 from backend.container import create_container
-from backend.features.browser_requests.infrastructure.dispatcher import Dispatcher
-from backend.features.browser_requests.infrastructure.notifications import PostgresListener
+from backend.features.session_requests.infrastructure.dispatcher import Dispatcher
+from backend.features.session_requests.infrastructure.notifications import (
+    PostgresListener,
+)
 
 
 async def main():
@@ -21,7 +25,5 @@ async def main():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    try:
+    with suppress(KeyboardInterrupt):
         asyncio.run(main())
-    except KeyboardInterrupt:
-        pass

@@ -30,14 +30,15 @@ class BrowserModel(DatabaseModel, table=True):
     generation: int = Field(default=0, sa_type=BigInteger, nullable=False)
 
 
-class BrowserRequestModel(DatabaseModel, table=True):
-    __tablename__ = "browser_requests"
+class SessionRequestModel(DatabaseModel, table=True):
+    __tablename__ = "session_requests"
 
     owner_id: UUID = Field(index=True)
     test_run_id: UUID | None = None
     status: str = Field(sa_column=Column(String, nullable=False))
     expires_at: datetime = Field(sa_type=DateTime(timezone=True), nullable=False)
-    lease_id: UUID | None = None
+    # An assignment mints lease and session aggregate under one id; this is it.
+    session_id: UUID | None = None
     browser_id: UUID | None = None
     authentication_profile_id: UUID | None = None
     browser_checkpoint_id: UUID | None = None

@@ -3,30 +3,41 @@ import logging
 from contextlib import suppress
 
 import asyncpg
-from dishka import AsyncContainer, Scope
 
-from backend.features.browser_requests.application import Wakeups
-from backend.features.browser_requests.domain import BrowserRequest, RequestStatus
-from backend.features.browser_requests.infrastructure.notifications import connection_options
-from backend.features.browser_requests.infrastructure.repository import SqlRequestRepository
 from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.domain.models import Browser
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.features.leases.settings import LeaseSettings
+from backend.features.session_requests.application.wakeups import Wakeups
+from backend.features.session_requests.domain import RequestStatus, SessionRequest
+from backend.features.session_requests.infrastructure.notifications import (
+    connection_options,
+)
+from backend.features.session_requests.infrastructure.repository import (
+    SqlSessionRequestRepository,
+)
 from backend.features.sessions.application.ports import BrowserRuntime
 from backend.features.sessions.application.service import SessionService
 from backend.infrastructure.database.settings import DatabaseSettings
+from backend.shared.unit_of_work import UnitOfWork
 
 logger = logging.getLogger(__name__)
 LEADER_LOCK = 728194630
 
 
 class Dispatcher:
-    def __init__(self, container: AsyncContainer, repository: SqlRequestRepository,
-                 provisioner: BrowserProvisioner, runtime: BrowserRuntime,
-                 settings: DatabaseSettings, pool: BrowserPoolSettings, wakeups: Wakeups,
-                 leases: LeaseSettings):
-        self._container = container
+    def __init__(
+        self,
+        sessions: UnitOfWork[SessionService],
+        repository: SqlSessionRequestRepository,
+        provisioner: BrowserProvisioner,
+        runtime: BrowserRuntime,
+        settings: DatabaseSettings,
+        pool: BrowserPoolSettings,
+        wakeups: Wakeups,
+        leases: LeaseSettings,
+    ):
+        self._sessions = sessions
         self._repository = repository
         self._provisioner = provisioner
         self._runtime = runtime
@@ -44,8 +55,12 @@ class Dispatcher:
         while True:
             connection = None
             try:
-                connection = await asyncpg.connect(**connection_options(self._settings), timeout=5)
-                elected = await connection.fetchval("SELECT pg_try_advisory_lock($1)", LEADER_LOCK)
+                connection = await asyncpg.connect(
+                    **connection_options(self._settings), timeout=5
+                )
+                elected = await connection.fetchval(
+                    "SELECT pg_try_advisory_lock($1)", LEADER_LOCK
+                )
                 if elected:
                     logger.info("Browser scheduler elected")
                     await self._repository.reconcile(self._pool)
@@ -78,13 +93,15 @@ class Dispatcher:
                     async with asyncio.timeout(90):
                         await self._provision(request, browser)
                 except Exception:
-                    logger.exception("Browser request provisioning failed request_id=%s", request.id)
+                    logger.exception(
+                        "Session request provisioning failed request_id=%s", request.id
+                    )
                     await self._repository.retry(request.id)
                 continue
             with suppress(TimeoutError):
                 await asyncio.wait_for(self._wakeups.dispatch.wait(), timeout=5)
 
-    async def _provision(self, request: BrowserRequest, browser: Browser):
+    async def _provision(self, request: SessionRequest, browser: Browser):
         # Release is generation checked and idempotent. A previous scheduler may
         # have died after worker creation but before committing the assignment.
         await self._provisioner.release(browser.slot, browser.generation)
@@ -92,18 +109,28 @@ class Dispatcher:
         if current.status in (RequestStatus.CANCELLED, RequestStatus.EXPIRED):
             await self._repository.cleaned(request.id, browser)
             return
-        async with self._container(scope=Scope.REQUEST) as scoped:
-            sessions = await scoped.get(SessionService)
-            checkpoint = (await sessions.get_browser_checkpoint(request.browser_checkpoint_id)
-                          if request.browser_checkpoint_id else None)
+        async with self._sessions() as sessions:
+            checkpoint = (
+                await sessions.get_browser_checkpoint(request.browser_checkpoint_id)
+                if request.browser_checkpoint_id
+                else None
+            )
             profile_id = request.authentication_profile_id or (
-                checkpoint.authentication_profile_id if checkpoint else None)
-            profile = await sessions.get_authentication_profile(profile_id) if profile_id else None
-        # All database scopes are closed before any worker call.
+                checkpoint.authentication_profile_id if checkpoint else None
+            )
+            profile = (
+                await sessions.get_authentication_profile(profile_id)
+                if profile_id
+                else None
+            )
+        # The unit of work is closed before any worker call, so provisioning
+        # never occupies a database connection while it waits on HTTP.
         await self._provisioner.start(browser.slot, browser.generation)
         await self._runtime.clear_downloads(browser)
         if profile is not None:
-            await self._runtime.mount_authentication(browser, profile.authentication_state)
+            await self._runtime.mount_authentication(
+                browser, profile.authentication_state
+            )
         if checkpoint is not None:
             await self._runtime.mount_browser(browser, checkpoint.browser_state)
         if not await self._repository.finish(request.id, browser):
@@ -113,8 +140,7 @@ class Dispatcher:
     async def _reap(self):
         while True:
             try:
-                async with self._container(scope=Scope.REQUEST) as scoped:
-                    sessions = await scoped.get(SessionService)
+                async with self._sessions() as sessions:
                     await sessions.reap_expired()
             except asyncio.CancelledError:
                 raise

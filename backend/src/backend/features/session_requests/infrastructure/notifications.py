@@ -7,7 +7,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.features.browser_requests.application import Notification, Notifier, Wakeups
+from backend.features.session_requests.application.ports import Notification, Notifier
+from backend.features.session_requests.application.wakeups import Wakeups
 from backend.infrastructure.database.settings import DatabaseSettings
 
 logger = logging.getLogger(__name__)
@@ -16,8 +17,14 @@ CHANNEL = "browser_capacity_changed"
 
 def connection_options(settings: DatabaseSettings) -> dict:
     url = make_url(settings.database_url)
-    return dict(host=url.host, port=url.port or 5432, user=url.username,
-                password=url.password, database=url.database, **dict(url.query))
+    return dict(
+        host=url.host,
+        port=url.port or 5432,
+        user=url.username,
+        password=url.password,
+        database=url.database,
+        **dict(url.query),
+    )
 
 
 async def notify_transaction(session: AsyncSession) -> None:
@@ -31,8 +38,10 @@ class PostgresNotifier(Notifier):
 
     async def notify(self, notification: Notification) -> None:
         async with self._factory.begin() as session:
-            await session.execute(text("SELECT pg_notify(:channel, :payload)"),
-                                  {"channel": notification.channel, "payload": notification.payload})
+            await session.execute(
+                text("SELECT pg_notify(:channel, :payload)"),
+                {"channel": notification.channel, "payload": notification.payload},
+            )
 
 
 class PostgresListener:
@@ -42,7 +51,7 @@ class PostgresListener:
 
     @asynccontextmanager
     async def running(self):
-        task = asyncio.create_task(self.run(), name="browser-request-listener")
+        task = asyncio.create_task(self.run(), name="session-request-listener")
         try:
             yield
         finally:
@@ -53,7 +62,9 @@ class PostgresListener:
         while True:
             connection = None
             try:
-                connection = await asyncpg.connect(**connection_options(self._settings), timeout=5)
+                connection = await asyncpg.connect(
+                    **connection_options(self._settings), timeout=5
+                )
                 await connection.add_listener(CHANNEL, lambda *_: self._wakeups.wake())
                 self._wakeups.wake()
                 while True:
@@ -62,7 +73,9 @@ class PostgresListener:
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.warning("Request listener disconnected; reconnecting", exc_info=True)
+                logger.warning(
+                    "Session request listener disconnected; reconnecting", exc_info=True
+                )
                 self._wakeups.wake()
                 await asyncio.sleep(2)
             finally:

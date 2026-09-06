@@ -5,13 +5,15 @@ from dishka.integrations.fastapi import setup_dishka
 from fastapi import APIRouter, FastAPI
 
 from backend.container import create_container
-from backend.features.browser_requests.feature import feature as browser_requests_feature
 from backend.features.admin.feature import feature as admin_feature
 from backend.features.browser_tunnel.feature import feature as browser_tunnel_feature
 from backend.features.browsers.feature import feature as browsers_feature
 from backend.features.health.feature import feature as health_feature
 from backend.features.leases.feature import feature as leases_feature
 from backend.features.recordings.feature import feature as recordings_feature
+from backend.features.session_requests.feature import (
+    feature as session_requests_feature,
+)
 from backend.features.sessions.feature import feature as sessions_feature
 from backend.lifespan import lifespan
 from backend.presentation.api_errors import register_api_error_handlers
@@ -20,12 +22,12 @@ from backend.shared.feature import Feature
 
 API_PREFIX = "/api/v1"
 FEATURES = (
-    browser_requests_feature,
     health_feature,
     browser_tunnel_feature,
     browsers_feature,
     leases_feature,
     sessions_feature,
+    session_requests_feature,
     recordings_feature,
     admin_feature,
 )

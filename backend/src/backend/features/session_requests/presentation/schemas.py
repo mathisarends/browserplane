@@ -3,10 +3,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from backend.features.browser_requests.domain import RequestStatus
+from backend.features.session_requests.domain import RequestStatus
 
 
-class BrowserRequestResponse(BaseModel):
+class SessionRequestResponse(BaseModel):
+    """What a queued request looks like from outside, before it holds a session."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -14,5 +16,5 @@ class BrowserRequestResponse(BaseModel):
     status: RequestStatus
     created_at: datetime
     expires_at: datetime
-    lease_id: UUID | None
+    session_id: UUID | None
     test_run_id: UUID | None
