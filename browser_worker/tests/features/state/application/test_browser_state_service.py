@@ -19,6 +19,10 @@ from browser_worker.features.state.application.service import (
 from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
+from browser_worker.features.state.presentation.schemas import (
+    AuthenticationStateSchema,
+    BrowserStateSchema,
+)
 
 BROWSER_STATE = {
     "tabs": [
@@ -123,23 +127,25 @@ async def _running_service(
 async def test_state_survives_a_mount_and_capture_roundtrip() -> None:
     service, browser_id = await _running_service(FakeStore())
 
-    state = BrowserState.model_validate(BROWSER_STATE)
+    state = BrowserStateSchema.model_validate(BROWSER_STATE)
 
     await service.mount_browser(browser_id, state)
     captured = await service.capture_browser(browser_id)
 
-    assert captured.model_dump(mode="json", by_alias=True) == BROWSER_STATE
+    response = BrowserStateSchema.model_validate(captured)
+    assert response.model_dump(mode="json", by_alias=True) == BROWSER_STATE
 
 
 @pytest.mark.asyncio
 async def test_authentication_survives_a_mount_and_capture_roundtrip() -> None:
     service, browser_id = await _running_service(FakeStore())
-    state = AuthenticationState.model_validate(AUTHENTICATION_STATE)
+    state = AuthenticationStateSchema.model_validate(AUTHENTICATION_STATE)
 
     await service.mount_authentication(browser_id, state)
     captured = await service.capture_authentication(browser_id)
 
-    assert captured.model_dump(mode="json", by_alias=True) == AUTHENTICATION_STATE
+    response = AuthenticationStateSchema.model_validate(captured)
+    assert response.model_dump(mode="json", by_alias=True) == AUTHENTICATION_STATE
 
 
 @pytest.mark.asyncio

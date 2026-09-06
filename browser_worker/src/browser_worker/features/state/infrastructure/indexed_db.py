@@ -21,7 +21,7 @@ async def capture_indexed_db(
         try:
             async with loaded_origin(client, origin) as session:
                 result = await session.runtime.evaluate(
-                    expression=CAPTURE_INDEXED_DB,
+                    expression=_CAPTURE_INDEXED_DB,
                     await_promise=True,
                     return_by_value=True,
                     silent=True,
@@ -39,7 +39,7 @@ async def capture_indexed_db(
 
 async def restore_indexed_db(client: Client, origin: OriginIndexedDb) -> None:
     """Replace an origin's IndexedDB databases from a portable snapshot."""
-    payload = origin.model_dump(mode="json", by_alias=True, include={"databases"})
+    payload = origin.model_dump(mode="json", include={"databases"})
     async with loaded_origin(client, origin.origin) as session:
         global_object = await session.runtime.evaluate(expression="globalThis")
         object_id = global_object.result.object_id
@@ -47,7 +47,7 @@ async def restore_indexed_db(client: Client, origin: OriginIndexedDb) -> None:
             raise TypeError("Could not address the origin execution context")
         result = await session.runtime.call_function_on(
             object_id=object_id,
-            function_declaration=RESTORE_INDEXED_DB,
+            function_declaration=_RESTORE_INDEXED_DB,
             arguments=[CallArgument(value=payload)],
             await_promise=True,
             return_by_value=True,
@@ -57,7 +57,7 @@ async def restore_indexed_db(client: Client, origin: OriginIndexedDb) -> None:
             raise BrowserStateFailedException("IndexedDB restore script failed")
 
 
-CAPTURE_INDEXED_DB = r"""
+_CAPTURE_INDEXED_DB = r"""
 (async () => {
     const request = (value) => new Promise((resolve, reject) => {
         value.onsuccess = () => resolve(value.result);
@@ -152,21 +152,25 @@ CAPTURE_INDEXED_DB = r"""
                 }
                 objectStores.push({
                     name,
-                    keyPath: store.keyPath,
-                    autoIncrement: store.autoIncrement,
+                    key_path: store.keyPath,
+                    auto_increment: store.autoIncrement,
                     indexes: Array.from(store.indexNames, (indexName) => {
                         const item = store.index(indexName);
                         return {
                             name: item.name,
-                            keyPath: item.keyPath,
+                            key_path: item.keyPath,
                             unique: item.unique,
-                            multiEntry: item.multiEntry,
+                            multi_entry: item.multiEntry,
                         };
                     }),
                     records,
                 });
             }
-            databases.push({name: db.name, version: db.version, objectStores});
+            databases.push({
+                name: db.name,
+                version: db.version,
+                object_stores: objectStores,
+            });
         } finally {
             db.close();
         }
@@ -176,7 +180,7 @@ CAPTURE_INDEXED_DB = r"""
 """
 
 
-RESTORE_INDEXED_DB = r"""
+_RESTORE_INDEXED_DB = r"""
 async function(payload) {
     const request = (value) => new Promise((resolve, reject) => {
         value.onsuccess = () => resolve(value.result);
@@ -263,29 +267,29 @@ async function(payload) {
         const opening = indexedDB.open(database.name, database.version);
         opening.onupgradeneeded = () => {
             const db = opening.result;
-            for (const definition of database.objectStores) {
+            for (const definition of database.object_stores) {
                 const store = db.createObjectStore(definition.name, {
-                    keyPath: definition.keyPath,
-                    autoIncrement: definition.autoIncrement,
+                    keyPath: definition.key_path,
+                    autoIncrement: definition.auto_increment,
                 });
                 for (const index of definition.indexes) {
-                    store.createIndex(index.name, index.keyPath, {
+                    store.createIndex(index.name, index.key_path, {
                         unique: index.unique,
-                        multiEntry: index.multiEntry,
+                        multiEntry: index.multi_entry,
                     });
                 }
             }
         };
         const db = await request(opening);
         try {
-            const names = database.objectStores.map((store) => store.name);
+            const names = database.object_stores.map((store) => store.name);
             if (!names.length) continue;
             const writing = db.transaction(names, "readwrite");
-            for (const definition of database.objectStores) {
+            for (const definition of database.object_stores) {
                 const store = writing.objectStore(definition.name);
                 for (const record of definition.records) {
                     const value = decode(record.value);
-                    if (definition.keyPath === null) {
+                    if (definition.key_path === null) {
                         store.put(value, decode(record.key));
                     }
                     else store.put(value);

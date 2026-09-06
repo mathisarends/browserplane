@@ -1,10 +1,10 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class StateModel(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, frozen=True)
+    model_config = ConfigDict(frozen=True)
 
 
 class StorageItem(StateModel):
@@ -14,7 +14,7 @@ class StorageItem(StateModel):
 
 class OriginLocalStorage(StateModel):
     origin: str
-    local_storage: tuple[StorageItem, ...] = Field(default=(), alias="localStorage")
+    local_storage: tuple[StorageItem, ...] = ()
 
 
 type IndexedDbKeyPath = str | tuple[str, ...] | None
@@ -22,9 +22,9 @@ type IndexedDbKeyPath = str | tuple[str, ...] | None
 
 class IndexedDbIndex(StateModel):
     name: str
-    key_path: IndexedDbKeyPath = Field(default=None, alias="keyPath")
+    key_path: IndexedDbKeyPath = None
     unique: bool = False
-    multi_entry: bool = Field(default=False, alias="multiEntry")
+    multi_entry: bool = False
 
 
 class IndexedDbRecord(StateModel):
@@ -34,8 +34,8 @@ class IndexedDbRecord(StateModel):
 
 class IndexedDbObjectStore(StateModel):
     name: str
-    key_path: IndexedDbKeyPath = Field(default=None, alias="keyPath")
-    auto_increment: bool = Field(default=False, alias="autoIncrement")
+    key_path: IndexedDbKeyPath = None
+    auto_increment: bool = False
     indexes: tuple[IndexedDbIndex, ...] = ()
     records: tuple[IndexedDbRecord, ...] = ()
 
@@ -43,9 +43,7 @@ class IndexedDbObjectStore(StateModel):
 class IndexedDbDatabase(StateModel):
     name: str
     version: int
-    object_stores: tuple[IndexedDbObjectStore, ...] = Field(
-        default=(), alias="objectStores"
-    )
+    object_stores: tuple[IndexedDbObjectStore, ...] = ()
 
 
 class OriginIndexedDb(StateModel):
@@ -54,8 +52,8 @@ class OriginIndexedDb(StateModel):
 
 
 class CookiePartitionKey(StateModel):
-    top_level_site: str = Field(alias="topLevelSite")
-    has_cross_site_ancestor: bool = Field(alias="hasCrossSiteAncestor")
+    top_level_site: str
+    has_cross_site_ancestor: bool
 
 
 class BrowserCookie(StateModel):
@@ -64,21 +62,19 @@ class BrowserCookie(StateModel):
     domain: str
     path: str
     expires: float | None = None
-    http_only: bool = Field(default=False, alias="httpOnly")
+    http_only: bool = False
     secure: bool = False
-    same_site: str | None = Field(default=None, alias="sameSite")
+    same_site: str | None = None
     priority: str | None = None
-    source_scheme: str | None = Field(default=None, alias="sourceScheme")
-    source_port: int | None = Field(default=None, alias="sourcePort")
-    partition_key: CookiePartitionKey | None = Field(default=None, alias="partitionKey")
+    source_scheme: str | None = None
+    source_port: int | None = None
+    partition_key: CookiePartitionKey | None = None
 
 
 class AuthenticationState(StateModel):
     cookies: tuple[BrowserCookie, ...] = ()
-    local_storage: tuple[OriginLocalStorage, ...] = Field(
-        default=(), alias="localStorage"
-    )
-    indexed_db: tuple[OriginIndexedDb, ...] = Field(default=(), alias="indexedDB")
+    local_storage: tuple[OriginLocalStorage, ...] = ()
+    indexed_db: tuple[OriginIndexedDb, ...] = ()
 
     @property
     def is_empty(self) -> bool:
@@ -93,7 +89,7 @@ class ScrollPosition(StateModel):
 class BrowserTabState(StateModel):
     url: str
     scroll: ScrollPosition = ScrollPosition()
-    session_storage: tuple[StorageItem, ...] = Field(default=(), alias="sessionStorage")
+    session_storage: tuple[StorageItem, ...] = ()
 
 
 class BrowserState(StateModel):
