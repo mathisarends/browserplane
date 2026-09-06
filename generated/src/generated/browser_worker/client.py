@@ -129,13 +129,11 @@ class GeneratedBrowserWorkerClient:
 
     async def capture_authentication_state(
         self,
-        browser_id: UUID,
         origins: list[str] | None = None,
         *,
         timeout: float | None = None,
     ) -> AuthenticationStateSchema:
-        path = "/api/v1/browser/{browser_id}/authentication-state"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/authentication-state"
 
         params = CaptureAuthenticationStateParams(
             origins=origins,
@@ -171,13 +169,11 @@ class GeneratedBrowserWorkerClient:
 
     async def mount_authentication_state(
         self,
-        browser_id: UUID,
         body: AuthenticationState,
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/{browser_id}/authentication-state"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/authentication-state"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -210,12 +206,10 @@ class GeneratedBrowserWorkerClient:
 
     async def list_downloads(
         self,
-        browser_id: UUID,
         *,
         timeout: float | None = None,
     ) -> list[DownloadResponse]:
-        path = "/api/v1/browser/{browser_id}/downloads"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/downloads"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -232,20 +226,15 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 404:
             parsed_body = BrowserNotFoundError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
 
     async def clear_downloads(
         self,
-        browser_id: UUID,
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/{browser_id}/downloads"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/downloads"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -262,21 +251,16 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 404:
             parsed_body = BrowserNotFoundError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
 
     async def download_file(
         self,
-        browser_id: UUID,
         download_id: str,
         *,
         timeout: float | None = None,
     ) -> bytes:
-        path = "/api/v1/browser/{browser_id}/downloads/{download_id}/file"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/downloads/{download_id}/file"
         path = path.replace("{download_id}", serialize_path("download_id", download_id))
 
         headers = dict(self._headers)
@@ -302,12 +286,10 @@ class GeneratedBrowserWorkerClient:
 
     async def start_recording(
         self,
-        browser_id: UUID,
         *,
         timeout: float | None = None,
     ) -> RecordingResponse:
-        path = "/api/v1/browser/{browser_id}/recordings"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/recordings"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -327,9 +309,6 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 409:
             parsed_body = RecordingAlreadyExistsError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
             parsed_body = RecordingFailedError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
@@ -338,13 +317,11 @@ class GeneratedBrowserWorkerClient:
 
     async def inspect_recording(
         self,
-        browser_id: UUID,
         recording_id: UUID,
         *,
         timeout: float | None = None,
     ) -> RecordingResponse:
-        path = "/api/v1/browser/{browser_id}/recordings/{recording_id}"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/recordings/{recording_id}"
         path = path.replace(
             "{recording_id}", serialize_path("recording_id", recording_id)
         )
@@ -372,13 +349,11 @@ class GeneratedBrowserWorkerClient:
 
     async def download_recording(
         self,
-        browser_id: UUID,
         recording_id: UUID,
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/{browser_id}/recordings/{recording_id}/file"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/recordings/{recording_id}/file"
         path = path.replace(
             "{recording_id}", serialize_path("recording_id", recording_id)
         )
@@ -409,13 +384,11 @@ class GeneratedBrowserWorkerClient:
 
     async def stop_recording(
         self,
-        browser_id: UUID,
         recording_id: UUID,
         *,
         timeout: float | None = None,
     ) -> RecordingResponse:
-        path = "/api/v1/browser/{browser_id}/recordings/{recording_id}/stop"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/recordings/{recording_id}/stop"
         path = path.replace(
             "{recording_id}", serialize_path("recording_id", recording_id)
         )
@@ -449,12 +422,10 @@ class GeneratedBrowserWorkerClient:
 
     async def capture_browser_state(
         self,
-        browser_id: UUID,
         *,
         timeout: float | None = None,
     ) -> BrowserStateSchema:
-        path = "/api/v1/browser/{browser_id}/state"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/state"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
@@ -482,13 +453,11 @@ class GeneratedBrowserWorkerClient:
 
     async def mount_browser_state(
         self,
-        browser_id: UUID,
         body: BrowserState,
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/{browser_id}/state"
-        path = path.replace("{browser_id}", serialize_path("browser_id", browser_id))
+        path = "/api/v1/browser/state"
 
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
