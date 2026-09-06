@@ -33,7 +33,7 @@ class StorageItemSchema(BaseModel):
     value: str
 
 
-class BrowserOriginStateSchema(BaseModel):
+class OriginLocalStorageSchema(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     origin: str
@@ -44,7 +44,7 @@ class AuthenticationStateSchema(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     cookies: list[BrowserCookieSchema] = []
-    origins: list[BrowserOriginStateSchema] = []
+    local_storage: list[OriginLocalStorageSchema] = Field([], alias="localStorage")
 
 
 class BrowserAlreadyRunningError(BaseModel):
