@@ -8,13 +8,13 @@ from backend.features.sessions.domain.models import SessionStatus
 
 class OpenSessionRequest(BaseModel):
     owner_id: UUID
-    ttl_seconds: int = Field(default=300, gt=0, le=86_400)
+    ttl_seconds: int | None = Field(default=None, deprecated=True, exclude=True)
     authentication_profile_id: UUID | None = None
     browser_checkpoint_id: UUID | None = None
 
 
 class ResumeSessionRequest(BaseModel):
-    ttl_seconds: int = Field(default=300, gt=0, le=86_400)
+    ttl_seconds: int | None = Field(default=None, deprecated=True, exclude=True)
 
 
 class CreateBrowserCheckpointRequest(BaseModel):
@@ -67,6 +67,8 @@ class SessionResponse(BaseModel):
     tunnel_path: str | None = None
     screencast_path: str | None = None
     browser_checkpoint_id: UUID | None = None
+    lease_generation: int | None = None
+    reclaim_after: datetime | None = None
 
 
 class OpenSessionResponse(SessionResponse):

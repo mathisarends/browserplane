@@ -25,6 +25,7 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
             ),
             created_at=model.created_at,
             state=BrowserState(model.state),
+            generation=model.generation,
         )
 
     def to_model(self, entity: Browser) -> BrowserModel:
@@ -33,6 +34,7 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
             created_at=entity.created_at,
             browser_worker_url=entity.slot.browser_worker_url,
             state=entity.state,
+            generation=entity.generation,
         )
 
     async def save(self, *, browser: Browser) -> Browser:

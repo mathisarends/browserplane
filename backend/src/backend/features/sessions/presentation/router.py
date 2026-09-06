@@ -1,17 +1,13 @@
 import logging
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
-from datetime import timedelta
 from urllib.parse import quote
 from uuid import UUID
 
-from dishka import AsyncContainer, Scope
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Response, WebSocket, status
 
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
-from backend.features.browsers.infrastructure import routes
+from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
@@ -19,6 +15,7 @@ from backend.features.sessions.application.exceptions import (
 )
 from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.domain.models import ActiveSession
+from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
     AUTHENTICATION_PROFILE_NOT_FOUND,
@@ -70,7 +67,6 @@ async def open_session(
 ) -> OpenSessionResponse:
     session = await service.open(
         owner_id=request.owner_id,
-        ttl=timedelta(seconds=request.ttl_seconds),
         authentication_profile_id=request.authentication_profile_id,
         browser_checkpoint_id=request.browser_checkpoint_id,
     )
@@ -419,10 +415,24 @@ async def resume_session(
     service: FromDishka[SessionService],
 ) -> SessionResponse:
     """Mount a parked session onto whichever browser is free now."""
-    session = await service.resume(
-        session_id, ttl=timedelta(seconds=request.ttl_seconds)
-    )
+    session = await service.resume(session_id)
     return to_session_response(session)
+
+
+@session_router.post(
+    "/sessions/{session_id}/lease/renew",
+    response_model=SessionResponse,
+    operation_id="renew_session_lease",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_NOT_FOUND,
+    ),
+)
+async def renew_session_lease(
+    session_id: UUID, service: FromDishka[SessionService]
+) -> SessionResponse:
+    return to_session_response(await service.renew(session_id))
 
 
 @session_router.delete(
@@ -440,15 +450,25 @@ async def close_session(session_id: UUID, service: FromDishka[SessionService]) -
 async def session_tunnel(
     session_id: UUID,
     websocket: WebSocket,
-    container: FromDishka[AsyncContainer],
     tunnel: FromDishka[BrowserTunnel],
+    lease_keeper: FromDishka[SessionLeaseKeeper],
+    routes: FromDishka[BrowserWorkerRoutes],
 ) -> None:
-    session = await _resolve(websocket, container, session_id)
+    session = await _resolve(websocket, lease_keeper, session_id, renew=True)
     if session is None:
         return
     try:
         logger.info("Session tunnel connected session_id=%s", session_id)
-        await tunnel.serve(websocket, routes.cdp_url(session.browser.slot))
+        await lease_keeper.run(
+            session_id,
+            tunnel.serve(websocket, routes.cdp_url(session.browser.slot)),
+        )
+    except (
+        LeaseNotFoundException,
+        BrowserNotFoundException,
+        SessionNotActiveException,
+    ):
+        await websocket.close(code=1008, reason="Session lease expired")
     finally:
         # State capture is an independent HTTP operation. Keep the lease alive
         # when this transport drops so state can still be read from the worker.
@@ -462,9 +482,12 @@ async def session_tunnel(
 @session_router.websocket("/sessions/{session_id}/screencast")
 @inject
 async def session_screencast(
-    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
+    session_id: UUID,
+    websocket: WebSocket,
+    lease_keeper: FromDishka[SessionLeaseKeeper],
+    routes: FromDishka[BrowserWorkerRoutes],
 ) -> None:
-    session = await _resolve(websocket, container, session_id)
+    session = await _resolve(websocket, lease_keeper, session_id)
     if session is not None:
         url = routes.screencast_url(session.browser.slot)
         await proxy_stream(websocket, url, name="Screencast")
@@ -473,37 +496,27 @@ async def session_screencast(
 @session_router.websocket("/sessions/{session_id}/screencast/fmp4")
 @inject
 async def session_fmp4_screencast(
-    session_id: UUID, websocket: WebSocket, container: FromDishka[AsyncContainer]
+    session_id: UUID,
+    websocket: WebSocket,
+    lease_keeper: FromDishka[SessionLeaseKeeper],
+    routes: FromDishka[BrowserWorkerRoutes],
 ) -> None:
-    session = await _resolve(websocket, container, session_id)
+    session = await _resolve(websocket, lease_keeper, session_id)
     if session is not None:
         url = routes.fmp4_screencast_url(session.browser.slot)
         await proxy_stream(websocket, url, name="fMP4 screencast")
 
 
-@asynccontextmanager
-async def _session_service(
-    container: AsyncContainer,
-) -> AsyncGenerator[SessionService]:
-    """
-    A service for one step of a live connection.
-
-    A stream outlives any unit of work, so each lookup gets its own scope and
-    hands its database session back before the proxying starts.
-    """
-    async with container(scope=Scope.REQUEST) as scoped:
-        yield await scoped.get(SessionService)
-
-
 async def _resolve(
     websocket: WebSocket,
-    container: AsyncContainer,
+    lease_keeper: SessionLeaseKeeper,
     session_id: UUID,
+    *,
+    renew: bool = False,
 ) -> ActiveSession | None:
     """Look up the live session, closing the socket in session terms when it is gone."""
     try:
-        async with _session_service(container) as service:
-            return await service.get_active(session_id)
+        return await lease_keeper.resolve(session_id, renew=renew)
     except LeaseNotFoundException, BrowserNotFoundException, SessionNotActiveException:
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")

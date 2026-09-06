@@ -11,11 +11,16 @@ from backend.features.browsers.infrastructure.browser_worker_provisioner import 
     BrowserWorkerProvisioner,
 )
 from backend.features.browsers.infrastructure.repository import SqlBrowserRepository
+from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class BrowserProvider(Provider):
+    @provide(scope=Scope.APP)
+    def routes(self) -> BrowserWorkerRoutes:
+        return BrowserWorkerRoutes()
+
     @provide(scope=Scope.APP)
     def settings(self) -> BrowserPoolSettings:
         return BrowserPoolSettings()

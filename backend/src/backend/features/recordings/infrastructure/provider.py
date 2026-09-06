@@ -2,6 +2,7 @@ from dishka import Provider, Scope, provide
 from httpx2 import AsyncClient
 
 from backend.features.browsers.application.service import BrowserService
+from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
 from backend.features.recordings.application.ports import Recorder
 from backend.features.recordings.application.service import RecordingService
 from backend.features.recordings.infrastructure.browser_worker import (
@@ -22,8 +23,9 @@ class RecordingProvider(Provider):
         bucket: Bucket,
         http: AsyncClient,
         settings: BrowserWorkerSettings,
+        routes: BrowserWorkerRoutes,
     ) -> Recorder:
-        return self._recorder or BrowserWorkerRecorder(bucket, http, settings)
+        return self._recorder or BrowserWorkerRecorder(bucket, http, settings, routes)
 
     @provide(scope=Scope.REQUEST)
     def service(self, browsers: BrowserService, recorder: Recorder) -> RecordingService:

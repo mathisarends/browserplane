@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from typing import Any, cast
+from uuid import UUID
 
 from httpx2 import AsyncClient
 
@@ -7,7 +8,11 @@ from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.domain.models import BrowserSlot
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
-from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
+from generated.browser_worker import (
+    CreateBrowserRequest,
+    GeneratedBrowserWorkerClient,
+    ReleaseWorkerRequest,
+)
 
 
 class BrowserWorkerProvisioner(BrowserProvisioner):
@@ -23,26 +28,32 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
         self._http = http
         self._worker_settings = worker_settings
         self._provisioned: list[BrowserSlot] = []
+        self._generations: dict[UUID, int] = {}
 
     async def provision(self) -> Sequence[BrowserSlot]:
         slots = self._settings.slots()
         for slot in slots:
-            await self.start(slot)
             self._provisioned.append(slot)
         return slots
 
     async def deprovision(self) -> None:
         for slot in reversed(self._provisioned):
-            await self.release(slot)
+            await self.release(slot, self._generations.get(slot.id, 0))
         self._provisioned.clear()
+        self._generations.clear()
 
-    async def start(self, slot: BrowserSlot) -> None:
+    async def start(self, slot: BrowserSlot, generation: int = 0) -> None:
         client = self._client(slot)
-        await client.create_browser(CreateBrowserRequest(id=slot.id))
+        await client.create_browser(
+            CreateBrowserRequest(id=slot.id, generation=generation)
+        )
+        self._generations[slot.id] = generation
 
-    async def release(self, slot: BrowserSlot) -> None:
+    async def release(self, slot: BrowserSlot, generation: int) -> None:
         client = self._client(slot)
-        await client.release_worker()
+        await client.release_worker(
+            ReleaseWorkerRequest(browser_id=slot.id, generation=generation)
+        )
 
     def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
         return GeneratedBrowserWorkerClient(

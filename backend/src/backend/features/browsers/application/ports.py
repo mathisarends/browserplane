@@ -15,11 +15,11 @@ class BrowserProvisioner(ABC):
     async def deprovision(self) -> None: ...
 
     @abstractmethod
-    async def start(self, slot: BrowserSlot) -> None:
+    async def start(self, slot: BrowserSlot, generation: int = 0) -> None:
         """Bring one slot's browser process up, on its own worker."""
 
     @abstractmethod
-    async def release(self, slot: BrowserSlot) -> None:
+    async def release(self, slot: BrowserSlot, generation: int) -> None:
         """Reset one worker to its empty initial state; the slot itself stays."""
 
 

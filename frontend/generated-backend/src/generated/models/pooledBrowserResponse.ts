@@ -18,5 +18,6 @@ export interface PooledBrowserResponse {
   id: string;
   state: BrowserState;
   created_at: string;
+  generation: number;
   lease?: BrowserLeaseSummary | null;
 }

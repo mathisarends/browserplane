@@ -65,6 +65,7 @@ class BrowserResponse(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     id: UUID
+    generation: int
     cdp_url: str
 
 
@@ -115,6 +116,7 @@ class CreateBrowserRequest(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     id: UUID
+    generation: int = 0
 
 
 class DownloadNotFoundError(BaseModel):
@@ -210,6 +212,13 @@ class RecordingResponse(BaseModel):
     started_at: datetime
     stopped_at: datetime | None = None
     size_bytes: int | None = None
+
+
+class ReleaseWorkerRequest(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    browser_id: UUID
+    generation: int
 
 
 class CaptureAuthenticationStateParams(BaseModel):

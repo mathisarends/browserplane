@@ -23,9 +23,19 @@ def to_session_response(session: ActiveSession | Session) -> SessionResponse:
         id=aggregate.id,
         status=aggregate.status,
         owner_id=aggregate.owner_id,
-        expires_at=aggregate.expires_at,
+        expires_at=(
+            session.lease.expires_at
+            if isinstance(session, ActiveSession)
+            else aggregate.expires_at
+        ),
         created_at=aggregate.created_at,
         browser_checkpoint_id=aggregate.browser_checkpoint_id,
+        lease_generation=(
+            session.lease.generation if isinstance(session, ActiveSession) else None
+        ),
+        reclaim_after=(
+            session.lease.reclaim_after if isinstance(session, ActiveSession) else None
+        ),
         browser_id=session.browser_id if isinstance(session, ActiveSession) else None,
         tunnel_path=(
             f"{SESSION_PATH}/{aggregate.id}/tunnel"

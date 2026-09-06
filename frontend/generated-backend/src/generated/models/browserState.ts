@@ -12,6 +12,7 @@ export const BrowserState = {
   starting: 'starting',
   ready: 'ready',
   leased: 'leased',
+  recycling: 'recycling',
   stopping: 'stopping',
   stopped: 'stopped',
   failed: 'failed',

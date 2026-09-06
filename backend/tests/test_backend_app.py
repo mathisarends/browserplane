@@ -50,10 +50,10 @@ class FakeProvisioner(BrowserProvisioner):
     async def deprovision(self) -> None:
         pass
 
-    async def start(self, slot: BrowserSlot) -> None:
+    async def start(self, slot: BrowserSlot, generation: int = 0) -> None:
         self.started.append(slot.id)
 
-    async def release(self, slot: BrowserSlot) -> None:
+    async def release(self, slot: BrowserSlot, generation: int) -> None:
         self.released.append(slot.id)
 
 
@@ -189,8 +189,9 @@ def create_test_app(
 
 def test_backend_serves_a_session_lifecycle() -> None:
     state = FakeBrowserRuntime()
+    provisioner = FakeProvisioner()
     app = create_test_app(
-        FakeProvisioner(),
+        provisioner,
         InMemoryBrowserRepository(),
         InMemorySessionRepository(),
         state,
@@ -221,7 +222,13 @@ def test_backend_serves_a_session_lifecycle() -> None:
         assert exhausted.json()["code"] == "no_browser_available"
 
         assert client.get(f"/api/v1/sessions/{session['id']}").status_code == 200
+        renewed = client.post(f"/api/v1/sessions/{session['id']}/lease/renew")
+        assert renewed.status_code == 200
+        assert renewed.json()["lease_generation"] == session["lease_generation"]
+        assert renewed.json()["expires_at"] > session["expires_at"]
         assert client.delete(f"/api/v1/sessions/{session['id']}").status_code == 204
+        assert provisioner.released == [UUID(int=1)]
+        assert provisioner.started == [UUID(int=1), UUID(int=1)]
 
         closed = client.get(f"/api/v1/sessions/{session['id']}")
         assert closed.status_code == 200
@@ -267,7 +274,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
         )
         assert restarted.status_code == 200
         assert restarted.json()["state"] == "ready"
-        assert provisioner.started == [UUID(int=1)]
+        assert provisioner.started == [UUID(int=1), UUID(int=1)]
         assert (
             client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).status_code
             == 201

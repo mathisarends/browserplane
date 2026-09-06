@@ -37,9 +37,9 @@ async def create_browser(
     downloads: FromDishka[DownloadService],
     settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
-    browser_id = await service.create(request.id)
+    browser_id = await service.create(request.id, request.generation)
     await downloads.start(browser_id)
-    return to_browser_response(browser_id, settings.public_base_url)
+    return to_browser_response(service.inspect(), settings.public_base_url)
 
 
 @browser_router.get(
@@ -51,7 +51,7 @@ async def inspect_browser(
     service: FromDishka[BrowserService],
     settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
-    return to_browser_response(service.get(), settings.public_base_url)
+    return to_browser_response(service.inspect(), settings.public_base_url)
 
 
 @browser_router.websocket("/browser/{browser_id}/cdp")

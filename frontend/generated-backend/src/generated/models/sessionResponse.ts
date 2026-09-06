@@ -24,4 +24,6 @@ export interface SessionResponse {
   tunnel_path?: string | null;
   screencast_path?: string | null;
   browser_checkpoint_id?: string | null;
+  lease_generation?: number | null;
+  reclaim_after?: string | null;
 }

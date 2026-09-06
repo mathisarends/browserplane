@@ -56,6 +56,11 @@ class Session:
             browser_checkpoint_id=None,
         )
 
+    def renew(self, expires_at: datetime) -> Session:
+        if self.status is not SessionStatus.ACTIVE:
+            raise ValueError("Only an active session can be renewed")
+        return replace(self, expires_at=expires_at)
+
     def close(self) -> Session:
         if self.status is SessionStatus.CLOSED:
             return self

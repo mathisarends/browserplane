@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
+from uuid import UUID
 
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.downloads.application.service import DownloadService
@@ -31,7 +32,11 @@ class WorkerReleaseService:
         self._workspace = workspace
         self._lock = asyncio.Lock()
 
-    async def release(self) -> None:
+    async def release(
+        self,
+        browser_id: UUID | None = None,
+        generation: int | None = None,
+    ) -> None:
         """Release all resources, attempting every step even after a failure."""
         async with self._lock:
             failures: list[Exception] = []
@@ -43,14 +48,12 @@ class WorkerReleaseService:
             # The browser scope removes its public identity immediately and keeps
             # creation blocked until every worker-owned resource has been cleared.
             try:
-                async with self._browsers.release_scope():
+                async with self._browsers.release_scope(browser_id, generation):
                     for resource, cleanup in cleanups:
                         try:
                             await cleanup()
                         except Exception as error:
-                            logger.exception(
-                                "Worker release failed for %s", resource
-                            )
+                            logger.exception("Worker release failed for %s", resource)
                             failures.append(error)
                     try:
                         self._workspace.clear()

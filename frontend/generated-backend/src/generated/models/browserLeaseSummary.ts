@@ -13,4 +13,6 @@ export interface BrowserLeaseSummary {
   owner_id: string;
   created_at: string;
   expires_at: string;
+  reclaim_after: string;
+  generation: number;
 }

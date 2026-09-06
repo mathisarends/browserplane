@@ -10,8 +10,8 @@ class BrowserServiceAllocator(BrowserAllocator):
     def __init__(self, browsers: BrowserService) -> None:
         self._browsers = browsers
 
-    async def reserve(self, browser_id: UUID) -> None:
-        await self._browsers.reserve(browser_id)
+    async def reserve(self, browser_id: UUID) -> int:
+        return await self._browsers.reserve(browser_id)
 
-    async def release(self, browser_id: UUID) -> None:
+    async def recycle(self, browser_id: UUID) -> None:
         await self._browsers.recycle(browser_id)

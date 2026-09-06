@@ -33,6 +33,7 @@ from generated.browser_worker.models import (
     RecordingNotFoundError,
     RecordingNotRunningError,
     RecordingResponse,
+    ReleaseWorkerRequest,
 )
 from generated.browser_worker.serialization import serialize_path, serialize_query
 
@@ -562,19 +563,31 @@ class GeneratedBrowserWorkerClient:
 
     async def release_worker(
         self,
+        body: ReleaseWorkerRequest,
         *,
         timeout: float | None = None,
     ) -> None:
         path = "/api/v1/release"
 
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        json_body = TypeAdapter(ReleaseWorkerRequest).dump_python(
+            body, mode="json", by_alias=True, exclude_none=True
+        )
+
         response = await self._client.request(
             method=HttpMethods.POST,
             url=f"{self._base_url}{path}",
-            headers=self._headers,
+            headers=headers,
+            json=json_body,
             timeout=self._timeout if timeout is None else timeout,
         )
 
         if response.status_code == 204:
             return None
+        if response.status_code == 422:
+            parsed_body = HTTPValidationError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)

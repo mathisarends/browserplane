@@ -53,7 +53,7 @@ class BrowserCheckpointNotFoundError(ApiErrorResponse):
     code: Literal[ApiErrorCode.BROWSER_CHECKPOINT_NOT_FOUND]
 
 
-# An expired lease is dropped on access, so it reaches the edge as "not found".
+# A lease that expired or crossed its reclaim fence reaches the edge as "not found".
 # A lease whose browser vanished answers with the pool's own BROWSER_NOT_FOUND.
 SESSION_NOT_FOUND = ApiErrorSpec(
     exceptions=(LeaseNotFoundException, SessionNotFoundException),

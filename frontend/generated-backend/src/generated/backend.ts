@@ -1321,6 +1321,66 @@ const res = await fetch(getResumeSessionUrl(sessionId),
 
 
 
+export type renewSessionLeaseResponse200 = {
+  data: SessionResponse
+  status: 200
+}
+
+export type renewSessionLeaseResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError
+  status: 404
+}
+
+export type renewSessionLeaseResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type renewSessionLeaseResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type renewSessionLeaseResponseSuccess = (renewSessionLeaseResponse200) & {
+  headers: Headers;
+};
+export type renewSessionLeaseResponseError = (renewSessionLeaseResponse404 | renewSessionLeaseResponse409 | renewSessionLeaseResponse422) & {
+  headers: Headers;
+};
+
+export type renewSessionLeaseResponse = (renewSessionLeaseResponseSuccess | renewSessionLeaseResponseError)
+
+export const getRenewSessionLeaseUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/lease/renew`
+}
+
+/**
+ * @summary Renew Session Lease
+ */
+export const renewSessionLease = async (sessionId: string, options?: RequestInit): Promise<renewSessionLeaseResponse> => {
+
+  const res = await fetch(getRenewSessionLeaseUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: renewSessionLeaseResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as renewSessionLeaseResponse
+}
+
+
+
 export type startRecordingResponse201 = {
   data: RecordingResponse
   status: 201

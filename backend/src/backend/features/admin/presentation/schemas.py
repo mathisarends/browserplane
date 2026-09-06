@@ -13,6 +13,8 @@ class BrowserLeaseSummary(BaseModel):
     owner_id: UUID
     created_at: datetime
     expires_at: datetime
+    reclaim_after: datetime
+    generation: int
 
 
 class PooledBrowserResponse(BaseModel):
@@ -26,4 +28,5 @@ class PooledBrowserResponse(BaseModel):
     id: UUID
     state: BrowserState
     created_at: datetime
+    generation: int
     lease: BrowserLeaseSummary | None = None

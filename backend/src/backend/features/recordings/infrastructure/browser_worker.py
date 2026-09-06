@@ -7,7 +7,7 @@ from httpx2 import AsyncClient, HTTPError
 from pydantic import ValidationError
 
 from backend.features.browsers.domain.models import Browser
-from backend.features.browsers.infrastructure import routes
+from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
 from backend.features.recordings.application.exceptions import (
     RecordingAlreadyExistsException,
     RecordingNotFoundException,
@@ -38,10 +38,12 @@ class BrowserWorkerRecorder(Recorder):
         bucket: Bucket,
         http: AsyncClient,
         settings: BrowserWorkerSettings,
+        routes: BrowserWorkerRoutes,
     ) -> None:
         self._bucket = bucket
         self._http = http
         self._settings = settings
+        self._routes = routes
 
     async def start(self, browser: Browser) -> Recording:
         try:
@@ -100,7 +102,7 @@ class BrowserWorkerRecorder(Recorder):
         recording_id: UUID,
     ) -> None:
         try:
-            url = routes.recording_file_url(browser.slot, recording_id)
+            url = self._routes.recording_file_url(browser.slot, recording_id)
             async with self._http.stream(
                 "GET",
                 url,

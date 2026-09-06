@@ -8,6 +8,7 @@ class BrowserState(StrEnum):
     STARTING = "starting"
     READY = "ready"
     LEASED = "leased"
+    RECYCLING = "recycling"
     STOPPING = "stopping"
     STOPPED = "stopped"
     FAILED = "failed"
@@ -26,6 +27,7 @@ class Browser:
     slot: BrowserSlot
     created_at: datetime
     state: BrowserState = field(default=BrowserState.READY)
+    generation: int = 0
 
     @property
     def id(self) -> UUID:

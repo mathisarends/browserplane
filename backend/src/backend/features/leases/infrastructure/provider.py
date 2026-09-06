@@ -8,9 +8,14 @@ from backend.features.leases.infrastructure.browser_service_allocator import (
     BrowserServiceAllocator,
 )
 from backend.features.leases.infrastructure.repository import SqlLeaseStore
+from backend.features.leases.settings import LeaseSettings
 
 
 class LeaseProvider(Provider):
+    @provide(scope=Scope.APP)
+    def settings(self) -> LeaseSettings:
+        return LeaseSettings()
+
     @provide(scope=Scope.REQUEST, provides=LeaseStore)
     def store(self, session: AsyncSession) -> LeaseStore:
         return SqlLeaseStore(session)
@@ -21,6 +26,9 @@ class LeaseProvider(Provider):
 
     @provide(scope=Scope.REQUEST)
     def lease_service(
-        self, allocator: BrowserAllocator, store: LeaseStore
+        self,
+        allocator: BrowserAllocator,
+        store: LeaseStore,
+        settings: LeaseSettings,
     ) -> LeaseService:
-        return LeaseService(allocator, store)
+        return LeaseService(allocator, store, settings)

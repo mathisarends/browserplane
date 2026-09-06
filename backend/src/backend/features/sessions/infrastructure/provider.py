@@ -1,11 +1,12 @@
 from datetime import timedelta
 
-from dishka import Provider, Scope, provide
+from dishka import AsyncContainer, Provider, Scope, provide
 from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.service import LeaseService
+from backend.features.leases.settings import LeaseSettings
 from backend.features.sessions.application.ports import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
@@ -19,6 +20,7 @@ from backend.features.sessions.infrastructure.browser_worker import (
 from backend.features.sessions.infrastructure.encryption import (
     AuthenticationStateCipher,
 )
+from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.repository import (
     SqlAuthenticationProfileRepository,
     SqlBrowserCheckpointRepository,
@@ -29,6 +31,12 @@ from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class SessionProvider(Provider):
+    @provide(scope=Scope.APP)
+    def lease_keeper(
+        self, container: AsyncContainer, settings: LeaseSettings
+    ) -> SessionLeaseKeeper:
+        return SessionLeaseKeeper(container, settings.heartbeat_interval_seconds)
+
     @provide(scope=Scope.APP)
     def settings(self) -> SessionSettings:
         return SessionSettings()

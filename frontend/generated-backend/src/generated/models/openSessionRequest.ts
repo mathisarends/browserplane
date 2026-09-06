@@ -7,11 +7,8 @@
 
 export interface OpenSessionRequest {
   owner_id: string;
-  /**
-     * @maximum 86400
-     * @exclusiveMinimum 0
-     */
-  ttl_seconds?: number;
+  /** @deprecated */
+  ttl_seconds?: number | null;
   authentication_profile_id?: string | null;
   browser_checkpoint_id?: string | null;
 }
