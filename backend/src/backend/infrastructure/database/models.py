@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String
+from sqlalchemy import Column, DateTime, LargeBinary, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -67,9 +67,7 @@ class SuspendedSessionModel(DatabaseModel, table=True):
     )
     # Kept as separate opaque browser-worker documents: authentication can be
     # reused without also restoring a suspended browser's tabs (and vice versa).
-    authentication_state: dict[str, Any] = Field(
-        sa_column=Column(JSONB, nullable=False)
-    )
+    authentication_state: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
     browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
 
 
@@ -91,7 +89,4 @@ class AuthenticationStateSnapshotModel(DatabaseModel, table=True):
 
     owner_id: UUID = Field(index=True)
     name: str
-    source_browser: str
-    authentication_state: dict[str, Any] = Field(
-        sa_column=Column(JSONB, nullable=False)
-    )
+    authentication_state: bytes = Field(sa_column=Column(LargeBinary, nullable=False))

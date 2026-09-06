@@ -9,7 +9,6 @@ import type { AuthenticationStateSchema } from './authenticationStateSchema';
 export interface AuthenticationStateSnapshotResponse {
   id: string;
   name: string;
-  source_browser: string;
   created_at: string;
   authentication_state: AuthenticationStateSchema;
 }

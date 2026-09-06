@@ -618,7 +618,7 @@ export class BrowserStateToolbar {
       const snapshot =
         kind === "browser"
           ? await this.vault.captureBrowser(sessionId, this.sourceLabel())
-          : await this.vault.captureAuthentication(sessionId, this.sourceLabel());
+          : await this.vault.captureAuthentication(sessionId);
       if (kind === "browser") this.selectedBrowserId.set(snapshot.id);
       else this.selectedAuthenticationId.set(snapshot.id);
       this.notice.set({ tone: "success", text: `${snapshot.name} saved` });

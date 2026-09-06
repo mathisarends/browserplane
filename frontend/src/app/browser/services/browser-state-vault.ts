@@ -64,13 +64,9 @@ export class BrowserStateVault {
     return snapshot;
   }
 
-  async captureAuthentication(
-    sessionId: string,
-    sourceBrowser: string,
-  ): Promise<AuthenticationStateSnapshotResponse> {
+  async captureAuthentication(sessionId: string): Promise<AuthenticationStateSnapshotResponse> {
     const response = await captureAuthenticationStateSnapshot(sessionId, {
       name: `Authentication ${this.authenticationSnapshots().length + 1}`,
-      source_browser: sourceBrowser,
     });
     if (response.status !== 201) {
       throw new Error(`Authentication state could not be saved (${response.status})`);

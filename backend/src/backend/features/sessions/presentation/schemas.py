@@ -33,13 +33,11 @@ class BrowserStateSnapshotResponse(BaseModel):
 
 class CaptureAuthenticationStateSnapshotRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    source_browser: str = Field(min_length=1, max_length=200)
 
 
 class AuthenticationStateSnapshotResponse(BaseModel):
     id: UUID
     name: str
-    source_browser: str
     created_at: datetime
     authentication_state: AuthenticationStateSchema
 

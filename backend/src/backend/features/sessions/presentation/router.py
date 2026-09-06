@@ -326,7 +326,6 @@ async def capture_authentication_state_snapshot(
     snapshot = await service.capture_authentication_snapshot(
         session_id,
         name=request.name,
-        source_browser=request.source_browser,
     )
     return to_authentication_state_snapshot_response(snapshot)
 

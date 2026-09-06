@@ -91,6 +91,7 @@ services:
     command: ["alembic", "upgrade", "head"]
     environment:
       - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
+      - BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY=${BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY:?Run scripts/generate_fernet_key.sh and add its output to .env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,6 +125,7 @@ services:
     environment:
       - PORT=8000
       - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
+      - BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY=${BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY:?Run scripts/generate_fernet_key.sh and add its output to .env}
       - BUCKET_NAME=${MINIO_RECORDINGS_BUCKET:-browser-recordings}
       - BUCKET_ENDPOINT=http://minio:9000
       - BUCKET_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}

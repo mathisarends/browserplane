@@ -105,6 +105,5 @@ class AuthenticationStateSnapshot:
     id: UUID
     owner_id: UUID
     name: str
-    source_browser: str
     authentication_state: AuthenticationStateDocument
     created_at: datetime

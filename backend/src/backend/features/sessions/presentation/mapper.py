@@ -80,7 +80,6 @@ def to_authentication_state_snapshot_response(
     return AuthenticationStateSnapshotResponse(
         id=snapshot.id,
         name=snapshot.name,
-        source_browser=snapshot.source_browser,
         created_at=snapshot.created_at,
         authentication_state=AuthenticationStateSchema.model_validate(
             snapshot.authentication_state

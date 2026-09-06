@@ -16,6 +16,9 @@ from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.infrastructure.browser_worker import (
     BrowserWorkerRuntime,
 )
+from backend.features.sessions.infrastructure.encryption import (
+    AuthenticationStateCipher,
+)
 from backend.features.sessions.infrastructure.repository import (
     SqlAuthenticationStateSnapshotRepository,
     SqlBrowserStateSnapshotRepository,
@@ -26,47 +29,41 @@ from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class SessionProvider(Provider):
-    def __init__(
-        self,
-        suspensions: SuspendedSessionRepository | None = None,
-        browser_state: BrowserRuntime | None = None,
-        snapshots: BrowserStateSnapshotRepository | None = None,
-        authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
-    ) -> None:
-        super().__init__()
-        self._suspensions = suspensions
-        self._browser_state = browser_state
-        self._snapshots = snapshots
-        self._authentication_snapshots = authentication_snapshots
-
     @provide(scope=Scope.APP)
     def settings(self) -> SessionSettings:
         return SessionSettings()
 
+    @provide(scope=Scope.APP)
+    def authentication_state_cipher(
+        self, settings: SessionSettings
+    ) -> AuthenticationStateCipher:
+        return AuthenticationStateCipher(
+            settings.authentication_state_encryption_key.get_secret_value()
+        )
+
     @provide(scope=Scope.REQUEST, provides=SuspendedSessionRepository)
-    def suspensions(self, session: AsyncSession) -> SuspendedSessionRepository:
-        return self._suspensions or SqlSuspendedSessionRepository(session)
+    def suspensions(
+        self, session: AsyncSession, cipher: AuthenticationStateCipher
+    ) -> SuspendedSessionRepository:
+        return SqlSuspendedSessionRepository(session, cipher)
 
     @provide(scope=Scope.APP, provides=BrowserRuntime)
-    def browser_state(
+    def browser_runtime(
         self,
         http: AsyncClient,
         settings: BrowserWorkerSettings,
     ) -> BrowserRuntime:
-        return self._browser_state or BrowserWorkerRuntime(http, settings)
+        return BrowserWorkerRuntime(http, settings)
 
     @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
     def snapshots(self, session: AsyncSession) -> BrowserStateSnapshotRepository:
-        return self._snapshots or SqlBrowserStateSnapshotRepository(session)
+        return SqlBrowserStateSnapshotRepository(session)
 
     @provide(scope=Scope.REQUEST, provides=AuthenticationStateSnapshotRepository)
     def authentication_snapshots(
-        self, session: AsyncSession
+        self, session: AsyncSession, cipher: AuthenticationStateCipher
     ) -> AuthenticationStateSnapshotRepository:
-        return (
-            self._authentication_snapshots
-            or SqlAuthenticationStateSnapshotRepository(session)
-        )
+        return SqlAuthenticationStateSnapshotRepository(session, cipher)
 
     @provide(scope=Scope.REQUEST)
     def session_service(
@@ -76,15 +73,15 @@ class SessionProvider(Provider):
         suspensions: SuspendedSessionRepository,
         snapshots: BrowserStateSnapshotRepository,
         authentication_snapshots: AuthenticationStateSnapshotRepository,
-        browser_state: BrowserRuntime,
+        browser_runtime: BrowserRuntime,
         settings: SessionSettings,
     ) -> SessionService:
         return SessionService(
-            browsers,
-            leases,
-            suspensions,
-            snapshots,
-            authentication_snapshots,
-            browser_state,
-            timedelta(seconds=settings.suspended_session_ttl_seconds),
+            browsers=browsers,
+            leases=leases,
+            suspensions=suspensions,
+            snapshots=snapshots,
+            authentication_snapshots=authentication_snapshots,
+            browser_state=browser_runtime,
+            suspension_ttl=timedelta(seconds=settings.suspended_session_ttl_seconds),
         )

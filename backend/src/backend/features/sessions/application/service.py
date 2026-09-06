@@ -183,7 +183,7 @@ class SessionService:
         return await self._snapshots.list()
 
     async def capture_authentication_snapshot(
-        self, session_id: UUID, *, name: str, source_browser: str
+        self, session_id: UUID, *, name: str
     ) -> AuthenticationStateSnapshot:
         session = await self._active_session(session_id)
         authentication_state = await self._browser_state.capture_authentication(
@@ -194,7 +194,6 @@ class SessionService:
                 id=uuid4(),
                 owner_id=session.lease.owner_id,
                 name=name,
-                source_browser=source_browser,
                 authentication_state=authentication_state,
                 created_at=datetime.now(UTC),
             )

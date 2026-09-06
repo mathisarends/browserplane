@@ -13,6 +13,9 @@ from backend.features.sessions.application.ports import (
     BrowserStateSnapshotRepository,
     SuspendedSessionRepository,
 )
+from backend.features.sessions.infrastructure.encryption import (
+    AuthenticationStateCipher,
+)
 from backend.infrastructure.database.models import (
     AuthenticationStateSnapshotModel,
     BrowserStateSnapshotModel,
@@ -25,14 +28,17 @@ class SqlSuspendedSessionRepository(
     SqlRepository[SuspendedSessionModel, SuspendedSession],
     SuspendedSessionRepository,
 ):
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self, session: AsyncSession, cipher: AuthenticationStateCipher
+    ) -> None:
         super().__init__(session, SuspendedSessionModel)
+        self._cipher = cipher
 
     def to_domain(self, model: SuspendedSessionModel) -> SuspendedSession:
         return SuspendedSession(
             id=model.id,
             owner_id=model.owner_id,
-            authentication_state=model.authentication_state,
+            authentication_state=self._cipher.decrypt(model.authentication_state),
             browser_state=model.browser_state,
             created_at=model.created_at,
             expires_at=model.expires_at,
@@ -42,7 +48,7 @@ class SqlSuspendedSessionRepository(
         return SuspendedSessionModel(
             id=entity.id,
             owner_id=entity.owner_id,
-            authentication_state=entity.authentication_state,
+            authentication_state=self._cipher.encrypt(entity.authentication_state),
             browser_state=entity.browser_state,
             created_at=entity.created_at,
             expires_at=entity.expires_at,
@@ -70,8 +76,11 @@ class SqlAuthenticationStateSnapshotRepository(
     SqlRepository[AuthenticationStateSnapshotModel, AuthenticationStateSnapshot],
     AuthenticationStateSnapshotRepository,
 ):
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self, session: AsyncSession, cipher: AuthenticationStateCipher
+    ) -> None:
         super().__init__(session, AuthenticationStateSnapshotModel)
+        self._cipher = cipher
 
     def to_domain(
         self, model: AuthenticationStateSnapshotModel
@@ -80,8 +89,7 @@ class SqlAuthenticationStateSnapshotRepository(
             id=model.id,
             owner_id=model.owner_id,
             name=model.name,
-            source_browser=model.source_browser,
-            authentication_state=model.authentication_state,
+            authentication_state=self._cipher.decrypt(model.authentication_state),
             created_at=model.created_at,
         )
 
@@ -92,8 +100,7 @@ class SqlAuthenticationStateSnapshotRepository(
             id=entity.id,
             owner_id=entity.owner_id,
             name=entity.name,
-            source_browser=entity.source_browser,
-            authentication_state=entity.authentication_state,
+            authentication_state=self._cipher.encrypt(entity.authentication_state),
             created_at=entity.created_at,
         )
 

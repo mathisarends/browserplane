@@ -11,9 +11,4 @@ export interface CaptureAuthenticationStateSnapshotRequest {
      * @maxLength 120
      */
   name: string;
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  source_browser: string;
 }

@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from dishka import Provider, Scope, provide
 from fakes.browser_repository import InMemoryBrowserRepository
 from fakes.lease_store import InMemoryLeaseStore
 from fakes.session_repositories import (
@@ -19,10 +20,16 @@ from backend.features.sessions.application.models import (
     BrowserStateDocument,
     Download,
 )
-from backend.features.sessions.application.ports import BrowserRuntime
-from backend.features.sessions.infrastructure import SessionProvider
+from backend.features.sessions.application.ports import (
+    AuthenticationStateSnapshotRepository,
+    BrowserRuntime,
+    BrowserStateSnapshotRepository,
+    SuspendedSessionRepository,
+)
+from backend.features.sessions.infrastructure.settings import SessionSettings
 
 OWNER_ID = str(UUID(int=7))
+TEST_ENCRYPTION_KEY = "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
 
 
 class FakeProvisioner(BrowserProvisioner):
@@ -92,6 +99,41 @@ class FakeBrowserRuntime(BrowserRuntime):
         raise AssertionError("No fake download exists")
 
 
+class FakeSessionProvider(Provider):
+    def __init__(
+        self,
+        suspensions: SuspendedSessionRepository,
+        browser_runtime: BrowserRuntime,
+        snapshots: BrowserStateSnapshotRepository,
+        authentication_snapshots: AuthenticationStateSnapshotRepository,
+    ) -> None:
+        super().__init__()
+        self._suspensions = suspensions
+        self._browser_runtime = browser_runtime
+        self._snapshots = snapshots
+        self._authentication_snapshots = authentication_snapshots
+
+    @provide(scope=Scope.APP)
+    def settings(self) -> SessionSettings:
+        return SessionSettings(authentication_state_encryption_key=TEST_ENCRYPTION_KEY)
+
+    @provide(scope=Scope.REQUEST, provides=SuspendedSessionRepository)
+    def suspensions(self) -> SuspendedSessionRepository:
+        return self._suspensions
+
+    @provide(scope=Scope.APP, provides=BrowserRuntime)
+    def browser_runtime(self) -> BrowserRuntime:
+        return self._browser_runtime
+
+    @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
+    def snapshots(self) -> BrowserStateSnapshotRepository:
+        return self._snapshots
+
+    @provide(scope=Scope.REQUEST, provides=AuthenticationStateSnapshotRepository)
+    def authentication_snapshots(self) -> AuthenticationStateSnapshotRepository:
+        return self._authentication_snapshots
+
+
 def create_test_app(
     provisioner: BrowserProvisioner,
     repository: InMemoryBrowserRepository,
@@ -105,11 +147,14 @@ def create_test_app(
         (
             BrowserProvider(provisioner, repository),
             LeaseProvider(InMemoryLeaseStore()),
-            SessionProvider(
-                suspensions,
-                browser_state,
-                snapshots,
-                authentication_snapshots,
+            FakeSessionProvider(
+                suspensions=suspensions,
+                browser_runtime=browser_state,
+                snapshots=snapshots or InMemoryBrowserStateSnapshotRepository(),
+                authentication_snapshots=(
+                    authentication_snapshots
+                    or InMemoryAuthenticationStateSnapshotRepository()
+                ),
             ),
         )
     )
@@ -276,12 +321,13 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
         )
         authentication = client.post(
             f"/api/v1/sessions/{session['id']}/authentication-state-snapshots",
-            json=request,
+            json={"name": "Work"},
         )
 
         assert browser.status_code == authentication.status_code == 201
         assert "authentication_state" not in browser.json()
         assert "browser_state" not in authentication.json()
+        assert "source_browser" not in authentication.json()
         assert len(client.get("/api/v1/browser-state-snapshots").json()) == 1
         auth_list = client.get("/api/v1/authentication-state-snapshots")
         assert auth_list.headers["cache-control"] == "no-store"
