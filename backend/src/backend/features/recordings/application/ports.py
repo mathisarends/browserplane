@@ -18,3 +18,6 @@ class Recorder(ABC):
     async def stop_and_store(
         self, browser: Browser, recording_id: UUID
     ) -> Recording: ...
+
+    @abstractmethod
+    async def file(self, browser: Browser, recording_id: UUID) -> bytes: ...

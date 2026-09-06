@@ -16,10 +16,17 @@ import { BrowserNavigationBar } from "./browser-navigation-bar";
 import { BrowserSession } from "../services/browser-session";
 import { BrowserStateToolbar } from "./browser-state-toolbar";
 import { BrowserTabStrip } from "./browser-tab-strip";
+import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
 
 @Component({
   selector: "app-browser-panel",
-  imports: [BrowserCanvas, BrowserNavigationBar, BrowserStateToolbar, BrowserTabStrip],
+  imports: [
+    BrowserCanvas,
+    BrowserNavigationBar,
+    BrowserStateToolbar,
+    BrowserTabStrip,
+    BrowserTransferToolbar,
+  ],
   providers: [BrowserSession],
   template: `
     <section class="browser-panel" [attr.aria-label]="label() + ' preview'">
@@ -56,6 +63,7 @@ import { BrowserTabStrip } from "./browser-tab-strip";
         </div>
       } @else {
         <app-browser-canvas />
+        <app-browser-transfer-toolbar />
         <app-browser-state-toolbar [position]="position()" />
       }
     </section>

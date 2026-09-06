@@ -23,3 +23,7 @@ class RecordingService:
     async def stop(self, browser_id: UUID, recording_id: UUID) -> Recording:
         browser = await self._browsers.get(browser_id)
         return await self._recorder.stop_and_store(browser, recording_id)
+
+    async def file(self, browser_id: UUID, recording_id: UUID) -> bytes:
+        browser = await self._browsers.get(browser_id)
+        return await self._recorder.file(browser, recording_id)

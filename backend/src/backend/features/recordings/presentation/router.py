@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.recordings.application.service import RecordingService
@@ -71,3 +71,37 @@ async def stop_recording(
 ) -> RecordingResponse:
     recording = await service.stop(browser_id, recording_id)
     return to_recording_response(recording)
+
+
+@recording_router.get(
+    "/browser/{browser_id}/recordings/{recording_id}/file",
+    operation_id="download_recording",
+    responses={
+        200: {
+            "content": {
+                "video/mp4": {"schema": {"type": "string", "format": "binary"}}
+            },
+            "description": "Completed MP4 recording",
+        },
+        **api_error_responses(
+            BROWSER_NOT_FOUND,
+            RECORDING_NOT_FOUND,
+            RECORDING_TRANSFER_FAILED,
+        ),
+    },
+)
+async def download_recording(
+    browser_id: UUID,
+    recording_id: UUID,
+    service: FromDishka[RecordingService],
+) -> Response:
+    content = await service.file(browser_id, recording_id)
+    return Response(
+        content=content,
+        media_type="video/mp4",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="recording-{recording_id}.mp4"'
+            )
+        },
+    )

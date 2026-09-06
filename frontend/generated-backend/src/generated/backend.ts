@@ -1722,6 +1722,72 @@ export const stopRecording = async (browserId: string,
 
 
 
+export type downloadRecordingResponse200ApplicationJson = {
+  data: unknown
+  status: 200
+}
+
+export type downloadRecordingResponse200VideoMp4 = {
+  data: Blob
+  status: 200
+}
+
+export type downloadRecordingResponse404 = {
+  data: BrowserNotFoundError | RecordingNotFoundError
+  status: 404
+}
+
+export type downloadRecordingResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type downloadRecordingResponse503 = {
+  data: RecordingTransferFailedError
+  status: 503
+}
+
+export type downloadRecordingResponseSuccess = (downloadRecordingResponse200ApplicationJson | downloadRecordingResponse200VideoMp4) & {
+  headers: Headers;
+};
+export type downloadRecordingResponseError = (downloadRecordingResponse404 | downloadRecordingResponse422 | downloadRecordingResponse503) & {
+  headers: Headers;
+};
+
+export type downloadRecordingResponse = (downloadRecordingResponseSuccess | downloadRecordingResponseError)
+
+export const getDownloadRecordingUrl = (browserId: string,
+    recordingId: string,) => {
+
+
+
+
+  return `/api/v1/browser/${browserId}/recordings/${recordingId}/file`
+}
+
+/**
+ * @summary Download Recording
+ */
+export const downloadRecording = async (browserId: string,
+    recordingId: string, options?: RequestInit): Promise<downloadRecordingResponse> => {
+
+  const res = await fetch(getDownloadRecordingUrl(browserId,recordingId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: downloadRecordingResponse['data'] = body as downloadRecordingResponse['data']
+  return { data, status: res.status, headers: res.headers } as downloadRecordingResponse
+}
+
+
+
 export type listPooledBrowsersResponse200 = {
   data: PooledBrowserResponse[]
   status: 200

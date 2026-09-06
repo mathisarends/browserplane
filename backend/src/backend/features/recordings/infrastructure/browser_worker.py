@@ -79,6 +79,21 @@ class BrowserWorkerRecorder(Recorder):
         await self._store_recording(browser, recording_id)
         return _to_recording(recording)
 
+    async def file(self, browser: Browser, recording_id: UUID) -> bytes:
+        """Fetch the completed video while its browser worker still owns it."""
+        try:
+            response = await self._http.get(
+                self._routes.recording_file_url(browser.slot, recording_id),
+                timeout=self._settings.transfer_timeout_seconds,
+            )
+            response.raise_for_status()
+            return response.content
+        except HTTPError as error:
+            response = getattr(error, "response", None)
+            if response is not None and response.status_code == 404:
+                raise RecordingNotFoundException() from error
+            raise _transfer_error("download", error) from error
+
     def _client(
         self,
         browser: Browser,
