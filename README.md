@@ -1,12 +1,20 @@
 # Browserplane
 
-Mirrors a real Chromium tab into a web page. The backend drives the tab over
-the Chrome DevTools Protocol and replays viewer input; the browser worker streams
+Mirrors a real Chromium tab into a web page. The backend drives the tab over the
+Chrome DevTools Protocol and replays viewer input; the browser worker streams
 JPEG frames through the backend to a `<canvas>`.
 
 Learning project: no auth, no rate limiting.
 
-### See it in action
+- [See it in action](#see-it-in-action)
+- [Architecture](#architecture)
+- [Deep dives](#deep-dives)
+- [Setup](#setup)
+- [Development](#development)
+- [Protocol](#protocol)
+- [Configuration](#configuration)
+
+## See it in action
 
 A leased session — tab strip, address bar, and state toolbar:
 
@@ -23,94 +31,59 @@ CDP into a CSS cursor in the frontend (it is not part of the frame stream).
 ## Architecture
 
 ```text
-┌───────────────┐   HTTP + WS (JSON-RPC)   ┌──────────────────────────────┐
-│   Frontend    │ ───────────────────────▶ │           Backend            │
-│  Angular SPA  │ ◀─────────────────────── │                              │
-│  <canvas>     │   JPEG frames, events    │  ┌────────────────────────┐  │
-└───────────────┘                          │  │  Gateway               │  │
-                                           │  │  browser_tunnel        │  │
-                                           │  │  JSON-RPC + WS relay   │  │
-                                           │  └───────────┬────────────┘  │
-                                           │  ┌───────────┴────────────┐  │
-                                           │  │  Control Plane         │  │
-                                           │  │  sessions · leases ·   │  │
-                                           │  │  browsers · state      │  │
-                                           │  └───────────┬────────────┘  │
-                                           └──────────────┼───────────────┘
-                                     internal HTTP/CDP/WS │        │ SQL
-                                                          ▼        ▼
-                                    ┌──────────────────────┐  ┌──────────┐
-                                    │      Browser Worker      │  │ Postgres │
-                                    │  worker per Chromium │  └──────────┘
-                                    │  lifecycle · CDP ·   │
-                                    │  screencast · state  │
-                                    └──────────┬───────────┘
-                                               ▼
-                                          ┌──────────┐
-                                          │ Chromium │
-                                          └──────────┘
+┌─────────────┐   HTTP + WS (JSON-RPC)   ┌───────────────────────────────┐
+│  Frontend   │ ───────────────────────▶ │  Backend · API                │
+│ Angular SPA │ ◀─────────────────────── │  gateway (JSON-RPC ⇄ CDP)     │
+│  <canvas>   │   JPEG frames, events    │  sessions · requests · leases │
+└─────────────┘                          └──────┬─────────────────┬──────┘
+                                                │ SQL             │ CDP · WS
+┌─────────────────────────────┐                 ▼                 │
+│  Scheduler                  │        ┌───────────────────┐      │
+│  request dispatcher         │──SQL──▶│     Postgres      │      │
+│  lease reaper               │        │  source of truth  │      │
+│  slot reconciliation        │        │  slots · leases   │      │
+│  leader-elected             │        │  sessions · state │      │
+└──────┬──────────────────────┘        └───────────────────┘      │
+       │ internal HTTP: start · release · state                   │
+       ▼                                                          ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  Browser worker × 2 — one Chromium each                              │
+│  lifecycle · CDP · screencast · downloads · recordings · state       │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
+                          ┌──────────┐
+                          │ Chromium │
+                          └──────────┘
 ```
 
-**Frontend** (`frontend/`) — Angular SPA, talks only to the backend. Opens a
-session (`POST /api/v1/sessions`), gets back two backend-relative paths, draws
-frames onto a `<canvas>` and replays every DOM event as a CDP input command.
+| Component | Path | Owns |
+| --- | --- | --- |
+| Frontend | `frontend/` | `<canvas>`; replays DOM events as CDP commands, talks only to the backend |
+| Gateway | `backend/…/features/browser_tunnel/` | JSON-RPC 2.0 ⇄ CDP, frame relay; keeps worker and CDP addresses off the wire |
+| API | `backend/…/features/` | sessions, browser requests, leases, browsers, recordings, health |
+| Scheduler | `backend/src/backend/scheduler.py` | dispatches queued requests, reaps leases, reconciles slots |
+| Browser worker | `browser_worker/` | one Chromium each: lifecycle, CDP, screencast, downloads, recordings, state |
 
-**Gateway** (`backend/src/backend/features/browser_tunnel/`) — session-bound edge.
-Speaks JSON-RPC 2.0, translates to CDP, relays frames, keeps worker and CDP
-addresses off the wire. `application/` defines what a browser can do,
-`infrastructure/cdp_browser` implements it over CDP, `presentation/` exposes
-it.
-
-**Control Plane** (`backend/src/backend/features/`) — `sessions`, `leases`,
-`browsers`, `recordings`, `health`. Owns the session and browser lifecycle;
-state documents live in Postgres, and completed recording files are persisted
-to object storage by the backend.
-
-**Browser Worker** (`browser_worker/`) — one worker per Chromium: lifecycle, CDP,
-screencast, state capture, recording capture, health and capacity. It streams
-the completed recording video to the backend and has no object-storage
-credentials. Reachable only via `BACKEND_BROWSER_*_BROWSER_WORKER_URL`.
+**Control plane / data plane.** The control plane decides who may use which
+browser until when — its truth is a Postgres row, and it survives a crash. The
+data plane *is* the browser — its truth is a running process, and it is thrown
+away. A `READY` row does not prove a clean Chromium, and a live Chromium
+entitles nobody to use it: only a proven cleanup plus a fresh runtime returns a
+slot to the pool. Leases end on deadlines, never on a dropped socket.
 
 Live traffic uses two transports: the backend WebSocket for JSON-RPC and
 tab/navigation/cursor state, a browser worker WebSocket for binary JPEG frames.
 
-### Control plane and data plane
+## Deep dives
 
-The line through the whole system: the **control plane** decides who may use
-which browser until when — its truth is a Postgres row, and it survives a crash.
-The **data plane** *is* the browser — its truth is a running process, and it is
-thrown away. Neither derives the other's answer.
+| Document | Question it answers |
+| --- | --- |
+| [docs/planes.md](docs/planes.md) | Who owns which truth, and which process may do what |
+| [docs/browser-lifecycle.md](docs/browser-lifecycle.md) | Slot vs. runtime vs. lease, and how fencing keeps them honest |
+| [docs/acquiring-a-browser.md](docs/acquiring-a-browser.md) | What happens when the pool is full and a caller waits |
+| [docs/session-state.md](docs/session-state.md) | Why authentication and browser state are two documents |
 
-- A `READY` row does not prove a clean Chromium, and a live Chromium entitles
-  nobody to use it. Only a proven cleanup plus a fresh runtime makes a slot
-  `READY` again — an expiring lease never does.
-- A **lease** is a renewable, time-boxed claim on one browser slot: heartbeat
-  10 s, TTL 30 s, then 45 s of grace in which the same holder can come back.
-  After that the reclaim is irreversible.
-- The **generation** is the fence. It rides along on every worker lifecycle
-  call, and the hard reclaim replaces the Chromium process — so a stale holder
-  is dead, not merely unauthorized.
-- Nothing is released because a socket dropped; deadlines release things. A
-  reloaded tab reattaches, a hung stream cannot pin a browser.
-
-Details and diagrams: [`docs/`](docs/README.md).
-
-## Tunneled events
-
-**Navigation:** navigate, back, forward, reload (optional cache bypass), stop.
-
-**Mouse:** down, move, up — with button, modifier and click-count tracking —
-plus scroll.
-
-**Keyboard:** key down/up, raw key down, char, text insertion, paste.
-
-**Clipboard:** copy, read, write.
-
-**Tabs:** list, create, activate, close. Every command replies with the full
-tab list.
-
-**Pushed by the backend:** tab list, navigation state (title, URL, loading,
-can-go-back/forward, error), cursor style, target crashed/detached.
+Working specs: `LEASE_CONCEPT.md`, `REQUEST_CONCEPT.md`.
 
 ## Setup
 
@@ -123,7 +96,7 @@ uv run pre-commit install
 ## Development
 
 ```bash
-# Postgres, MinIO, migrations, backend and browser workers
+# Postgres, MinIO, migrations, backend, scheduler and browser workers
 docker compose up --build
 
 # Frontend on http://localhost:5173
@@ -149,48 +122,26 @@ request = await repository.get(request_id)
 return BrowserRequestResponse.model_validate(request)
 ```
 
-After the backend stops a recording, it streams each completed segment from the
-browser worker into the `recordings/` prefix of the S3-compatible
-`browser-recordings` bucket. MinIO exposes its S3 API at
-`http://localhost:9000` and its object browser/admin console at
-`http://localhost:9001`. Development credentials default to
-`minioadmin` / `minioadmin`; override them and the bucket name with
-`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, and `MINIO_RECORDINGS_BUCKET`.
-
-`predev` regenerates schemas and clients; Vite hot-reloads and proxies `/api`
-to port 8000.
-
 Generated clients: `frontend/generated` (browser JSON-RPC, from OpenRPC),
-`frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev)
-from `schemas/backend-openapi.json`), and the uv workspace package
-`generated/` (typed Python client for the browser worker API). `npm run
-check:generated` and `./scripts/generate_http_clients.sh --check` flag a stale
-one.
+`frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev) from
+`schemas/backend-openapi.json`), and the uv workspace package `generated/`
+(typed Python client for the browser worker API). `npm run check:generated` and
+`./scripts/generate_http_clients.sh --check` flag a stale one. `predev`
+regenerates schemas and clients; Vite hot-reloads and proxies `/api` to 8000.
 
-## Session state
+Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
 
-Two independent documents — *who you are* and *where you were*:
+## Protocol
 
-- `authentication_state` — cookies and origin-localStorage, reusable as a named
-  browser profile, encrypted at rest.
-- `browser_state` — tabs, active-tab index, scroll positions, per-tab
-  sessionStorage, captured as a checkpoint.
-
-Splitting them is what lets one login start fifty fresh browsers, and lets a
-restored set of tabs land on a different identity. `POST /api/v1/sessions`
-accepts either or both; authentication is mounted first, so restored tabs
-navigate logged in instead of bouncing off a login screen. Suspend captures both
-and hands the browser back; resume mounts them onto whichever slot is free, so
-the session id is stable while the browser underneath is not. See
-[`docs/session-state.md`](docs/session-state.md). A running session exposes each at
-`/api/v1/sessions/{id}/authentication-state` and
-`/api/v1/sessions/{id}/browser-state` (`GET`/`PUT`). Suspend/resume keeps both,
-stored separately.
-
-## Backend protocol
-
-- `ws://127.0.0.1:8000/api/v1/sessions/{session_id}/tunnel` — JSON-RPC 2.0
-- Browser worker frames: `/api/v1/browser/{browser_id}/screencast`
+```text
+POST    /api/v1/sessions                        open a session; waits for capacity
+GET     /api/v1/browser-requests/{id}           inspect or pick a wait back up
+DELETE  /api/v1/browser-requests/{id}           cancel a wait
+POST    /api/v1/sessions/{id}/lease/renew       heartbeat without a tunnel
+GET|PUT /api/v1/sessions/{id}/browser-state     · /authentication-state
+ws      /api/v1/sessions/{id}/tunnel            JSON-RPC 2.0
+ws      /api/v1/browser/{browser_id}/screencast worker frames
+```
 
 ```json
 {
@@ -201,12 +152,36 @@ stored separately.
 }
 ```
 
-Server-pushed events arrive as `browser.event`; `params.type` tells frames
-apart from tab/navigation state and crashed/detached targets.
+| Group | Methods |
+| --- | --- |
+| Navigation | navigate, back, forward, reload (optional cache bypass), stop |
+| Mouse | down, move, up — button, modifier, click-count tracking — and scroll |
+| Keyboard | key down/up, raw key down, char, text insertion, paste |
+| Clipboard | copy, read, write |
+| Tabs | list, create, activate, close; every reply carries the full tab list |
+| Pushed | tab list, navigation state, cursor style, target crashed/detached |
 
-The view is configured through `BACKEND_BROWSER_WIDTH` and
-`BACKEND_BROWSER_HEIGHT`; Chromium lifecycle settings (`BROWSER_WORKER_EXECUTABLE`,
-`BROWSER_WORKER_HEADLESS`, `BROWSER_WORKER_CAPACITY`, `BROWSER_WORKER_STARTUP_TIMEOUT`)
-belong to the worker.
+Server-pushed events arrive as `browser.event`; `params.type` tells frames apart
+from tab/navigation state and crashed/detached targets.
 
-Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
+Session state is two independent documents — `authentication_state` (cookies and
+origin-localStorage; a reusable, encrypted profile) and `browser_state` (tabs,
+active tab, scroll, sessionStorage; a checkpoint). Authentication is mounted
+first, so restored tabs navigate logged in. See
+[docs/session-state.md](docs/session-state.md).
+
+## Configuration
+
+```text
+BACKEND_BROWSER_WIDTH / _HEIGHT              the mirrored viewport
+BACKEND_LEASE_*                              heartbeat 10s, TTL 30s, grace 45s
+BACKEND_BROWSER_WORKER_{1,2}_URL             internal worker addresses only
+BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY  scripts/generate_fernet_key.sh
+BROWSER_WORKER_EXECUTABLE / _HEADLESS / _CAPACITY / _STARTUP_TIMEOUT
+```
+
+Completed recordings are streamed from the worker into the `recordings/` prefix
+of the S3-compatible `browser-recordings` bucket. MinIO serves S3 on
+`http://localhost:9000` and its console on `http://localhost:9001`; credentials
+default to `minioadmin` / `minioadmin` and are overridden with
+`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_RECORDINGS_BUCKET`.
