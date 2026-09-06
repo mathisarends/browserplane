@@ -3,6 +3,9 @@ x-browser-worker-environment: &browser-worker-environment
 
 x-browser-worker: &browser-worker
   image: browser-provisioner-browser-worker:local
+  # browser-worker-1 owns the build; the tag is local-only, so nothing here
+  # may fall back to pulling it from a registry.
+  pull_policy: never
   environment: *browser-worker-environment
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
@@ -79,9 +82,11 @@ services:
         condition: service_healthy
 
   # One-shot: brings the schema up to date before the backend opens its pool.
-  # Runs the backend image, which the backend service builds.
+  # Runs the backend image, which the backend service builds; the tag is
+  # local-only, so never fall back to pulling it.
   migrate:
     image: browser-provisioner-backend:local
+    pull_policy: never
     working_dir: /app/backend
     command: ["alembic", "upgrade", "head"]
     environment:
