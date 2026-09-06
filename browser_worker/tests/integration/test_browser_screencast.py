@@ -17,7 +17,7 @@ async def test_running_browser_produces_a_jpeg_screencast_frame() -> None:
         height=240,
         startup_timeout=10,
     )
-    if not ChromeProcess.is_available(settings):
+    if not ChromeProcess(settings).is_available():
         pytest.skip("Chromium is not available")
 
     browser = ChromeProcess(settings)

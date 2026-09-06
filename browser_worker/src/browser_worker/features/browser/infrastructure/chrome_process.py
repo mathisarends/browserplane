@@ -20,9 +20,8 @@ class ChromeProcess(BrowserProcess):
         self._process: asyncio.subprocess.Process | None = None
         self._profile: tempfile.TemporaryDirectory[str] | None = None
 
-    @staticmethod
-    def is_available(settings: BrowserSettings) -> bool:
-        return _find_executable(settings) is not None
+    def is_available(self) -> bool:
+        return _find_executable(self._settings) is not None
 
     async def start(self) -> str:
         executable = self._find_executable()

@@ -13,7 +13,7 @@ def test_reports_an_explicitly_missing_browser() -> None:
         executable="browser-worker-test-missing-executable",
     )
 
-    assert ChromeProcess.is_available(settings) is False
+    assert ChromeProcess(settings).is_available() is False
 
 
 @pytest.mark.asyncio

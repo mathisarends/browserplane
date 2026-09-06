@@ -74,7 +74,7 @@ async def test_download_service_collects_and_clears_a_chromium_download(
         height=240,
         startup_timeout=10,
     )
-    if not ChromeProcess.is_available(settings):
+    if not ChromeProcess(settings).is_available():
         pytest.skip("Chromium is not available")
 
     browsers = BrowserService(ChromeProcess(settings))

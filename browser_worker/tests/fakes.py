@@ -8,9 +8,13 @@ from browser_worker.features.screencast.application.ports import FrameStream
 class FakeBrowserProcess(BrowserProcess):
     """Small observable browser process used by application-service tests."""
 
-    def __init__(self) -> None:
+    def __init__(self, available: bool = True) -> None:
+        self.available = available
         self.start_count = 0
         self.stop_count = 0
+
+    def is_available(self) -> bool:
+        return self.available
 
     async def start(self) -> str:
         self.start_count += 1

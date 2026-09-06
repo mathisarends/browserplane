@@ -53,7 +53,7 @@ async def test_browser_state_roundtrips_through_real_chromium(tmp_path: Path) ->
         height=240,
         startup_timeout=10,
     )
-    if not ChromeProcess.is_available(browser_settings):
+    if not ChromeProcess(browser_settings).is_available():
         pytest.skip("Chromium is not available")
 
     (tmp_path / "index.html").write_text(
