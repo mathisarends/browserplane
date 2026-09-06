@@ -18,7 +18,7 @@ import type {
   DownloadNotFoundError,
   DownloadResponse,
   HTTPValidationError,
-  Health200,
+  Health,
   ListOwnerSessionsParams,
   MountAuthenticationProfileRequest,
   MountBrowserCheckpointRequest,
@@ -27,7 +27,6 @@ import type {
   OpenSessionResponse,
   OwnerSessionsResponse,
   PooledBrowserResponse,
-  Readiness200,
   RecordingAlreadyExistsError,
   RecordingNotFoundError,
   RecordingNotRunningError,
@@ -43,7 +42,7 @@ import type {
 
 
 export type healthResponse200 = {
-  data: Health200
+  data: Health
   status: 200
 }
 
@@ -86,7 +85,7 @@ export const health = async ( options?: RequestInit): Promise<healthResponse> =>
 
 
 export type readinessResponse200 = {
-  data: Readiness200
+  data: Health
   status: 200
 }
 

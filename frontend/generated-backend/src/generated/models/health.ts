@@ -4,5 +4,8 @@
  * Browser Backend
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatus } from './healthStatus';
 
-export type Readiness200 = {[key: string]: string};
+export interface Health {
+  status: HealthStatus;
+}
