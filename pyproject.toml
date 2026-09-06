@@ -34,7 +34,7 @@ dev = [
 line-length = 88
 target-version = "py314"
 # Rendered by httpxgen; not covered by this repo's lint rules, only by
-# `./scripts/generate_http_clients.sh --check`.
+# `uv run python scripts/generate_http_clients.py --check`.
 extend-exclude = ["generated/src/generated/*/"]
 
 [tool.ruff.lint]
