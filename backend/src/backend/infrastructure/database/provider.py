@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import (
@@ -31,11 +31,14 @@ class DatabaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
     async def session(
         self, factory: async_sessionmaker[AsyncSession]
-    ) -> AsyncIterator[AsyncSession]:
+    ) -> AsyncGenerator[AsyncSession, BaseException | None]:
+        # Closing the scope sends the failing exception into this generator
+        # rather than throwing it, so the commit decision has to read it from
+        # the yield. A plain `try/except` around the yield would never see it
+        # and would commit the half-finished work of a failed request.
         async with factory() as session:
-            try:
-                yield session
+            error = yield session
+            if error is None:
                 await session.commit()
-            except Exception:
+            else:
                 await session.rollback()
-                raise

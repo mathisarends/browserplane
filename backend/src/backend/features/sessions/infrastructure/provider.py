@@ -28,9 +28,16 @@ from backend.features.sessions.infrastructure.repository import (
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
+from backend.infrastructure.database.unit_of_work import ScopedUnitOfWork
+from backend.shared.unit_of_work import UnitOfWork
 
 
 class SessionProvider(Provider):
+    @provide(scope=Scope.APP)
+    def unit_of_work(self, container: AsyncContainer) -> UnitOfWork[SessionService]:
+        """For callers outside an HTTP request, and for those who must not hold one."""
+        return ScopedUnitOfWork(container, SessionService)
+
     @provide(scope=Scope.APP)
     def lease_keeper(
         self, container: AsyncContainer, settings: LeaseSettings
