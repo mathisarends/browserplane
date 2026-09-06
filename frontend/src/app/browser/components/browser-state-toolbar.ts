@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from "@angular/core";
 import { BrowserSession } from "../services/browser-session";
-import { BrowserStateVault } from "../services/browser-state-vault";
+import { BrowserPersistenceVault } from "../services/browser-persistence-vault";
 
 type StateKind = "browser" | "authentication";
 type Operation = `${StateKind}-${"capture" | "mount"}`;
@@ -9,7 +9,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
 @Component({
   selector: "app-browser-state-toolbar",
   template: `
-    <div class="state-bar" aria-label="Browser state">
+    <div class="state-bar" aria-label="Browser persistence">
       <button
         class="state-trigger"
         type="button"
@@ -17,7 +17,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
         (click)="toggle()"
       >
         <i class="state-dot" [attr.data-state]="session.connection()" aria-hidden="true"></i>
-        <span>Saved states</span>
+        <span>Checkpoints & profiles</span>
         <svg viewBox="0 0 16 16" aria-hidden="true" [class.open]="expanded()">
           <path d="m5 6 3 3 3-3" />
         </svg>
@@ -36,11 +36,11 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
     </div>
 
     @if (expanded()) {
-      <section class="state-popover" aria-label="Manage browser state">
+      <section class="state-popover" aria-label="Manage checkpoints and profiles">
         <header>
           <span>
-            <strong>Saved states</strong>
-            <small>Restore browsing and sign-in data independently.</small>
+            <strong>Checkpoints & profiles</strong>
+            <small>Restore browser state and reusable login identities.</small>
           </span>
           <button
             class="close-button"
@@ -59,9 +59,10 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             <div class="card-heading">
               <span class="state-icon" aria-hidden="true">B</span>
               <span
-                ><strong>Browser State</strong><small>Tabs, active page, and scroll</small></span
+                ><strong>Browser Checkpoint</strong
+                ><small>Tabs, active page, and scroll</small></span
               >
-              <span class="state-count">{{ vault.browserSnapshots().length }}</span>
+              <span class="state-count">{{ vault.checkpoints().length }}</span>
             </div>
             <div class="state-actions">
               <button
@@ -71,20 +72,20 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
               >
                 Save
               </button>
-              <label class="snapshot-picker">
-                <span class="visually-hidden">Select browser state</span>
+              <label class="saved-state-picker">
+                <span class="visually-hidden">Select browser checkpoint</span>
                 <select
                   [value]="selectedBrowserId()"
                   [attr.data-empty]="!selectedBrowserId()"
-                  [disabled]="!vault.browserSnapshots().length || !!operation()"
+                  [disabled]="!vault.checkpoints().length || !!operation()"
                   (change)="selectedBrowserId.set($any($event.target).value)"
                 >
                   <option value="">
-                    {{ vault.browserSnapshots().length ? "Select browser state" : "None saved" }}
+                    {{ vault.checkpoints().length ? "Select checkpoint" : "None saved" }}
                   </option>
-                  @for (snapshot of vault.browserSnapshots(); track snapshot.id) {
-                    <option [value]="snapshot.id">
-                      {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
+                  @for (checkpoint of vault.checkpoints(); track checkpoint.id) {
+                    <option [value]="checkpoint.id">
+                      Checkpoint · {{ savedAt(checkpoint.created_at) }}
                     </option>
                   }
                 </select>
@@ -107,9 +108,9 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
             <div class="card-heading">
               <span class="state-icon" aria-hidden="true">A</span>
               <span
-                ><strong>Authentication State</strong><small>Cookies and local storage</small></span
+                ><strong>Authentication Profile</strong><small>Reusable login identity</small></span
               >
-              <span class="state-count">{{ vault.authenticationSnapshots().length }}</span>
+              <span class="state-count">{{ vault.authenticationProfiles().length }}</span>
             </div>
             <div class="state-actions">
               <button
@@ -119,24 +120,20 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
               >
                 Save
               </button>
-              <label class="snapshot-picker">
-                <span class="visually-hidden">Select authentication state</span>
+              <label class="saved-state-picker">
+                <span class="visually-hidden">Select authentication profile</span>
                 <select
                   [value]="selectedAuthenticationId()"
                   [attr.data-empty]="!selectedAuthenticationId()"
-                  [disabled]="!vault.authenticationSnapshots().length || !!operation()"
+                  [disabled]="!vault.authenticationProfiles().length || !!operation()"
                   (change)="selectedAuthenticationId.set($any($event.target).value)"
                 >
                   <option value="">
-                    {{
-                      vault.authenticationSnapshots().length
-                        ? "Select authentication"
-                        : "None saved"
-                    }}
+                    {{ vault.authenticationProfiles().length ? "Select profile" : "None saved" }}
                   </option>
-                  @for (snapshot of vault.authenticationSnapshots(); track snapshot.id) {
-                    <option [value]="snapshot.id">
-                      {{ snapshot.name }} · {{ snapshotTime(snapshot.created_at) }}
+                  @for (profile of vault.authenticationProfiles(); track profile.id) {
+                    <option [value]="profile.id">
+                      {{ profile.name }} · {{ savedAt(profile.created_at) }}
                     </option>
                   }
                 </select>
@@ -449,7 +446,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       background: #dfe2e6;
       border-color: #dfe2e6;
     }
-    .snapshot-picker {
+    .saved-state-picker {
       position: relative;
       display: grid;
       min-width: 0;
@@ -563,7 +560,7 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       .state-actions {
         grid-template-columns: 1fr 1fr;
       }
-      .snapshot-picker {
+      .saved-state-picker {
         grid-column: 1 / -1;
         grid-row: 1;
       }
@@ -592,19 +589,15 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
 export class BrowserStateToolbar {
   readonly position = input.required<number>();
   protected readonly session = inject(BrowserSession);
-  protected readonly vault = inject(BrowserStateVault);
+  protected readonly vault = inject(BrowserPersistenceVault);
   protected readonly expanded = signal(false);
   protected readonly operation = signal<Operation | undefined>(undefined);
   protected readonly selectedBrowserId = signal("");
   protected readonly selectedAuthenticationId = signal("");
   protected readonly notice = signal<Notice | undefined>(undefined);
   protected readonly savedCount = computed(
-    () => this.vault.browserSnapshots().length + this.vault.authenticationSnapshots().length,
+    () => this.vault.checkpoints().length + this.vault.authenticationProfiles().length,
   );
-  protected readonly sourceLabel = computed(
-    () => this.session.browserId() ?? `Session ${this.position().toString().padStart(2, "0")}`,
-  );
-
   protected toggle(): void {
     this.expanded.update((value) => !value);
   }
@@ -615,13 +608,13 @@ export class BrowserStateToolbar {
     this.operation.set(`${kind}-capture`);
     this.notice.set(undefined);
     try {
-      const snapshot =
+      const saved =
         kind === "browser"
-          ? await this.vault.captureBrowser(sessionId, this.sourceLabel())
-          : await this.vault.captureAuthentication(sessionId);
-      if (kind === "browser") this.selectedBrowserId.set(snapshot.id);
-      else this.selectedAuthenticationId.set(snapshot.id);
-      this.notice.set({ tone: "success", text: `${snapshot.name} saved` });
+          ? await this.vault.createCheckpoint(sessionId)
+          : await this.vault.createProfile(sessionId);
+      if (kind === "browser") this.selectedBrowserId.set(saved.id);
+      else this.selectedAuthenticationId.set(saved.id);
+      this.notice.set({ tone: "success", text: `${kind} saved` });
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {
@@ -631,18 +624,21 @@ export class BrowserStateToolbar {
 
   protected async mount(kind: StateKind): Promise<void> {
     const sessionId = this.session.sessionId();
-    const snapshotId =
+    const savedStateId =
       kind === "browser" ? this.selectedBrowserId() : this.selectedAuthenticationId();
-    if (!sessionId || !snapshotId) return;
+    if (!sessionId || !savedStateId) return;
     this.operation.set(`${kind}-mount`);
     this.notice.set(undefined);
     try {
-      const snapshot =
+      const saved =
         kind === "browser"
-          ? await this.vault.mountBrowser(sessionId, snapshotId)
-          : await this.vault.mountAuthentication(sessionId, snapshotId);
+          ? await this.vault.mountCheckpoint(sessionId, savedStateId)
+          : await this.vault.mountProfile(sessionId, savedStateId);
       if (kind === "browser") await this.session.refreshTabs();
-      this.notice.set({ tone: "success", text: `${snapshot.name} mounted` });
+      this.notice.set({
+        tone: "success",
+        text: `${"name" in saved ? saved.name : "Checkpoint"} mounted`,
+      });
     } catch (error) {
       this.notice.set({ tone: "error", text: errorMessage(error) });
     } finally {
@@ -650,7 +646,7 @@ export class BrowserStateToolbar {
     }
   }
 
-  protected snapshotTime(timestamp: string): string {
+  protected savedAt(timestamp: string): string {
     return new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit" }).format(
       new Date(timestamp),
     );

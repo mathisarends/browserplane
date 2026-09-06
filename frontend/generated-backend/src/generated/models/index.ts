@@ -5,28 +5,29 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './authenticationStateSchema';
-export * from './authenticationStateSnapshotResponse';
-export * from './browserCookieSchema';
+export * from './authenticationProfileNotFoundError';
+export * from './authenticationProfileResponse';
+export * from './browserCheckpointNotFoundError';
+export * from './browserCheckpointResponse';
 export * from './browserLeaseSummary';
 export * from './browserNotFoundError';
 export * from './browserProvisioningFailedError';
 export * from './browserState';
 export * from './browserStateSchema';
-export * from './browserStateSnapshotResponse';
 export * from './browserStateTransferFailedError';
 export * from './browserTabStateSchema';
-export * from './captureAuthenticationStateSnapshotRequest';
-export * from './captureBrowserStateSnapshotRequest';
+export * from './createAuthenticationProfileRequest';
+export * from './createBrowserCheckpointRequest';
 export * from './downloadNotFoundError';
 export * from './downloadResponse';
 export * from './health200';
 export * from './hTTPValidationError';
 export * from './listOwnerSessionsParams';
+export * from './mountAuthenticationProfileRequest';
+export * from './mountBrowserCheckpointRequest';
 export * from './noBrowserAvailableError';
 export * from './openSessionRequest';
 export * from './openSessionResponse';
-export * from './originLocalStorageSchema';
 export * from './ownerSessionsResponse';
 export * from './pooledBrowserResponse';
 export * from './readiness200';
@@ -44,5 +45,6 @@ export * from './sessionNotSuspendedError';
 export * from './sessionResponse';
 export * from './sessionStatus';
 export * from './storageItemSchema';
+export * from './updateAuthenticationProfileRequest';
 export * from './validationError';
 export * from './validationErrorCtx';

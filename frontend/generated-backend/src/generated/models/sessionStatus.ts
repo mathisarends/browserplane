@@ -5,13 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * Whether a session currently holds a browser.
- */
 export type SessionStatus = typeof SessionStatus[keyof typeof SessionStatus];
 
 
 export const SessionStatus = {
   active: 'active',
   suspended: 'suspended',
+  closed: 'closed',
 } as const;

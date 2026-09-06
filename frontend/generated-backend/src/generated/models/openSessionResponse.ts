@@ -13,11 +13,12 @@ export interface OpenSessionResponse {
   id: string;
   status: SessionStatus;
   owner_id: string;
-  expires_at: string;
+  expires_at: string | null;
   created_at: string;
   browser_id?: string | null;
   tunnel_path?: string | null;
   screencast_path?: string | null;
+  browser_checkpoint_id?: string | null;
   /** @minimum 0 */
   remaining_capacity: number;
 }

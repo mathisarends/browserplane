@@ -1,29 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from "@angular/core";
-import type { BrowserStateSnapshotResponse } from "@browsertunnel/backend-client";
 import { AdminConsole } from "../services/admin-console";
 import { AdminSection } from "./admin-section";
 import { relativeTime } from "../services/format";
 
-type SnapshotRow = {
+type CheckpointRow = {
   readonly id: string;
-  readonly name: string;
-  readonly source: string;
-  readonly tabs: string;
+  readonly profile: string;
   readonly age: string;
 };
 
-/** Snapshots carry no actions yet, so they stay a list rather than cards. */
+/** Checkpoints carry no admin actions yet, so they stay a compact list. */
 @Component({
-  selector: "app-admin-snapshot-list",
+  selector: "app-admin-checkpoint-list",
   imports: [AdminSection],
   template: `
-    <app-admin-section heading="Saved browser states" [meta]="meta()">
+    <app-admin-section heading="Browser checkpoints" [meta]="meta()">
       <ul>
         @for (row of rows(); track row.id) {
           <li>
-            <span class="name">{{ row.name }}</span>
-            <span class="source" [title]="row.source">{{ row.source }}</span>
-            <span class="tabs">{{ row.tabs }}</span>
+            <span class="name">Checkpoint {{ row.id }}</span>
+            <span class="profile">{{ row.profile }}</span>
             <span class="age">{{ row.age }}</span>
           </li>
         } @empty {
@@ -48,7 +44,7 @@ type SnapshotRow = {
     }
     li {
       display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto auto;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
       gap: 12px;
       align-items: center;
       padding: 10px 14px;
@@ -65,14 +61,13 @@ type SnapshotRow = {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .source,
-    .tabs,
+    .profile,
     .age {
       color: var(--admin-text-dim);
       font-family: var(--font-mono);
       font-size: 0.65rem;
     }
-    .source {
+    .profile {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -91,28 +86,22 @@ type SnapshotRow = {
       li {
         grid-template-columns: minmax(0, 1fr) auto;
       }
-      .source {
+      .profile {
         display: none;
       }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminSnapshotList {
+export class AdminCheckpointList {
   private readonly console = inject(AdminConsole);
 
-  protected readonly meta = computed(() => `${this.console.snapshots().length} snapshots`);
-  protected readonly rows = computed<readonly SnapshotRow[]>(() =>
-    this.console.snapshots().map((snapshot) => ({
-      id: snapshot.id,
-      name: snapshot.name,
-      source: snapshot.source_browser,
-      tabs: `${tabCount(snapshot)} tabs`,
-      age: relativeTime(snapshot.created_at),
+  protected readonly meta = computed(() => `${this.console.checkpoints().length} checkpoints`);
+  protected readonly rows = computed<readonly CheckpointRow[]>(() =>
+    this.console.checkpoints().map((checkpoint) => ({
+      id: checkpoint.id.slice(0, 8),
+      profile: checkpoint.authentication_profile_id ? "with profile" : "without profile",
+      age: relativeTime(checkpoint.created_at),
     })),
   );
-}
-
-function tabCount(snapshot: BrowserStateSnapshotResponse): number {
-  return snapshot.browser_state.tabs?.length ?? 0;
 }

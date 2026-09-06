@@ -55,7 +55,7 @@ export class AdminSessionCard {
         id: true,
       },
       { label: "Opened", value: relativeTime(session.created_at) },
-      { label: "Expires", value: relativeTime(session.expires_at) },
+      { label: "Expires", value: session.expires_at ? relativeTime(session.expires_at) : "—" },
     ];
   });
 }

@@ -5,20 +5,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import type {
-  AuthenticationStateSchema,
-  AuthenticationStateSnapshotResponse,
+  AuthenticationProfileNotFoundError,
+  AuthenticationProfileResponse,
+  BrowserCheckpointNotFoundError,
+  BrowserCheckpointResponse,
   BrowserNotFoundError,
   BrowserProvisioningFailedError,
   BrowserStateSchema,
-  BrowserStateSnapshotResponse,
   BrowserStateTransferFailedError,
-  CaptureAuthenticationStateSnapshotRequest,
-  CaptureBrowserStateSnapshotRequest,
+  CreateAuthenticationProfileRequest,
+  CreateBrowserCheckpointRequest,
   DownloadNotFoundError,
   DownloadResponse,
   HTTPValidationError,
   Health200,
   ListOwnerSessionsParams,
+  MountAuthenticationProfileRequest,
+  MountBrowserCheckpointRequest,
   NoBrowserAvailableError,
   OpenSessionRequest,
   OpenSessionResponse,
@@ -34,7 +37,8 @@ import type {
   SessionNotActiveError,
   SessionNotFoundError,
   SessionNotSuspendedError,
-  SessionResponse
+  SessionResponse,
+  UpdateAuthenticationProfileRequest
 } from './models';
 
 
@@ -358,118 +362,53 @@ export const closeSession = async (sessionId: string, options?: RequestInit): Pr
 
 
 
-export type captureSessionAuthenticationStateResponse200 = {
-  data: AuthenticationStateSchema
-  status: 200
-}
-
-export type captureSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
-  status: 404
-}
-
-export type captureSessionAuthenticationStateResponse409 = {
-  data: SessionNotActiveError
-  status: 409
-}
-
-export type captureSessionAuthenticationStateResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type captureSessionAuthenticationStateResponse503 = {
-  data: BrowserStateTransferFailedError
-  status: 503
-}
-
-export type captureSessionAuthenticationStateResponseSuccess = (captureSessionAuthenticationStateResponse200) & {
-  headers: Headers;
-};
-export type captureSessionAuthenticationStateResponseError = (captureSessionAuthenticationStateResponse404 | captureSessionAuthenticationStateResponse409 | captureSessionAuthenticationStateResponse422 | captureSessionAuthenticationStateResponse503) & {
-  headers: Headers;
-};
-
-export type captureSessionAuthenticationStateResponse = (captureSessionAuthenticationStateResponseSuccess | captureSessionAuthenticationStateResponseError)
-
-export const getCaptureSessionAuthenticationStateUrl = (sessionId: string,) => {
-
-
-
-
-  return `/api/v1/sessions/${sessionId}/authentication-state`
-}
-
-/**
- * @summary Capture Session Authentication State
- */
-export const captureSessionAuthenticationState = async (sessionId: string, options?: RequestInit): Promise<captureSessionAuthenticationStateResponse> => {
-
-  const res = await fetch(getCaptureSessionAuthenticationStateUrl(sessionId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: captureSessionAuthenticationStateResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as captureSessionAuthenticationStateResponse
-}
-
-
-
-export type mountSessionAuthenticationStateResponse204 = {
+export type mountSessionAuthenticationProfileResponse204 = {
   data: void
   status: 204
 }
 
-export type mountSessionAuthenticationStateResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+export type mountSessionAuthenticationProfileResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
   status: 404
 }
 
-export type mountSessionAuthenticationStateResponse409 = {
+export type mountSessionAuthenticationProfileResponse409 = {
   data: SessionNotActiveError
   status: 409
 }
 
-export type mountSessionAuthenticationStateResponse422 = {
+export type mountSessionAuthenticationProfileResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type mountSessionAuthenticationStateResponse503 = {
+export type mountSessionAuthenticationProfileResponse503 = {
   data: BrowserStateTransferFailedError
   status: 503
 }
 
-export type mountSessionAuthenticationStateResponseSuccess = (mountSessionAuthenticationStateResponse204) & {
+export type mountSessionAuthenticationProfileResponseSuccess = (mountSessionAuthenticationProfileResponse204) & {
   headers: Headers;
 };
-export type mountSessionAuthenticationStateResponseError = (mountSessionAuthenticationStateResponse404 | mountSessionAuthenticationStateResponse409 | mountSessionAuthenticationStateResponse422 | mountSessionAuthenticationStateResponse503) & {
+export type mountSessionAuthenticationProfileResponseError = (mountSessionAuthenticationProfileResponse404 | mountSessionAuthenticationProfileResponse409 | mountSessionAuthenticationProfileResponse422 | mountSessionAuthenticationProfileResponse503) & {
   headers: Headers;
 };
 
-export type mountSessionAuthenticationStateResponse = (mountSessionAuthenticationStateResponseSuccess | mountSessionAuthenticationStateResponseError)
+export type mountSessionAuthenticationProfileResponse = (mountSessionAuthenticationProfileResponseSuccess | mountSessionAuthenticationProfileResponseError)
 
-export const getMountSessionAuthenticationStateUrl = (sessionId: string,) => {
-
-
+export const getMountSessionAuthenticationProfileUrl = (sessionId: string,) => {
 
 
-  return `/api/v1/sessions/${sessionId}/authentication-state`
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-profile`
 }
 
 /**
- * @summary Mount Session Authentication State
+ * @summary Mount Session Authentication Profile
  */
-export const mountSessionAuthenticationState = async (sessionId: string,
-    authenticationStateSchema: AuthenticationStateSchema, options?: RequestInit): Promise<mountSessionAuthenticationStateResponse> => {
+export const mountSessionAuthenticationProfile = async (sessionId: string,
+    mountAuthenticationProfileRequest: MountAuthenticationProfileRequest, options?: RequestInit): Promise<mountSessionAuthenticationProfileResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -477,20 +416,20 @@ export const mountSessionAuthenticationState = async (sessionId: string,
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-const res = await fetch(getMountSessionAuthenticationStateUrl(sessionId),
+const res = await fetch(getMountSessionAuthenticationProfileUrl(sessionId),
   {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(authenticationStateSchema)
+    body: JSON.stringify(mountAuthenticationProfileRequest)
   }
 )
 
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: mountSessionAuthenticationStateResponse['data'] = body ? JSON.parse(body) : undefined
-  return { data, status: res.status, headers: res.headers } as mountSessionAuthenticationStateResponse
+  const data: mountSessionAuthenticationProfileResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as mountSessionAuthenticationProfileResponse
 }
 
 
@@ -501,7 +440,7 @@ export type captureSessionBrowserStateResponse200 = {
 }
 
 export type captureSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
   status: 404
 }
 
@@ -768,32 +707,32 @@ export const downloadSessionFile = async (sessionId: string,
 
 
 
-export type listBrowserStateSnapshotsResponse200 = {
-  data: BrowserStateSnapshotResponse[]
+export type listBrowserCheckpointsResponse200 = {
+  data: BrowserCheckpointResponse[]
   status: 200
 }
 
-export type listBrowserStateSnapshotsResponseSuccess = (listBrowserStateSnapshotsResponse200) & {
+export type listBrowserCheckpointsResponseSuccess = (listBrowserCheckpointsResponse200) & {
   headers: Headers;
 };
 ;
 
-export type listBrowserStateSnapshotsResponse = (listBrowserStateSnapshotsResponseSuccess)
+export type listBrowserCheckpointsResponse = (listBrowserCheckpointsResponseSuccess)
 
-export const getListBrowserStateSnapshotsUrl = () => {
-
-
+export const getListBrowserCheckpointsUrl = () => {
 
 
-  return `/api/v1/browser-state-snapshots`
+
+
+  return `/api/v1/browser-checkpoints`
 }
 
 /**
- * @summary List Browser State Snapshots
+ * @summary List Browser Checkpoints
  */
-export const listBrowserStateSnapshots = async ( options?: RequestInit): Promise<listBrowserStateSnapshotsResponse> => {
+export const listBrowserCheckpoints = async ( options?: RequestInit): Promise<listBrowserCheckpointsResponse> => {
 
-  const res = await fetch(getListBrowserStateSnapshotsUrl(),
+  const res = await fetch(getListBrowserCheckpointsUrl(),
   {
     ...options,
     method: 'GET'
@@ -805,59 +744,59 @@ export const listBrowserStateSnapshots = async ( options?: RequestInit): Promise
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: listBrowserStateSnapshotsResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as listBrowserStateSnapshotsResponse
+  const data: listBrowserCheckpointsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listBrowserCheckpointsResponse
 }
 
 
 
-export type captureBrowserStateSnapshotResponse201 = {
-  data: BrowserStateSnapshotResponse
+export type createBrowserCheckpointResponse201 = {
+  data: BrowserCheckpointResponse
   status: 201
 }
 
-export type captureBrowserStateSnapshotResponse404 = {
+export type createBrowserCheckpointResponse404 = {
   data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
-export type captureBrowserStateSnapshotResponse409 = {
+export type createBrowserCheckpointResponse409 = {
   data: SessionNotActiveError
   status: 409
 }
 
-export type captureBrowserStateSnapshotResponse422 = {
+export type createBrowserCheckpointResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type captureBrowserStateSnapshotResponse503 = {
+export type createBrowserCheckpointResponse503 = {
   data: BrowserStateTransferFailedError
   status: 503
 }
 
-export type captureBrowserStateSnapshotResponseSuccess = (captureBrowserStateSnapshotResponse201) & {
+export type createBrowserCheckpointResponseSuccess = (createBrowserCheckpointResponse201) & {
   headers: Headers;
 };
-export type captureBrowserStateSnapshotResponseError = (captureBrowserStateSnapshotResponse404 | captureBrowserStateSnapshotResponse409 | captureBrowserStateSnapshotResponse422 | captureBrowserStateSnapshotResponse503) & {
+export type createBrowserCheckpointResponseError = (createBrowserCheckpointResponse404 | createBrowserCheckpointResponse409 | createBrowserCheckpointResponse422 | createBrowserCheckpointResponse503) & {
   headers: Headers;
 };
 
-export type captureBrowserStateSnapshotResponse = (captureBrowserStateSnapshotResponseSuccess | captureBrowserStateSnapshotResponseError)
+export type createBrowserCheckpointResponse = (createBrowserCheckpointResponseSuccess | createBrowserCheckpointResponseError)
 
-export const getCaptureBrowserStateSnapshotUrl = (sessionId: string,) => {
-
-
+export const getCreateBrowserCheckpointUrl = (sessionId: string,) => {
 
 
-  return `/api/v1/sessions/${sessionId}/browser-state-snapshots`
+
+
+  return `/api/v1/sessions/${sessionId}/browser-checkpoints`
 }
 
 /**
- * @summary Capture Browser State Snapshot
+ * @summary Create Browser Checkpoint
  */
-export const captureBrowserStateSnapshot = async (sessionId: string,
-    captureBrowserStateSnapshotRequest: CaptureBrowserStateSnapshotRequest, options?: RequestInit): Promise<captureBrowserStateSnapshotResponse> => {
+export const createBrowserCheckpoint = async (sessionId: string,
+    createBrowserCheckpointRequest: CreateBrowserCheckpointRequest, options?: RequestInit): Promise<createBrowserCheckpointResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -865,50 +804,50 @@ export const captureBrowserStateSnapshot = async (sessionId: string,
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-const res = await fetch(getCaptureBrowserStateSnapshotUrl(sessionId),
+const res = await fetch(getCreateBrowserCheckpointUrl(sessionId),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(captureBrowserStateSnapshotRequest)
+    body: JSON.stringify(createBrowserCheckpointRequest)
   }
 )
 
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: captureBrowserStateSnapshotResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as captureBrowserStateSnapshotResponse
+  const data: createBrowserCheckpointResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createBrowserCheckpointResponse
 }
 
 
 
-export type listAuthenticationStateSnapshotsResponse200 = {
-  data: AuthenticationStateSnapshotResponse[]
+export type listAuthenticationProfilesResponse200 = {
+  data: AuthenticationProfileResponse[]
   status: 200
 }
 
-export type listAuthenticationStateSnapshotsResponseSuccess = (listAuthenticationStateSnapshotsResponse200) & {
+export type listAuthenticationProfilesResponseSuccess = (listAuthenticationProfilesResponse200) & {
   headers: Headers;
 };
 ;
 
-export type listAuthenticationStateSnapshotsResponse = (listAuthenticationStateSnapshotsResponseSuccess)
+export type listAuthenticationProfilesResponse = (listAuthenticationProfilesResponseSuccess)
 
-export const getListAuthenticationStateSnapshotsUrl = () => {
-
-
+export const getListAuthenticationProfilesUrl = () => {
 
 
-  return `/api/v1/authentication-state-snapshots`
+
+
+  return `/api/v1/authentication-profiles`
 }
 
 /**
- * @summary List Authentication State Snapshots
+ * @summary List Authentication Profiles
  */
-export const listAuthenticationStateSnapshots = async ( options?: RequestInit): Promise<listAuthenticationStateSnapshotsResponse> => {
+export const listAuthenticationProfiles = async ( options?: RequestInit): Promise<listAuthenticationProfilesResponse> => {
 
-  const res = await fetch(getListAuthenticationStateSnapshotsUrl(),
+  const res = await fetch(getListAuthenticationProfilesUrl(),
   {
     ...options,
     method: 'GET'
@@ -920,59 +859,59 @@ export const listAuthenticationStateSnapshots = async ( options?: RequestInit): 
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: listAuthenticationStateSnapshotsResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as listAuthenticationStateSnapshotsResponse
+  const data: listAuthenticationProfilesResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listAuthenticationProfilesResponse
 }
 
 
 
-export type captureAuthenticationStateSnapshotResponse201 = {
-  data: AuthenticationStateSnapshotResponse
+export type createAuthenticationProfileResponse201 = {
+  data: AuthenticationProfileResponse
   status: 201
 }
 
-export type captureAuthenticationStateSnapshotResponse404 = {
+export type createAuthenticationProfileResponse404 = {
   data: SessionNotFoundError | BrowserNotFoundError
   status: 404
 }
 
-export type captureAuthenticationStateSnapshotResponse409 = {
+export type createAuthenticationProfileResponse409 = {
   data: SessionNotActiveError
   status: 409
 }
 
-export type captureAuthenticationStateSnapshotResponse422 = {
+export type createAuthenticationProfileResponse422 = {
   data: HTTPValidationError
   status: 422
 }
 
-export type captureAuthenticationStateSnapshotResponse503 = {
+export type createAuthenticationProfileResponse503 = {
   data: BrowserStateTransferFailedError
   status: 503
 }
 
-export type captureAuthenticationStateSnapshotResponseSuccess = (captureAuthenticationStateSnapshotResponse201) & {
+export type createAuthenticationProfileResponseSuccess = (createAuthenticationProfileResponse201) & {
   headers: Headers;
 };
-export type captureAuthenticationStateSnapshotResponseError = (captureAuthenticationStateSnapshotResponse404 | captureAuthenticationStateSnapshotResponse409 | captureAuthenticationStateSnapshotResponse422 | captureAuthenticationStateSnapshotResponse503) & {
+export type createAuthenticationProfileResponseError = (createAuthenticationProfileResponse404 | createAuthenticationProfileResponse409 | createAuthenticationProfileResponse422 | createAuthenticationProfileResponse503) & {
   headers: Headers;
 };
 
-export type captureAuthenticationStateSnapshotResponse = (captureAuthenticationStateSnapshotResponseSuccess | captureAuthenticationStateSnapshotResponseError)
+export type createAuthenticationProfileResponse = (createAuthenticationProfileResponseSuccess | createAuthenticationProfileResponseError)
 
-export const getCaptureAuthenticationStateSnapshotUrl = (sessionId: string,) => {
-
-
+export const getCreateAuthenticationProfileUrl = (sessionId: string,) => {
 
 
-  return `/api/v1/sessions/${sessionId}/authentication-state-snapshots`
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-profiles`
 }
 
 /**
- * @summary Capture Authentication State Snapshot
+ * @summary Create Authentication Profile
  */
-export const captureAuthenticationStateSnapshot = async (sessionId: string,
-    captureAuthenticationStateSnapshotRequest: CaptureAuthenticationStateSnapshotRequest, options?: RequestInit): Promise<captureAuthenticationStateSnapshotResponse> => {
+export const createAuthenticationProfile = async (sessionId: string,
+    createAuthenticationProfileRequest: CreateAuthenticationProfileRequest, options?: RequestInit): Promise<createAuthenticationProfileResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -980,20 +919,266 @@ export const captureAuthenticationStateSnapshot = async (sessionId: string,
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-const res = await fetch(getCaptureAuthenticationStateSnapshotUrl(sessionId),
+const res = await fetch(getCreateAuthenticationProfileUrl(sessionId),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(captureAuthenticationStateSnapshotRequest)
+    body: JSON.stringify(createAuthenticationProfileRequest)
   }
 )
 
 
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-  const data: captureAuthenticationStateSnapshotResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as captureAuthenticationStateSnapshotResponse
+  const data: createAuthenticationProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createAuthenticationProfileResponse
+}
+
+
+
+export type getAuthenticationProfileResponse200 = {
+  data: AuthenticationProfileResponse
+  status: 200
+}
+
+export type getAuthenticationProfileResponse404 = {
+  data: AuthenticationProfileNotFoundError
+  status: 404
+}
+
+export type getAuthenticationProfileResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getAuthenticationProfileResponseSuccess = (getAuthenticationProfileResponse200) & {
+  headers: Headers;
+};
+export type getAuthenticationProfileResponseError = (getAuthenticationProfileResponse404 | getAuthenticationProfileResponse422) & {
+  headers: Headers;
+};
+
+export type getAuthenticationProfileResponse = (getAuthenticationProfileResponseSuccess | getAuthenticationProfileResponseError)
+
+export const getGetAuthenticationProfileUrl = (profileId: string,) => {
+
+
+
+
+  return `/api/v1/authentication-profiles/${profileId}`
+}
+
+/**
+ * @summary Get Authentication Profile
+ */
+export const getAuthenticationProfile = async (profileId: string, options?: RequestInit): Promise<getAuthenticationProfileResponse> => {
+
+  const res = await fetch(getGetAuthenticationProfileUrl(profileId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getAuthenticationProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getAuthenticationProfileResponse
+}
+
+
+
+export type deleteAuthenticationProfileResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteAuthenticationProfileResponse404 = {
+  data: AuthenticationProfileNotFoundError
+  status: 404
+}
+
+export type deleteAuthenticationProfileResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type deleteAuthenticationProfileResponseSuccess = (deleteAuthenticationProfileResponse204) & {
+  headers: Headers;
+};
+export type deleteAuthenticationProfileResponseError = (deleteAuthenticationProfileResponse404 | deleteAuthenticationProfileResponse422) & {
+  headers: Headers;
+};
+
+export type deleteAuthenticationProfileResponse = (deleteAuthenticationProfileResponseSuccess | deleteAuthenticationProfileResponseError)
+
+export const getDeleteAuthenticationProfileUrl = (profileId: string,) => {
+
+
+
+
+  return `/api/v1/authentication-profiles/${profileId}`
+}
+
+/**
+ * @summary Delete Authentication Profile
+ */
+export const deleteAuthenticationProfile = async (profileId: string, options?: RequestInit): Promise<deleteAuthenticationProfileResponse> => {
+
+  const res = await fetch(getDeleteAuthenticationProfileUrl(profileId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteAuthenticationProfileResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as deleteAuthenticationProfileResponse
+}
+
+
+
+export type updateAuthenticationProfileResponse200 = {
+  data: AuthenticationProfileResponse
+  status: 200
+}
+
+export type updateAuthenticationProfileResponse404 = {
+  data: AuthenticationProfileNotFoundError
+  status: 404
+}
+
+export type updateAuthenticationProfileResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateAuthenticationProfileResponseSuccess = (updateAuthenticationProfileResponse200) & {
+  headers: Headers;
+};
+export type updateAuthenticationProfileResponseError = (updateAuthenticationProfileResponse404 | updateAuthenticationProfileResponse422) & {
+  headers: Headers;
+};
+
+export type updateAuthenticationProfileResponse = (updateAuthenticationProfileResponseSuccess | updateAuthenticationProfileResponseError)
+
+export const getUpdateAuthenticationProfileUrl = (sessionId: string,
+    profileId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/authentication-profiles/${profileId}`
+}
+
+/**
+ * @summary Update Authentication Profile
+ */
+export const updateAuthenticationProfile = async (sessionId: string,
+    profileId: string,
+    updateAuthenticationProfileRequest: UpdateAuthenticationProfileRequest, options?: RequestInit): Promise<updateAuthenticationProfileResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getUpdateAuthenticationProfileUrl(sessionId,profileId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateAuthenticationProfileRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateAuthenticationProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateAuthenticationProfileResponse
+}
+
+
+
+export type mountSessionBrowserCheckpointResponse204 = {
+  data: void
+  status: 204
+}
+
+export type mountSessionBrowserCheckpointResponse404 = {
+  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError
+  status: 404
+}
+
+export type mountSessionBrowserCheckpointResponse409 = {
+  data: SessionNotActiveError
+  status: 409
+}
+
+export type mountSessionBrowserCheckpointResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type mountSessionBrowserCheckpointResponse503 = {
+  data: BrowserStateTransferFailedError
+  status: 503
+}
+
+export type mountSessionBrowserCheckpointResponseSuccess = (mountSessionBrowserCheckpointResponse204) & {
+  headers: Headers;
+};
+export type mountSessionBrowserCheckpointResponseError = (mountSessionBrowserCheckpointResponse404 | mountSessionBrowserCheckpointResponse409 | mountSessionBrowserCheckpointResponse422 | mountSessionBrowserCheckpointResponse503) & {
+  headers: Headers;
+};
+
+export type mountSessionBrowserCheckpointResponse = (mountSessionBrowserCheckpointResponseSuccess | mountSessionBrowserCheckpointResponseError)
+
+export const getMountSessionBrowserCheckpointUrl = (sessionId: string,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/browser-checkpoint`
+}
+
+/**
+ * @summary Mount Session Browser Checkpoint
+ */
+export const mountSessionBrowserCheckpoint = async (sessionId: string,
+    mountBrowserCheckpointRequest: MountBrowserCheckpointRequest, options?: RequestInit): Promise<mountSessionBrowserCheckpointResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+const res = await fetch(getMountSessionBrowserCheckpointUrl(sessionId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(mountBrowserCheckpointRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: mountSessionBrowserCheckpointResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as mountSessionBrowserCheckpointResponse
 }
 
 

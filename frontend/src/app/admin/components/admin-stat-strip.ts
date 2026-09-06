@@ -74,6 +74,6 @@ export class AdminStatStrip {
     { label: "Active", value: this.console.activeSessions().length, tone: "busy" },
     { label: "Suspended", value: this.console.suspendedSessions().length, tone: "plain" },
     { label: "Offline", value: this.console.offlineBrowsers().length, tone: "bad" },
-    { label: "Snapshots", value: this.console.snapshots().length, tone: "plain" },
+    { label: "Checkpoints", value: this.console.checkpoints().length, tone: "plain" },
   ]);
 }

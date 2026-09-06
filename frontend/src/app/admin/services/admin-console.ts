@@ -1,7 +1,7 @@
 import { computed, Injectable, signal } from "@angular/core";
 import {
   closeSession,
-  listBrowserStateSnapshots,
+  listBrowserCheckpoints,
   listPooledBrowsers,
   listSessions,
   releasePooledBrowser,
@@ -10,7 +10,7 @@ import {
   suspendSession,
 } from "@browsertunnel/backend-client";
 import type {
-  BrowserStateSnapshotResponse,
+  BrowserCheckpointResponse,
   PooledBrowserResponse,
   SessionResponse,
 } from "@browsertunnel/backend-client";
@@ -32,7 +32,7 @@ export type AdminNotice = { readonly tone: "success" | "error"; readonly text: s
 export class AdminConsole {
   private readonly browserState = signal<readonly PooledBrowserResponse[]>([]);
   private readonly sessionState = signal<readonly SessionResponse[]>([]);
-  private readonly snapshotState = signal<readonly BrowserStateSnapshotResponse[]>([]);
+  private readonly checkpointState = signal<readonly BrowserCheckpointResponse[]>([]);
   private readonly loadingState = signal(false);
   private readonly busyState = signal<ReadonlySet<string>>(new Set());
   private readonly noticeState = signal<AdminNotice | undefined>(undefined);
@@ -40,7 +40,7 @@ export class AdminConsole {
 
   readonly browsers = this.browserState.asReadonly();
   readonly sessions = this.sessionState.asReadonly();
-  readonly snapshots = this.snapshotState.asReadonly();
+  readonly checkpoints = this.checkpointState.asReadonly();
   readonly loading = this.loadingState.asReadonly();
   readonly notice = this.noticeState.asReadonly();
   readonly refreshedAt = this.refreshedState.asReadonly();
@@ -71,16 +71,16 @@ export class AdminConsole {
   async refresh(): Promise<void> {
     this.loadingState.set(true);
     try {
-      const [browsers, sessions, snapshots] = await Promise.all([
+      const [browsers, sessions, checkpoints] = await Promise.all([
         listPooledBrowsers(),
         listSessions(),
-        listBrowserStateSnapshots(),
+        listBrowserCheckpoints(),
       ]);
       if (browsers.status !== 200) throw new Error(`Pool unavailable (${browsers.status})`);
       if (sessions.status !== 200) throw new Error(`Sessions unavailable (${sessions.status})`);
       this.browserState.set(browsers.data);
       this.sessionState.set(sessions.data);
-      if (snapshots.status === 200) this.snapshotState.set(snapshots.data);
+      if (checkpoints.status === 200) this.checkpointState.set(checkpoints.data);
       this.refreshedState.set(new Date());
     } catch (error) {
       this.noticeState.set({ tone: "error", text: message(error) });

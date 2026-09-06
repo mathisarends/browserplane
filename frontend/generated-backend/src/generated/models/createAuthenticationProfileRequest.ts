@@ -5,15 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CaptureBrowserStateSnapshotRequest {
+export interface CreateAuthenticationProfileRequest {
   /**
      * @minLength 1
      * @maxLength 120
      */
   name: string;
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  source_browser: string;
 }

@@ -12,7 +12,7 @@ import { AdminBrowserGrid } from "./admin-browser-grid";
 import { AdminConsole } from "../services/admin-console";
 import { AdminNotice } from "./admin-notice";
 import { AdminSessionGrid } from "./admin-session-grid";
-import { AdminSnapshotList } from "./admin-snapshot-list";
+import { AdminCheckpointList } from "./admin-checkpoint-list";
 import { AdminStatStrip } from "./admin-stat-strip";
 import { clockTime } from "../services/format";
 
@@ -26,7 +26,7 @@ const POLL_INTERVAL_MS = 5000;
     AdminBrowserGrid,
     AdminNotice,
     AdminSessionGrid,
-    AdminSnapshotList,
+    AdminCheckpointList,
     AdminStatStrip,
   ],
   template: `
@@ -54,7 +54,7 @@ const POLL_INTERVAL_MS = 5000;
       <app-admin-stat-strip />
       <app-admin-browser-grid />
       <app-admin-session-grid />
-      <app-admin-snapshot-list />
+      <app-admin-checkpoint-list />
     </div>
   `,
   styles: `
