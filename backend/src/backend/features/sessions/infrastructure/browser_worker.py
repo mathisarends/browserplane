@@ -18,8 +18,8 @@ from backend.features.sessions.domain.models import (
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     ApiError,
-    AuthenticationStateSchema,
-    BrowserStateSchema,
+    AuthenticationState,
+    BrowserState,
     GeneratedBrowserWorkerClient,
 )
 
@@ -48,7 +48,7 @@ class BrowserWorkerRuntime(BrowserRuntime):
         self, browser: Browser, state: AuthenticationStateDocument
     ) -> None:
         try:
-            body = AuthenticationStateSchema.model_validate(state)
+            body = AuthenticationState.model_validate(state)
         except ValidationError as error:
             raise _as_transfer_failure("validate authentication for", error) from error
         try:
@@ -67,7 +67,7 @@ class BrowserWorkerRuntime(BrowserRuntime):
         self, browser: Browser, state: BrowserStateDocument
     ) -> None:
         try:
-            body = BrowserStateSchema.model_validate(state)
+            body = BrowserState.model_validate(state)
         except ValidationError as error:
             raise _as_transfer_failure("validate browser state for", error) from error
         try:

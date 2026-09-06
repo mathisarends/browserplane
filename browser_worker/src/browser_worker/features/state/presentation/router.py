@@ -37,7 +37,7 @@ async def capture_browser_state(
 ) -> BrowserStateSchema:
     state = await service.capture_browser(browser_id)
     response.headers["Cache-Control"] = "no-store"
-    return BrowserStateSchema.model_validate(state)
+    return state
 
 
 @browser_state_router.put(
@@ -84,7 +84,7 @@ async def capture_authentication_state(
     """
     state = await service.capture_authentication(browser_id, origins or ())
     response.headers["Cache-Control"] = "no-store"
-    return AuthenticationStateSchema.model_validate(state)
+    return state
 
 
 @browser_state_router.put(

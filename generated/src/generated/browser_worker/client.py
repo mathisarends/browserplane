@@ -13,11 +13,13 @@ from pydantic import TypeAdapter
 from generated.browser_worker.exceptions import ApiError
 from generated.browser_worker.http_methods import HttpMethods
 from generated.browser_worker.models import (
+    AuthenticationState,
     AuthenticationStateSchema,
     BrowserAlreadyRunningError,
     BrowserNotFoundError,
     BrowserResponse,
     BrowserStartupFailedError,
+    BrowserState,
     BrowserStateFailedError,
     BrowserStateInvalidError,
     BrowserStateSchema,
@@ -170,7 +172,7 @@ class GeneratedBrowserWorkerClient:
     async def mount_authentication_state(
         self,
         browser_id: UUID,
-        body: AuthenticationStateSchema,
+        body: AuthenticationState,
         *,
         timeout: float | None = None,
     ) -> None:
@@ -180,7 +182,7 @@ class GeneratedBrowserWorkerClient:
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
 
-        json_body = TypeAdapter(AuthenticationStateSchema).dump_python(
+        json_body = TypeAdapter(AuthenticationState).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
         )
 
@@ -481,7 +483,7 @@ class GeneratedBrowserWorkerClient:
     async def mount_browser_state(
         self,
         browser_id: UUID,
-        body: BrowserStateSchema,
+        body: BrowserState,
         *,
         timeout: float | None = None,
     ) -> None:
@@ -491,7 +493,7 @@ class GeneratedBrowserWorkerClient:
         headers = dict(self._headers)
         headers.setdefault("Accept", "application/json")
 
-        json_body = TypeAdapter(BrowserStateSchema).dump_python(
+        json_body = TypeAdapter(BrowserState).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
         )
 

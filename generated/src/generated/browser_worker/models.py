@@ -13,14 +13,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 
-class CookiePartitionKeySchema(BaseModel):
+class CookiePartitionKey(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     top_level_site: str = Field(alias="topLevelSite")
     has_cross_site_ancestor: bool = Field(alias="hasCrossSiteAncestor")
 
 
-class BrowserCookieSchema(BaseModel):
+class BrowserCookie(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
@@ -34,70 +34,81 @@ class BrowserCookieSchema(BaseModel):
     priority: str | None = None
     source_scheme: str | None = Field(None, alias="sourceScheme")
     source_port: int | None = Field(None, alias="sourcePort")
-    partition_key: CookiePartitionKeySchema | None = Field(None, alias="partitionKey")
+    partition_key: CookiePartitionKey | None = Field(None, alias="partitionKey")
 
 
-class IndexedDbIndexSchema(BaseModel):
+IndexedDbKeyPath = str | list[str] | None
+
+
+class IndexedDbIndex(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
-    key_path: str | list[str] | None = Field(None, alias="keyPath")
+    key_path: IndexedDbKeyPath = Field(None, alias="keyPath")
     unique: bool = False
     multi_entry: bool = Field(False, alias="multiEntry")
 
 
-class IndexedDbRecordSchema(BaseModel):
+class IndexedDbRecord(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     key: Any
     value: Any
 
 
-class IndexedDbObjectStoreSchema(BaseModel):
+class IndexedDbObjectStore(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
-    key_path: str | list[str] | None = Field(None, alias="keyPath")
+    key_path: IndexedDbKeyPath = Field(None, alias="keyPath")
     auto_increment: bool = Field(False, alias="autoIncrement")
-    indexes: list[IndexedDbIndexSchema] = []
-    records: list[IndexedDbRecordSchema] = []
+    indexes: list[IndexedDbIndex] = []
+    records: list[IndexedDbRecord] = []
 
 
-class IndexedDbDatabaseSchema(BaseModel):
+class IndexedDbDatabase(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
     version: int
-    object_stores: list[IndexedDbObjectStoreSchema] = Field([], alias="objectStores")
+    object_stores: list[IndexedDbObjectStore] = Field([], alias="objectStores")
 
 
-class OriginIndexedDbSchema(BaseModel):
+class OriginIndexedDb(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     origin: str
-    databases: list[IndexedDbDatabaseSchema] = []
+    databases: list[IndexedDbDatabase] = []
 
 
-class StorageItemSchema(BaseModel):
+class StorageItem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
     value: str
 
 
-class OriginLocalStorageSchema(BaseModel):
+class OriginLocalStorage(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     origin: str
-    local_storage: list[StorageItemSchema] = Field([], alias="localStorage")
+    local_storage: list[StorageItem] = Field([], alias="localStorage")
+
+
+class AuthenticationState(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    cookies: list[BrowserCookie] = []
+    local_storage: list[OriginLocalStorage] = Field([], alias="localStorage")
+    indexed_d_b: list[OriginIndexedDb] = Field([], alias="indexedDB")
 
 
 class AuthenticationStateSchema(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    cookies: list[BrowserCookieSchema] = []
-    local_storage: list[OriginLocalStorageSchema] = Field([], alias="localStorage")
-    indexed_d_b: list[OriginIndexedDbSchema] = Field(alias="indexedDB")
+    cookies: list[BrowserCookie] = []
+    local_storage: list[OriginLocalStorage] = Field([], alias="localStorage")
+    indexed_d_b: list[OriginIndexedDb] = Field([], alias="indexedDB")
 
 
 class BrowserAlreadyRunningError(BaseModel):
@@ -129,6 +140,28 @@ class BrowserStartupFailedError(BaseModel):
     message: str
 
 
+class ScrollPosition(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    x: int = 0
+    y: int = 0
+
+
+class BrowserTabState(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    url: str
+    scroll: ScrollPosition = {'x': 0, 'y': 0}
+    session_storage: list[StorageItem] = Field([], alias="sessionStorage")
+
+
+class BrowserState(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    tabs: list[BrowserTabState] = []
+    active_tab_index: int = 0
+
+
 class BrowserStateFailedError(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -143,25 +176,10 @@ class BrowserStateInvalidError(BaseModel):
     message: str
 
 
-class ScrollPositionSchema(BaseModel):
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
-    x: int = 0
-    y: int = 0
-
-
-class BrowserTabStateSchema(BaseModel):
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
-
-    url: str
-    scroll: ScrollPositionSchema = {'x': 0, 'y': 0}
-    session_storage: list[StorageItemSchema] = Field([], alias="sessionStorage")
-
-
 class BrowserStateSchema(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    tabs: list[BrowserTabStateSchema] = []
+    tabs: list[BrowserTabState] = []
     active_tab_index: int = 0
 
 
