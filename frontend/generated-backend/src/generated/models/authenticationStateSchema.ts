@@ -5,10 +5,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BrowserCookieSchema } from './browserCookieSchema';
-import type { BrowserOriginStateSchema } from './browserOriginStateSchema';
+import type { OriginLocalStorageSchema } from './originLocalStorageSchema';
 
 export interface AuthenticationStateSchema {
   cookies?: BrowserCookieSchema[];
-  origins?: BrowserOriginStateSchema[];
+  localStorage?: OriginLocalStorageSchema[];
   [key: string]: unknown;
  }

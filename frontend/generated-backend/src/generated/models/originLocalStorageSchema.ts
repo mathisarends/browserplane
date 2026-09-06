@@ -6,7 +6,7 @@
  */
 import type { StorageItemSchema } from './storageItemSchema';
 
-export interface BrowserOriginStateSchema {
+export interface OriginLocalStorageSchema {
   origin: string;
   localStorage?: StorageItemSchema[];
   [key: string]: unknown;
