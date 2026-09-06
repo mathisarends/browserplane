@@ -1,13 +1,21 @@
 # Acquiring a browser
 
-Implemented in `backend/src/backend/features/browser_requests/`; the concept is
+Implemented in `backend/src/backend/features/session_requests/`; the concept is
 `REQUEST_CONCEPT.md`. `POST /api/v1/sessions` no longer fails when the pool is
 full — it waits until its deadline.
+
+## Why a session request
+
+An assignment does not hand out a browser. It mints a lease and a session
+aggregate under one id, and the inputs a request carries — owner, checkpoint,
+authentication profile, the session to resume — are session concepts. So the
+queue is named after what it produces, not after the resource it waits for. The
+browser is what the dispatcher spends to satisfy it.
 
 ## The goal
 
 ```python
-lease = await control_plane.acquire_browser(owner_id=owner_id, timeout=60)
+session = await acquisition.open(OpenSessionCommand(owner_id=owner_id))
 ```
 
 One `await`. No polling loop in the caller, no retry ladder. Waiting parks a
@@ -39,17 +47,17 @@ design — it must occupy no database connection either.
               ┌───────────┼───────────┐
               ▼           ▼           ▼
           ASSIGNED    terminal    keep waiting
-       read the lease  raise       loop again
+      read the session  raise       loop again
 ```
 
-The future carries **no payload** — only "something may have changed". The lease
-is always read back from the database. That is what makes a lost, duplicated, or
-coalesced notification harmless.
+The future carries **no payload** — only "something may have changed". The
+assignment is always read back from the database. That is what makes a lost,
+duplicated, or coalesced notification harmless.
 
 ## Request states
 
 ```text
-QUEUED ──▶ PROVISIONING ──▶ ASSIGNED     (terminal, carries lease_id)
+QUEUED ──▶ PROVISIONING ──▶ ASSIGNED     (terminal, carries session_id)
    │                                     
    ├──────────────────────▶ CANCELLED    (terminal, caller gave up)
    └──────────────────────▶ EXPIRED      (terminal, deadline passed)
@@ -86,6 +94,24 @@ read ─────┘          └── write lease, set ASSIGNED
 Between them, session, transaction, and pooled connection are all released. Ten
 thousand waiting callers cost ten thousand futures, not ten thousand
 connections.
+
+Two things enforce that. The acquire routes take no request-scoped dependency,
+so no session is ever built for them; and everything they read goes through a
+`UnitOfWork[SessionService]`, whose block owns one transaction and hands the
+connection back at its end:
+
+```python
+async with self._sessions() as sessions:      # one transaction
+    await self._check_state(sessions, ...)    # opens, reads, commits, releases
+session_id = await self._control.acquire(request)   # no connection held
+async with self._sessions() as sessions:      # a second, independent one
+    return await sessions.get_active(session_id)
+```
+
+The repository behind the queue works the same way: every method owns its own
+short transaction, and only detached values cross the boundary. The dispatcher
+uses the same unit of work, which is what keeps its worker calls — release,
+start, mount — outside any transaction.
 
 ## Dispatcher
 
@@ -128,9 +154,12 @@ request id supplied again   same input  → the same wait is picked back up
 deadline passed             → 408, request EXPIRED
 cancelled                   → 409
 HTTP client disconnects     → 499, the request is cancelled
-GET    /api/v1/browser-requests/{id}?owner_id=…   inspect a wait
-DELETE /api/v1/browser-requests/{id}?owner_id=…   cancel a wait
+GET    /api/v1/session-requests/{id}?owner_id=…   inspect a wait
+DELETE /api/v1/session-requests/{id}?owner_id=…   cancel a wait
 ```
+
+A request that belongs to someone else answers like one that never existed, so
+an id cannot be probed for.
 
 Resume takes the same path: `resume_session_id` makes the assignment reuse the
 suspended session's id and its checkpoint, so a resumed session waits for

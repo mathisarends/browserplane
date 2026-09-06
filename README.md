@@ -61,7 +61,7 @@ CDP into a CSS cursor in the frontend (it is not part of the frame stream).
 | --- | --- | --- |
 | Frontend | `frontend/` | `<canvas>`; replays DOM events as CDP commands, talks only to the backend |
 | Gateway | `backend/…/features/browser_tunnel/` | JSON-RPC 2.0 ⇄ CDP, frame relay; keeps worker and CDP addresses off the wire |
-| API | `backend/…/features/` | sessions, browser requests, leases, browsers, recordings, health |
+| API | `backend/…/features/` | sessions, session requests, leases, browsers, recordings, health |
 | Scheduler | `backend/src/backend/scheduler.py` | dispatches queued requests, reaps leases, reconciles slots |
 | Browser worker | `browser_worker/` | one Chromium each: lifecycle, CDP, screencast, downloads, recordings, state |
 
@@ -125,8 +125,8 @@ Keep awaited application or repository calls separate from response mapping so
 both steps remain easy to read:
 
 ```python
-request = await repository.get(request_id)
-return BrowserRequestResponse.model_validate(request)
+request = await control.get(request_id, owner_id)
+return SessionRequestResponse.model_validate(request)
 ```
 
 Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
@@ -136,7 +136,7 @@ Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/v1/sessions` | open a session; waits for capacity until its deadline |
-| `GET` `DELETE` | `/api/v1/browser-requests/{id}` | inspect or cancel a wait |
+| `GET` `DELETE` | `/api/v1/session-requests/{id}` | inspect or cancel a wait |
 | `GET` `DELETE` | `/api/v1/sessions/{id}` | inspect or close a session |
 | `POST` | `/api/v1/sessions/{id}/lease/renew` | heartbeat without a tunnel |
 | `POST` | `/api/v1/sessions/{id}/suspend` · `/resume` | park a session, pick it up on any free slot |
