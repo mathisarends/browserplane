@@ -12,7 +12,6 @@ from backend.features.sessions.application.exceptions import (
     BrowserCheckpointNotFoundException,
     BrowserStateTransferException,
     DownloadNotFoundException,
-    NoBrowserAvailableException,
     SessionNotActiveException,
     SessionNotFoundException,
     SessionNotSuspendedException,
@@ -62,11 +61,11 @@ SESSION_NOT_FOUND = ApiErrorSpec(
     response_model=SessionNotFoundError,
     description="Session not found",
 )
-# The pool being empty and losing the race for the browser we picked are the
-# same situation to a client: try again later.
+# An empty pool no longer reaches a caller as a failure: they queue for
+# capacity instead. What remains is losing the race for a browser that was
+# free a moment ago, which is the same situation to a client: try again later.
 NO_BROWSER_AVAILABLE = ApiErrorSpec(
     exceptions=(
-        NoBrowserAvailableException,
         BrowserUnavailableException,
         BrowserCapacityExhaustedException,
     ),

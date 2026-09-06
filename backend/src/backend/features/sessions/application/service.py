@@ -1,18 +1,15 @@
 import asyncio
 import logging
-from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from backend.features.browsers.application.service import BrowserService
-from backend.features.browsers.domain.models import Browser
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.exceptions import (
     AuthenticationProfileNotFoundException,
     BrowserCheckpointNotFoundException,
     DownloadNotFoundException,
-    NoBrowserAvailableException,
     SessionNotActiveException,
     SessionNotFoundException,
     SessionNotSuspendedException,
@@ -56,57 +53,6 @@ class SessionService:
         self._authentication_profiles = authentication_profiles
         self._browser_state = browser_state
         self._suspension_ttl = suspension_ttl
-
-    async def open(
-        self,
-        owner_id: UUID,
-        *,
-        authentication_profile_id: UUID | None = None,
-        browser_checkpoint_id: UUID | None = None,
-    ) -> ResolvedSession:
-        checkpoint = (
-            await self.get_browser_checkpoint(browser_checkpoint_id)
-            if browser_checkpoint_id is not None
-            else None
-        )
-        profile_id = authentication_profile_id or (
-            checkpoint.authentication_profile_id if checkpoint is not None else None
-        )
-        profile = (
-            await self.get_authentication_profile(profile_id)
-            if profile_id is not None
-            else None
-        )
-        browser = await self._pick_available_browser()
-        lease = await self._leases.create(browser.id, owner_id)
-        try:
-            await self._browser_state.clear_downloads(browser)
-            if profile is not None:
-                await self._browser_state.mount_authentication(
-                    browser, profile.authentication_state
-                )
-            if checkpoint is not None:
-                await self._browser_state.mount_browser(
-                    browser, checkpoint.browser_state
-                )
-        except Exception:
-            with suppress(LeaseNotFoundException):
-                await self._leases.release(lease.id, reason="open_state_mount_failed")
-            raise
-        aggregate = await self._sessions.save(
-            Session(
-                id=lease.id,
-                owner_id=owner_id,
-                status=SessionStatus.ACTIVE,
-                created_at=lease.created_at,
-                expires_at=lease.expires_at,
-            )
-        )
-        return ResolvedSession.active(
-            session=aggregate,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
-        )
 
     async def remaining_capacity(self) -> int:
         return await self._browsers.remaining_capacity()
@@ -306,36 +252,6 @@ class SessionService:
         await self._leases.release(session_id, reason="session_suspended")
         return ResolvedSession.inactive(suspended)
 
-    async def resume(self, session_id: UUID) -> ResolvedSession:
-        aggregate = await self._suspended_session(session_id)
-        checkpoint = await self.get_browser_checkpoint(aggregate.browser_checkpoint_id)  # type: ignore[arg-type]
-        profile = (
-            await self.get_authentication_profile(checkpoint.authentication_profile_id)
-            if checkpoint.authentication_profile_id is not None
-            else None
-        )
-        browser = await self._pick_available_browser()
-        lease = await self._leases.create(
-            browser.id, aggregate.owner_id, lease_id=aggregate.id
-        )
-        try:
-            await self._browser_state.clear_downloads(browser)
-            if profile is not None:
-                await self._browser_state.mount_authentication(
-                    browser, profile.authentication_state
-                )
-            await self._browser_state.mount_browser(browser, checkpoint.browser_state)
-        except Exception:
-            with suppress(LeaseNotFoundException):
-                await self._leases.release(lease.id, reason="resume_state_mount_failed")
-            raise
-        resumed = await self._sessions.save(aggregate.resume(lease.expires_at))
-        return ResolvedSession.active(
-            session=resumed,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
-        )
-
     async def close(self, session_id: UUID) -> None:
         aggregate = await self._session(session_id)
         if aggregate.status is SessionStatus.ACTIVE:
@@ -376,9 +292,3 @@ class SessionService:
             await self._sessions.save(session.close())
             raise SessionNotFoundException()
         return session
-
-    async def _pick_available_browser(self) -> Browser:
-        browser = await self._browsers.find_available()
-        if browser is None:
-            raise NoBrowserAvailableException()
-        return browser
