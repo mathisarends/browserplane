@@ -1,73 +1,57 @@
-from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
+from browser_worker.container import create_container
 from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.feature import feature as browser_feature
 from browser_worker.features.browser.infrastructure import BrowserProvider
-from browser_worker.features.browser.presentation.errors import (
-    API_ERRORS as BROWSER_API_ERRORS,
-)
-from browser_worker.features.browser.presentation.router import browser_router
-from browser_worker.features.downloads.infrastructure import DownloadProvider
-from browser_worker.features.downloads.presentation.errors import (
-    API_ERRORS as DOWNLOAD_API_ERRORS,
-)
-from browser_worker.features.downloads.presentation.router import download_router
-from browser_worker.features.health.infrastructure import HealthProvider
-from browser_worker.features.health.presentation.router import health_router
-from browser_worker.features.recordings.infrastructure import RecordingProvider
-from browser_worker.features.recordings.presentation.errors import (
-    API_ERRORS as RECORDING_API_ERRORS,
-)
-from browser_worker.features.recordings.presentation.router import recording_router
-from browser_worker.features.screencast.infrastructure import ScreencastProvider
-from browser_worker.features.screencast.presentation.router import screencast_router
-from browser_worker.features.state.infrastructure import BrowserStateProvider
-from browser_worker.features.state.presentation.errors import (
-    API_ERRORS as BROWSER_STATE_API_ERRORS,
-)
-from browser_worker.features.state.presentation.router import (
-    browser_state_router,
-)
-from browser_worker.features.workspace.infrastructure import WorkspaceProvider
+from browser_worker.features.downloads.feature import feature as downloads_feature
+from browser_worker.features.health.feature import feature as health_feature
+from browser_worker.features.recordings.feature import feature as recordings_feature
+from browser_worker.features.screencast.feature import feature as screencast_feature
+from browser_worker.features.state.feature import feature as state_feature
 from browser_worker.lifespan import lifespan
 from browser_worker.presentation.api_errors import register_api_error_handlers
 from browser_worker.presentation.middleware import RequestLoggingMiddleware
+from browser_worker.shared.feature import Feature
 
 API_PREFIX = "/api/v1"
-ROUTERS = (
-    health_router,
-    browser_router,
-    screencast_router,
-    browser_state_router,
-    download_router,
-    recording_router,
-)
-API_ERRORS = (
-    *BROWSER_API_ERRORS,
-    *BROWSER_STATE_API_ERRORS,
-    *DOWNLOAD_API_ERRORS,
-    *RECORDING_API_ERRORS,
+FEATURES = (
+    health_feature,
+    browser_feature,
+    screencast_feature,
+    state_feature,
+    downloads_feature,
+    recordings_feature,
 )
 
 
 def create_app(service: BrowserService | None = None) -> FastAPI:
     app = FastAPI(title="Browser Worker", version="0.1.0", lifespan=lifespan)
-    app.add_middleware(RequestLoggingMiddleware)
-    for router in ROUTERS:
-        app.include_router(router, prefix=API_PREFIX)
-    register_api_error_handlers(app, API_ERRORS)
-    container = make_async_container(
-        WorkspaceProvider(),
-        BrowserProvider(service),
-        ScreencastProvider(),
-        DownloadProvider(),
-        BrowserStateProvider(),
-        RecordingProvider(),
-        HealthProvider(),
+    _configure_app(app, FEATURES)
+    container = create_container(
+        FEATURES,
+        (BrowserProvider(service),) if service is not None else (),
     )
     setup_dishka(container, app)
+    _register_routes(app, FEATURES)
     return app
+
+
+def _configure_app(app: FastAPI, features: tuple[Feature, ...]) -> None:
+    app.add_middleware(RequestLoggingMiddleware)
+    register_api_error_handlers(
+        app,
+        tuple(error for feature in features for error in feature.api_errors),
+    )
+
+
+def _register_routes(app: FastAPI, features: tuple[Feature, ...]) -> None:
+    api_router = APIRouter(prefix=API_PREFIX)
+    for feature in features:
+        for router in feature.routers:
+            api_router.include_router(router)
+    app.include_router(api_router)
 
 
 app = create_app()
