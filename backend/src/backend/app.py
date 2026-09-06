@@ -1,85 +1,57 @@
-from dishka import make_async_container
-from dishka.integrations.fastapi import setup_dishka
-from fastapi import FastAPI
+from collections.abc import Sequence
 
-from backend.features.admin.infrastructure import AdminProvider
-from backend.features.admin.presentation.router import admin_router
-from backend.features.browser_tunnel.infrastructure import BrowserTunnelProvider
-from backend.features.browsers.application.ports import (
-    BrowserProvisioner,
-    BrowserRepository,
-)
-from backend.features.browsers.infrastructure import BrowserProvider
-from backend.features.browsers.presentation.errors import (
-    API_ERRORS as BROWSER_API_ERRORS,
-)
-from backend.features.health.infrastructure import HealthProvider
-from backend.features.health.presentation.router import health_router
-from backend.features.leases.application.ports import LeaseStore
-from backend.features.leases.infrastructure import LeaseProvider
-from backend.features.recordings.infrastructure import RecordingProvider
-from backend.features.recordings.presentation.errors import (
-    API_ERRORS as RECORDING_API_ERRORS,
-)
-from backend.features.recordings.presentation.router import recording_router
-from backend.features.sessions.application.ports import (
-    AuthenticationStateSnapshotRepository,
-    BrowserRuntime,
-    BrowserStateSnapshotRepository,
-    SuspendedSessionRepository,
-)
-from backend.features.sessions.infrastructure import SessionProvider
-from backend.features.sessions.presentation.errors import (
-    API_ERRORS as SESSION_API_ERRORS,
-)
-from backend.features.sessions.presentation.router import session_router
-from backend.infrastructure.browser_worker import BrowserWorkerProvider
-from backend.infrastructure.bucket.provider import BucketProvider
-from backend.infrastructure.database import DatabaseProvider
+from dishka import Provider
+from dishka.integrations.fastapi import setup_dishka
+from fastapi import APIRouter, FastAPI
+
+from backend.container import create_container
+from backend.features.admin.feature import feature as admin_feature
+from backend.features.browser_tunnel.feature import feature as browser_tunnel_feature
+from backend.features.browsers.feature import feature as browsers_feature
+from backend.features.health.feature import feature as health_feature
+from backend.features.leases.feature import feature as leases_feature
+from backend.features.recordings.feature import feature as recordings_feature
+from backend.features.sessions.feature import feature as sessions_feature
 from backend.lifespan import lifespan
 from backend.presentation.api_errors import register_api_error_handlers
 from backend.presentation.middleware import install_request_logging
+from backend.shared.feature import Feature
 
 API_PREFIX = "/api/v1"
-API_ERRORS = SESSION_API_ERRORS + BROWSER_API_ERRORS + RECORDING_API_ERRORS
-ROUTERS = (
-    health_router,
-    session_router,
-    recording_router,
-    admin_router,
+FEATURES = (
+    health_feature,
+    browser_tunnel_feature,
+    browsers_feature,
+    leases_feature,
+    sessions_feature,
+    recordings_feature,
+    admin_feature,
 )
 
 
-def create_app(
-    provisioner: BrowserProvisioner | None = None,
-    repository: BrowserRepository | None = None,
-    suspensions: SuspendedSessionRepository | None = None,
-    browser_state: BrowserRuntime | None = None,
-    snapshots: BrowserStateSnapshotRepository | None = None,
-    authentication_snapshots: AuthenticationStateSnapshotRepository | None = None,
-    lease_store: LeaseStore | None = None,
-) -> FastAPI:
+def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
-    install_request_logging(app)
-    for router in ROUTERS:
-        app.include_router(router, prefix=API_PREFIX)
-    register_api_error_handlers(app, API_ERRORS)
-    container = make_async_container(
-        BucketProvider(),
-        DatabaseProvider(),
-        BrowserWorkerProvider(),
-        BrowserTunnelProvider(),
-        BrowserProvider(provisioner, repository),
-        HealthProvider(),
-        RecordingProvider(),
-        LeaseProvider(lease_store),
-        SessionProvider(
-            suspensions, browser_state, snapshots, authentication_snapshots
-        ),
-        AdminProvider(),
-    )
+    _configure_app(app, FEATURES)
+    container = create_container(FEATURES, provider_overrides)
     setup_dishka(container, app)
+    _register_routes(app, FEATURES)
     return app
+
+
+def _configure_app(app: FastAPI, features: tuple[Feature, ...]) -> None:
+    install_request_logging(app)
+    register_api_error_handlers(
+        app,
+        tuple(error for feature in features for error in feature.api_errors),
+    )
+
+
+def _register_routes(app: FastAPI, features: tuple[Feature, ...]) -> None:
+    api_router = APIRouter(prefix=API_PREFIX)
+    for feature in features:
+        for router in feature.routers:
+            api_router.include_router(router)
+    app.include_router(api_router)
 
 
 app = create_app()

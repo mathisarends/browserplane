@@ -12,12 +12,15 @@ from fastapi.testclient import TestClient
 from backend.app import create_app
 from backend.features.browsers.application.models import Browser, BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
+from backend.features.browsers.infrastructure import BrowserProvider
+from backend.features.leases.infrastructure import LeaseProvider
 from backend.features.sessions.application.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
 )
 from backend.features.sessions.application.ports import BrowserRuntime
+from backend.features.sessions.infrastructure import SessionProvider
 
 OWNER_ID = str(UUID(int=7))
 
@@ -89,14 +92,36 @@ class FakeBrowserRuntime(BrowserRuntime):
         raise AssertionError("No fake download exists")
 
 
+def create_test_app(
+    provisioner: BrowserProvisioner,
+    repository: InMemoryBrowserRepository,
+    suspensions: InMemorySuspendedSessionRepository,
+    browser_state: BrowserRuntime,
+    snapshots: InMemoryBrowserStateSnapshotRepository | None = None,
+    authentication_snapshots: InMemoryAuthenticationStateSnapshotRepository
+    | None = None,
+):
+    return create_app(
+        (
+            BrowserProvider(provisioner, repository),
+            LeaseProvider(InMemoryLeaseStore()),
+            SessionProvider(
+                suspensions,
+                browser_state,
+                snapshots,
+                authentication_snapshots,
+            ),
+        )
+    )
+
+
 def test_backend_serves_a_session_lifecycle() -> None:
     state = FakeBrowserRuntime()
-    app = create_app(
+    app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         state,
-        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         assert client.get("/api/v1/health").status_code == 200
@@ -158,12 +183,11 @@ def test_backend_serves_a_session_lifecycle() -> None:
 
 def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
     provisioner = FakeProvisioner()
-    app = create_app(
+    app = create_test_app(
         provisioner,
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         FakeBrowserRuntime(),
-        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -202,12 +226,11 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
 
 def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
     state = FakeBrowserRuntime()
-    app = create_app(
+    app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         state,
-        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         opened = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -233,14 +256,13 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
 
 
 def test_saved_browser_and_authentication_states_are_independent() -> None:
-    app = create_app(
+    app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         FakeBrowserRuntime(),
         InMemoryBrowserStateSnapshotRepository(),
         InMemoryAuthenticationStateSnapshotRepository(),
-        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
@@ -266,12 +288,11 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
 
 def test_a_client_finds_its_own_sessions_again() -> None:
     """A reloaded page asks the backend what it owns instead of remembering."""
-    app = create_app(
+    app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
         InMemorySuspendedSessionRepository(),
         FakeBrowserRuntime(),
-        lease_store=InMemoryLeaseStore(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
