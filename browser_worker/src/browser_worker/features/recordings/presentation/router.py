@@ -20,7 +20,7 @@ recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 
 
 @recording_router.post(
-    "/browser/{browser_id}/recordings",
+    "/browser/recordings",
     status_code=status.HTTP_201_CREATED,
     operation_id="start_recording",
     responses=api_error_responses(
@@ -30,15 +30,14 @@ recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
     ),
 )
 async def start_recording(
-    browser_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    recording = await service.start(browser_id)
+    recording = await service.start()
     return RecordingResponse.model_validate(recording)
 
 
 @recording_router.post(
-    "/browser/{browser_id}/recordings/{recording_id}/stop",
+    "/browser/recordings/{recording_id}/stop",
     operation_id="stop_recording",
     responses=api_error_responses(
         RECORDING_NOT_FOUND,
@@ -47,29 +46,28 @@ async def start_recording(
     ),
 )
 async def stop_recording(
-    browser_id: UUID,
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    recording = await service.stop(browser_id, recording_id)
+    recording = await service.stop(recording_id)
     return RecordingResponse.model_validate(recording)
 
 
 @recording_router.get(
-    "/browser/{browser_id}/recordings/{recording_id}",
+    "/browser/recordings/{recording_id}",
     operation_id="inspect_recording",
     responses=api_error_responses(RECORDING_NOT_FOUND),
 )
 async def inspect_recording(
-    browser_id: UUID,
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> RecordingResponse:
-    return RecordingResponse.model_validate(service.get(browser_id, recording_id))
+    recording = service.get(recording_id)
+    return RecordingResponse.model_validate(recording)
 
 
 @recording_router.get(
-    "/browser/{browser_id}/recordings/{recording_id}/file",
+    "/browser/recordings/{recording_id}/file",
     operation_id="download_recording",
     response_class=FileResponse,
     responses=api_error_responses(
@@ -78,12 +76,11 @@ async def inspect_recording(
     ),
 )
 async def download_recording(
-    browser_id: UUID,
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> FileResponse:
     """Download the completed recording as one video file."""
-    video = service.file(browser_id, recording_id)
+    video = service.file(recording_id)
     return FileResponse(
         video.path,
         media_type=video.media_type,

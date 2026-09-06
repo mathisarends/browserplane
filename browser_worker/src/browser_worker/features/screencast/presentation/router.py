@@ -1,6 +1,5 @@
 from enum import StrEnum
 from typing import Annotated
-from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Query, WebSocket
@@ -31,10 +30,9 @@ class ScreencastMode(StrEnum):
     FMP4 = "fmp4"
 
 
-@screencast_router.websocket("/browser/{browser_id}/screencast")
+@screencast_router.websocket("/browser/screencast")
 @inject
 async def browser_screencast(
-    browser_id: UUID,
     websocket: WebSocket,
     browsers: FromDishka[BrowserService],
     screencasts: FromDishka[ScreencastService],
@@ -51,7 +49,6 @@ async def browser_screencast(
     """
     frames = await resolve_frames(
         websocket,
-        browser_id=browser_id,
         browsers=browsers,
         screencasts=screencasts,
     )

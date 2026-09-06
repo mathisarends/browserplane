@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, WebSocket, status
 
@@ -36,8 +34,8 @@ async def create_browser(
     downloads: FromDishka[DownloadService],
     settings: FromDishka[BrowserSettings],
 ) -> BrowserResponse:
-    browser_id = await service.create(request.id, request.generation)
-    await downloads.start(browser_id)
+    await service.create(request.id, request.generation)
+    await downloads.start()
     return BrowserResponse.from_browser(
         browser=service.inspect(), public_base_url=settings.public_base_url
     )
@@ -57,15 +55,14 @@ async def inspect_browser(
     )
 
 
-@browser_router.websocket("/browser/{browser_id}/cdp")
+@browser_router.websocket("/browser/cdp")
 @inject
 async def browser_cdp(
-    browser_id: UUID,
     websocket: WebSocket,
     service: FromDishka[BrowserService],
 ) -> None:
     try:
-        upstream_url = service.upstream_cdp_url(browser_id)
+        upstream_url = service.upstream_cdp_url()
     except BrowserNotFoundException:
         await websocket.accept()
         await websocket.close(code=1008, reason="Unknown browser")

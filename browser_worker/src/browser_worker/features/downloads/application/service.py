@@ -3,7 +3,6 @@ import logging
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from uuid import UUID
 
 from cdpify import Client
 from cdpify.domains.browser.events import (
@@ -34,17 +33,17 @@ class DownloadService:
     def __init__(self, browsers: BrowserService, workspace: Workspace) -> None:
         self._browsers = browsers
         self._workspace = workspace
-        self._browser_id: UUID | None = None
         self._client: Client | None = None
         self._tasks: tuple[asyncio.Task[None], ...] = ()
         self._pending: dict[str, _PendingDownload] = {}
         self._downloads: dict[str, Download] = {}
 
-    async def start(self, browser_id: UUID) -> None:
-        if self._browser_id == browser_id and self._client is not None:
+    async def start(self) -> None:
+        if self._client is not None:
             return
         await self.stop()
-        cdp_url = self._browsers.upstream_cdp_url(browser_id)
+        browser = self._browsers.inspect()
+        cdp_url = browser.upstream_cdp_url
         self._workspace.ensure()
         self._clear_files()
         client = Client(cdp_url)
@@ -72,22 +71,21 @@ class DownloadService:
             self._tasks = ()
             raise
         self._client = client
-        self._browser_id = browser_id
-        logger.info("Download monitoring active browser_id=%s", browser_id)
+        logger.info("Download monitoring active browser_id=%s", browser.browser_id)
 
-    def list(self, browser_id: UUID) -> tuple[Download, ...]:
-        self._ensure_browser(browser_id)
+    def list(self) -> tuple[Download, ...]:
+        self._ensure_browser()
         return tuple(self._downloads.values())
 
-    def file(self, browser_id: UUID, download_id: str) -> Download:
-        self._ensure_browser(browser_id)
+    def file(self, download_id: str) -> Download:
+        self._ensure_browser()
         download = self._downloads.get(download_id)
         if download is None or not download.path.is_file():
             raise DownloadNotFoundException()
         return download
 
-    async def clear(self, browser_id: UUID) -> None:
-        self._ensure_browser(browser_id)
+    async def clear(self) -> None:
+        self._ensure_browser()
         if self._client is not None:
             await asyncio.gather(
                 *(
@@ -103,7 +101,6 @@ class DownloadService:
     async def stop(self) -> None:
         tasks, self._tasks = self._tasks, ()
         client, self._client = self._client, None
-        self._browser_id = None
         self._pending.clear()
         self._downloads.clear()
         for task in tasks:
@@ -160,9 +157,9 @@ class DownloadService:
             "Download completed filename=%s size=%d", download.filename, download.size
         )
 
-    def _ensure_browser(self, browser_id: UUID) -> None:
-        self._browsers.upstream_cdp_url(browser_id)
-        if self._browser_id != browser_id:
+    def _ensure_browser(self) -> None:
+        self._browsers.inspect()
+        if self._client is None:
             raise DownloadNotFoundException()
 
     def _clear_files(self) -> None:

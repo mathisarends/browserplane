@@ -1,5 +1,4 @@
 from typing import Annotated
-from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Query, Response, status
@@ -22,7 +21,7 @@ browser_state_router = APIRouter(tags=["browser-state"], route_class=DishkaRoute
 
 
 @browser_state_router.get(
-    "/browser/{browser_id}/state",
+    "/browser/state",
     operation_id="capture_browser_state",
     responses=api_error_responses(
         BROWSER_NOT_FOUND,
@@ -31,17 +30,16 @@ browser_state_router = APIRouter(tags=["browser-state"], route_class=DishkaRoute
     ),
 )
 async def capture_browser_state(
-    browser_id: UUID,
     response: Response,
     service: FromDishka[BrowserStateService],
 ) -> BrowserStateSchema:
-    state = await service.capture_browser(browser_id)
+    state = await service.capture_browser()
     response.headers["Cache-Control"] = "no-store"
     return state
 
 
 @browser_state_router.put(
-    "/browser/{browser_id}/state",
+    "/browser/state",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_browser_state",
     responses=api_error_responses(
@@ -51,16 +49,15 @@ async def capture_browser_state(
     ),
 )
 async def mount_browser_state(
-    browser_id: UUID,
     state: BrowserStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    await service.mount_browser(browser_id, state)
+    await service.mount_browser(state)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @browser_state_router.get(
-    "/browser/{browser_id}/authentication-state",
+    "/browser/authentication-state",
     operation_id="capture_authentication_state",
     responses=api_error_responses(
         BROWSER_NOT_FOUND,
@@ -69,7 +66,6 @@ async def mount_browser_state(
     ),
 )
 async def capture_authentication_state(
-    browser_id: UUID,
     response: Response,
     service: FromDishka[BrowserStateService],
     origins: Annotated[
@@ -82,13 +78,13 @@ async def capture_authentication_state(
     The response carries live session cookies and tokens, so it must not be
     cached anywhere on the way back to the caller.
     """
-    state = await service.capture_authentication(browser_id, origins or ())
+    state = await service.capture_authentication(origins or ())
     response.headers["Cache-Control"] = "no-store"
     return state
 
 
 @browser_state_router.put(
-    "/browser/{browser_id}/authentication-state",
+    "/browser/authentication-state",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_authentication_state",
     responses=api_error_responses(
@@ -98,9 +94,8 @@ async def capture_authentication_state(
     ),
 )
 async def mount_authentication_state(
-    browser_id: UUID,
     state: AuthenticationStateSchema,
     service: FromDishka[BrowserStateService],
 ) -> Response:
-    await service.mount_authentication(browser_id, state)
+    await service.mount_authentication(state)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

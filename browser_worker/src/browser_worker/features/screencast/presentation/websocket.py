@@ -1,7 +1,6 @@
 import logging
 import time
 from contextlib import suppress
-from uuid import UUID
 
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
@@ -22,13 +21,13 @@ _INTERNAL_ERROR_CLOSE_CODE = 1011
 async def resolve_frames(
     websocket: WebSocket,
     *,
-    browser_id: UUID,
     browsers: BrowserService,
     screencasts: ScreencastService,
 ) -> FrameStream | None:
     """Return the browser's frame stream, closing the socket when it is gone."""
     try:
-        return screencasts.for_browser(browsers.upstream_cdp_url(browser_id))
+        cdp_url = browsers.upstream_cdp_url()
+        return screencasts.for_browser(cdp_url)
     except BrowserNotFoundException:
         await websocket.close(
             code=_UNKNOWN_BROWSER_CLOSE_CODE, reason="Unknown browser"

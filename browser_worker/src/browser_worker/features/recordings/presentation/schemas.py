@@ -12,7 +12,6 @@ class RecordingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    browser_id: UUID
     state: RecordingState
     started_at: datetime
     stopped_at: datetime | None = None

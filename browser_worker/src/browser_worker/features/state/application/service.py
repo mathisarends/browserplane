@@ -1,6 +1,5 @@
 from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
-from uuid import UUID
 
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.state.application.exceptions import (
@@ -36,34 +35,35 @@ class BrowserStateService:
 
     async def capture_authentication(
         self,
-        browser_id: UUID,
         origins: Sequence[str] = (),
     ) -> AuthenticationState:
         for origin in origins:
             _validate_origin(origin)
-        return await self._store(browser_id).capture_authentication(
-            extra_origins=origins
-        )
+        store = self._store()
+        return await store.capture_authentication(extra_origins=origins)
 
     async def mount_authentication(
-        self, browser_id: UUID, state: AuthenticationState
+        self, state: AuthenticationState
     ) -> None:
         for origin in state.local_storage:
             _validate_origin(origin.origin)
         for origin in state.indexed_db:
             _validate_origin(origin.origin)
-        await self._store(browser_id).restore_authentication(state)
+        store = self._store()
+        await store.restore_authentication(state)
 
-    async def capture_browser(self, browser_id: UUID) -> BrowserState:
-        return await self._store(browser_id).capture_browser()
+    async def capture_browser(self) -> BrowserState:
+        store = self._store()
+        return await store.capture_browser()
 
-    async def mount_browser(self, browser_id: UUID, state: BrowserState) -> None:
+    async def mount_browser(self, state: BrowserState) -> None:
         self._validate_browser(state)
-        await self._store(browser_id).restore_browser(state)
+        store = self._store()
+        await store.restore_browser(state)
 
-    def _store(self, browser_id: UUID) -> BrowserStateStore:
-        # Raises BrowserNotFoundException for an id the worker does not run.
-        return self._store_factory(self._browsers.upstream_cdp_url(browser_id))
+    def _store(self) -> BrowserStateStore:
+        cdp_url = self._browsers.upstream_cdp_url()
+        return self._store_factory(cdp_url)
 
     def _validate_browser(self, state: BrowserState) -> None:
         max_tabs = self._max_tabs

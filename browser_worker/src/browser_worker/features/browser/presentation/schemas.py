@@ -24,5 +24,5 @@ class BrowserResponse(BaseModel):
         return cls(
             id=browser.browser_id,
             generation=browser.generation,
-            cdp_url=f"{base_url}/api/v1/browser/{browser.browser_id}/cdp",
+            cdp_url=f"{base_url}/api/v1/browser/cdp",
         )

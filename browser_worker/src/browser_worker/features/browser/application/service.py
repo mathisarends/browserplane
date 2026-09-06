@@ -60,12 +60,10 @@ class BrowserService:
             raise BrowserNotFoundException
         return self._running
 
-    def upstream_cdp_url(self, browser_id: UUID) -> str:
-        """Resolve the endpoint a CDP client addressed by the browser's id."""
-        running = self._running
-        if running is None or running.browser_id != browser_id:
-            raise BrowserNotFoundException
-        return running.upstream_cdp_url
+    def upstream_cdp_url(self) -> str:
+        """Return the endpoint of the browser currently owned by this worker."""
+        browser = self.inspect()
+        return browser.upstream_cdp_url
 
     async def release(self) -> None:
         """Return the browser runtime to the worker's empty initial state."""

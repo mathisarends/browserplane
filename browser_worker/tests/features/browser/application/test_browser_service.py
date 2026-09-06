@@ -22,7 +22,7 @@ async def test_service_owns_browser_lifecycle() -> None:
 
     assert repeated is created
     assert service.get() is created
-    assert service.upstream_cdp_url(browser_id).endswith("/test")
+    assert service.upstream_cdp_url().endswith("/test")
     assert process.start_count == 1
 
     await service.release()
@@ -46,7 +46,7 @@ async def test_missing_browser_operations_fail_consistently() -> None:
     with pytest.raises(BrowserNotFoundException):
         service.get()
     with pytest.raises(BrowserNotFoundException):
-        service.upstream_cdp_url(uuid4())
+        service.upstream_cdp_url()
 
     await service.release()
     assert process.stop_count == 0

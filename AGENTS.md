@@ -10,3 +10,9 @@ Avoid locking down endpoint payloads, status codes, edge cases, or other API
 contracts that are still being explored. Prefer lightweight validation with the
 existing test suite, linting, type checks, or a direct startup/import check over
 adding broad new test coverage.
+
+## Readability
+
+Use descriptive intermediate variables for chained calls or attribute access
+when they represent distinct domain steps. Do not inline such expressions
+directly in a `return` merely to save a line.

@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from tests.fakes import FakeBrowserProcess
@@ -106,9 +106,9 @@ async def _running_service(
     store: FakeStore,
     *,
     max_tabs: int | None = None,
-) -> tuple[BrowserStateService, UUID]:
+) -> BrowserStateService:
     browsers = BrowserService(FakeBrowserProcess())
-    browser_id = await browsers.create(uuid4())
+    await browsers.create(uuid4())
     service = BrowserStateService(
         browsers,
         max_tabs
@@ -116,68 +116,68 @@ async def _running_service(
         else BrowserStateSettings(_env_file=None).max_tabs,
         lambda _: store,
     )
-    return service, browser_id
+    return service
 
 
 @pytest.mark.asyncio
 async def test_state_survives_a_mount_and_capture_roundtrip() -> None:
-    service, browser_id = await _running_service(FakeStore())
+    service = await _running_service(FakeStore())
 
     state = BrowserState.model_validate(BROWSER_STATE)
 
-    await service.mount_browser(browser_id, state)
-    captured = await service.capture_browser(browser_id)
+    await service.mount_browser(state)
+    captured = await service.capture_browser()
 
     assert captured.model_dump(mode="json", by_alias=True) == BROWSER_STATE
 
 
 @pytest.mark.asyncio
 async def test_authentication_survives_a_mount_and_capture_roundtrip() -> None:
-    service, browser_id = await _running_service(FakeStore())
+    service = await _running_service(FakeStore())
     state = AuthenticationState.model_validate(AUTHENTICATION_STATE)
 
-    await service.mount_authentication(browser_id, state)
-    captured = await service.capture_authentication(browser_id)
+    await service.mount_authentication(state)
+    captured = await service.capture_authentication()
 
     assert captured.model_dump(mode="json", by_alias=True) == AUTHENTICATION_STATE
 
 
 @pytest.mark.asyncio
 async def test_active_tab_index_outside_the_tabs_is_rejected() -> None:
-    service, browser_id = await _running_service(FakeStore())
+    service = await _running_service(FakeStore())
     state = BrowserState(
         tabs=[{"url": "https://a.example"}, {"url": "https://b.example"}],
         active_tab_index=3,
     )
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, state)
+        await service.mount_browser(state)
 
 
 @pytest.mark.asyncio
 async def test_non_web_tab_url_is_rejected() -> None:
-    service, browser_id = await _running_service(FakeStore())
+    service = await _running_service(FakeStore())
     state = BrowserState(tabs=[{"url": "file:///etc/passwd"}])
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, state)
+        await service.mount_browser(state)
 
 
 @pytest.mark.asyncio
 async def test_browser_state_with_too_many_tabs_is_rejected() -> None:
-    service, browser_id = await _running_service(FakeStore(), max_tabs=1)
+    service = await _running_service(FakeStore(), max_tabs=1)
     state = BrowserState(
         tabs=[{"url": "https://a.example"}, {"url": "https://b.example"}]
     )
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.mount_browser(browser_id, state)
+        await service.mount_browser(state)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("origin", ["example.com", "https://example.com/path"])
 async def test_capture_rejects_values_that_are_not_origins(origin: str) -> None:
-    service, browser_id = await _running_service(FakeStore())
+    service = await _running_service(FakeStore())
 
     with pytest.raises(BrowserStateInvalidException):
-        await service.capture_authentication(browser_id, (origin,))
+        await service.capture_authentication((origin,))

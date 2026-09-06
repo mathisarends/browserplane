@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Response, status
 from fastapi.responses import FileResponse
@@ -14,38 +12,36 @@ download_router = APIRouter(tags=["downloads"], route_class=DishkaRoute)
 
 
 @download_router.get(
-    "/browser/{browser_id}/downloads",
+    "/browser/downloads",
     operation_id="list_downloads",
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
 async def list_downloads(
-    browser_id: UUID,
     response: Response,
     service: FromDishka[DownloadService],
 ) -> list[DownloadResponse]:
     response.headers["Cache-Control"] = "no-store"
     return [
         DownloadResponse.model_validate(download)
-        for download in service.list(browser_id)
+        for download in service.list()
     ]
 
 
 @download_router.delete(
-    "/browser/{browser_id}/downloads",
+    "/browser/downloads",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="clear_downloads",
     responses=api_error_responses(BROWSER_NOT_FOUND),
 )
 async def clear_downloads(
-    browser_id: UUID,
     service: FromDishka[DownloadService],
 ) -> Response:
-    await service.clear(browser_id)
+    await service.clear()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @download_router.get(
-    "/browser/{browser_id}/downloads/{download_id}/file",
+    "/browser/downloads/{download_id}/file",
     operation_id="download_file",
     response_class=FileResponse,
     responses={
@@ -61,11 +57,10 @@ async def clear_downloads(
     },
 )
 async def download_file(
-    browser_id: UUID,
     download_id: str,
     service: FromDishka[DownloadService],
 ) -> FileResponse:
-    download = service.file(browser_id, download_id)
+    download = service.file(download_id)
     return FileResponse(
         download.path,
         media_type="application/octet-stream",

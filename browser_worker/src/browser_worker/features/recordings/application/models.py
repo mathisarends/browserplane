@@ -36,7 +36,6 @@ class Recording:
     """A screen recording of the worker's browser."""
 
     id: UUID
-    browser_id: UUID
     state: RecordingState
     started_at: datetime
     stopped_at: datetime | None = None

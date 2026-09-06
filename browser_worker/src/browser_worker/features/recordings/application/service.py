@@ -38,9 +38,9 @@ class RecordingService:
         self._recorder: ScreenRecorder | None = None
         self._lock = asyncio.Lock()
 
-    async def start(self, browser_id: UUID) -> Recording:
+    async def start(self) -> Recording:
         async with self._lock:
-            upstream_cdp_url = self._browsers.upstream_cdp_url(browser_id)
+            upstream_cdp_url = self._browsers.upstream_cdp_url()
             if (
                 self._recording is not None
                 and self._recording.state is not RecordingState.FAILED
@@ -48,7 +48,6 @@ class RecordingService:
                 raise RecordingAlreadyExistsException
             recording = Recording(
                 id=uuid4(),
-                browser_id=browser_id,
                 state=RecordingState.RECORDING,
                 started_at=datetime.now(UTC),
             )
@@ -59,9 +58,9 @@ class RecordingService:
             self._recorder = recorder
             return recording
 
-    async def stop(self, browser_id: UUID, recording_id: UUID) -> Recording:
+    async def stop(self, recording_id: UUID) -> Recording:
         async with self._lock:
-            recording = self.get(browser_id, recording_id)
+            recording = self.get(recording_id)
             recorder = self._recorder
             if recording.state is not RecordingState.RECORDING or recorder is None:
                 raise RecordingNotRunningException
@@ -92,18 +91,14 @@ class RecordingService:
             self._recording = completed
             return completed
 
-    def get(self, browser_id: UUID, recording_id: UUID) -> Recording:
+    def get(self, recording_id: UUID) -> Recording:
         recording = self._recording
-        if (
-            recording is None
-            or recording.id != recording_id
-            or recording.browser_id != browser_id
-        ):
+        if recording is None or recording.id != recording_id:
             raise RecordingNotFoundException
         return recording
 
-    def file(self, browser_id: UUID, recording_id: UUID) -> RecordingFile:
-        recording = self.get(browser_id, recording_id)
+    def file(self, recording_id: UUID) -> RecordingFile:
+        recording = self.get(recording_id)
         video = recording.video
         if recording.state is not RecordingState.COMPLETED or video is None:
             raise RecordingNotCompletedException
