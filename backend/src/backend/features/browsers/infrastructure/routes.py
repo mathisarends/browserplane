@@ -24,12 +24,12 @@ class BrowserWorkerRoutes:
 
     def recording_file_url(self, slot: BrowserSlot, recording_id: UUID) -> str:
         parsed = urlsplit(slot.browser_worker_url)
+        path = f"{self._base_path(parsed.path)}/recordings/{recording_id}/file"
         return urlunsplit(
             (
                 parsed.scheme,
                 parsed.netloc,
-                f"{self._base_path(parsed.path)}/{slot.id}/recordings/"
-                f"{recording_id}/file",
+                path,
                 "",
                 "",
             )
@@ -39,11 +39,12 @@ class BrowserWorkerRoutes:
         self, slot: BrowserSlot, stream: str, query: dict[str, str] | None = None
     ) -> str:
         parsed = urlsplit(slot.browser_worker_url)
+        path = f"{self._base_path(parsed.path)}/{stream}"
         return urlunsplit(
             (
                 "wss" if parsed.scheme == "https" else "ws",
                 parsed.netloc,
-                f"{self._base_path(parsed.path)}/{slot.id}/{stream}",
+                path,
                 urlencode(query) if query else "",
                 "",
             )

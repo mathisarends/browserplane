@@ -47,37 +47,37 @@ class BrowserWorkerRecorder(Recorder):
 
     async def start(self, browser: Browser) -> Recording:
         try:
-            recording = await self._client(browser).start_recording(browser.id)
+            client = self._client(browser)
+            recording = await client.start_recording()
         except ApiError as error:
             raise _recording_error(error) from error
         except (HTTPError, ValidationError, ValueError) as error:
             raise _transfer_error("start", error) from error
-        return _to_recording(recording)
+        return _to_recording(recording, browser_id=browser.id)
 
     async def inspect(self, browser: Browser, recording_id: UUID) -> Recording:
         try:
-            recording = await self._client(browser).inspect_recording(
-                browser.id,
-                recording_id,
-            )
+            client = self._client(browser)
+            recording = await client.inspect_recording(recording_id)
         except ApiError as error:
             raise _recording_error(error) from error
         except (HTTPError, ValidationError, ValueError) as error:
             raise _transfer_error("inspect", error) from error
-        return _to_recording(recording)
+        return _to_recording(recording, browser_id=browser.id)
 
     async def stop_and_store(self, browser: Browser, recording_id: UUID) -> Recording:
         try:
-            recording = await self._client(
+            client = self._client(
                 browser,
                 transfer=True,
-            ).stop_recording(browser.id, recording_id)
+            )
+            recording = await client.stop_recording(recording_id)
         except ApiError as error:
             raise _recording_error(error) from error
         except (HTTPError, ValidationError, ValueError) as error:
             raise _transfer_error("stop", error) from error
         await self._store_recording(browser, recording_id)
-        return _to_recording(recording)
+        return _to_recording(recording, browser_id=browser.id)
 
     async def file(self, browser: Browser, recording_id: UUID) -> bytes:
         """Fetch the completed video while its browser worker still owns it."""
@@ -158,10 +158,14 @@ def _recording_error(error: ApiError) -> Exception:
     return _transfer_error("communicate with", error)
 
 
-def _to_recording(recording: WorkerRecordingResponse) -> Recording:
+def _to_recording(
+    recording: WorkerRecordingResponse,
+    *,
+    browser_id: UUID,
+) -> Recording:
     return Recording(
         id=recording.id,
-        browser_id=recording.browser_id,
+        browser_id=browser_id,
         state=RecordingState(recording.state.value),
         started_at=recording.started_at,
         stopped_at=recording.stopped_at,
