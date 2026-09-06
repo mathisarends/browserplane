@@ -7,7 +7,7 @@ from tests.fakes import FakeFrameStream
 
 from browser_worker.features.screencast.infrastructure.dirty_rectangles import (
     DirtyRectangleJpegStream,
-    _encode_update,
+    encode_update,
 )
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
@@ -33,11 +33,9 @@ def test_encoder_sends_a_full_frame_then_only_changed_tiles() -> None:
     second = first.copy()
     ImageDraw.Draw(second).rectangle((0, 0, 10, 10), fill="black")
 
-    previous, first_packet, _ = _encode_update(_png(first), None, _settings())
-    previous, second_packet, _ = _encode_update(
-        _png(second), previous, _settings()
-    )
-    _, unchanged_packet, _ = _encode_update(_png(second), previous, _settings())
+    previous, first_packet, _ = encode_update(_png(first), None, _settings())
+    previous, second_packet, _ = encode_update(_png(second), previous, _settings())
+    _, unchanged_packet, _ = encode_update(_png(second), previous, _settings())
 
     assert first_packet is not None
     assert second_packet is not None

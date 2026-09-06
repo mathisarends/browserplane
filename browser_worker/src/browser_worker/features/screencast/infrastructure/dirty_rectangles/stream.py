@@ -1,35 +1,21 @@
 import asyncio
-import io
 import logging
 import queue
-import struct
 import threading
-import time
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass
-
-import numpy as np
-import numpy.typing as npt
-from PIL import Image
 
 from browser_worker.features.screencast.application.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
 )
 
+from .encoder import encode_update
+from .models import EncodedUpdate, RgbFrame
+
 logger = logging.getLogger(__name__)
 
-# Each update is one websocket message:
-#   frame header: magic, version, canvas width, canvas height, patch count
-#   patch*: x, y, width, height, JPEG byte length, JPEG bytes
-_FRAME_HEADER = struct.Struct("!4sBHHI")
-_PATCH_HEADER = struct.Struct("!HHHHI")
-_MAGIC = b"DRJP"
-_VERSION = 1
 _STREAM_ENDED = object()
-
-type RgbFrame = npt.NDArray[np.uint8]
 
 
 class DirtyRectangleJpegStream:
@@ -59,8 +45,8 @@ class DirtyRectangleJpegStream:
     async def _packets(self, frames: AsyncIterator[bytes]) -> AsyncIterator[bytes]:
         loop = asyncio.get_running_loop()
         input_queue: queue.Queue[bytes] = queue.Queue(maxsize=1)
-        output_queue: asyncio.Queue[_EncodedUpdate | Exception | object] = (
-            asyncio.Queue(maxsize=1)
+        output_queue: asyncio.Queue[EncodedUpdate | Exception | object] = asyncio.Queue(
+            maxsize=1
         )
         producer_done = threading.Event()
         stop = threading.Event()
@@ -100,7 +86,7 @@ class DirtyRectangleJpegStream:
                 if isinstance(item, Exception):
                     output_slot.release()
                     raise item
-                assert isinstance(item, _EncodedUpdate)
+                assert isinstance(item, EncodedUpdate)
                 logger.debug(
                     "Dirty JPEG frame decode=%.2fms diff=%.2fms encode=%.2fms "
                     "dirty=%.1f%% payload=%dB",
@@ -119,20 +105,6 @@ class DirtyRectangleJpegStream:
             producer.cancel()
             await asyncio.gather(producer, return_exceptions=True)
             await _wait_for_thread(worker)
-
-
-@dataclass(frozen=True, slots=True)
-class _Metrics:
-    decode_ms: float
-    diff_ms: float
-    encode_ms: float
-    dirty_ratio: float
-
-
-@dataclass(frozen=True, slots=True)
-class _EncodedUpdate:
-    packet: bytes
-    metrics: _Metrics
 
 
 async def _produce_latest_frames(
@@ -165,7 +137,7 @@ def _put_latest_frame(input_queue: queue.Queue[bytes], frame: bytes) -> None:
 
 def _encoder_worker(
     input_queue: queue.Queue[bytes],
-    output_queue: asyncio.Queue[_EncodedUpdate | Exception | object],
+    output_queue: asyncio.Queue[EncodedUpdate | Exception | object],
     loop: asyncio.AbstractEventLoop,
     output_slot: threading.Semaphore,
     producer_done: threading.Event,
@@ -186,14 +158,14 @@ def _encoder_worker(
             return
 
         try:
-            previous, packet, metrics = _encode_update(frame, previous, settings)
+            previous, packet, metrics = encode_update(frame, previous, settings)
         except Exception as error:
             _send_to_event_loop(loop, output_queue, error)
             return
         if packet is None:
             output_slot.release()
             continue
-        _send_to_event_loop(loop, output_queue, _EncodedUpdate(packet, metrics))
+        _send_to_event_loop(loop, output_queue, EncodedUpdate(packet, metrics))
 
 
 def _acquire_output_slot(
@@ -208,8 +180,8 @@ def _acquire_output_slot(
 
 def _send_to_event_loop(
     loop: asyncio.AbstractEventLoop,
-    output_queue: asyncio.Queue[_EncodedUpdate | Exception | object],
-    item: _EncodedUpdate | Exception | object,
+    output_queue: asyncio.Queue[EncodedUpdate | Exception | object],
+    item: EncodedUpdate | Exception | object,
 ) -> None:
     with suppress(RuntimeError):
         loop.call_soon_threadsafe(output_queue.put_nowait, item)
@@ -221,82 +193,3 @@ async def _wait_for_thread(worker: threading.Thread) -> None:
         await asyncio.sleep(0.01)
     if worker.is_alive():
         logger.warning("Dirty JPEG encoder thread did not stop within two seconds")
-
-
-def _encode_update(
-    frame_data: bytes,
-    previous: RgbFrame | None,
-    settings: DirtyRectangleSettings,
-) -> tuple[RgbFrame, bytes | None, _Metrics]:
-    started = time.perf_counter()
-    with Image.open(io.BytesIO(frame_data)) as image:
-        current = np.array(image.convert("RGB"), dtype=np.uint8)
-    decoded = time.perf_counter()
-
-    height, width, _ = current.shape
-    if width > 0xFFFF or height > 0xFFFF:
-        raise ValueError("Dirty rectangle JPEG stream supports canvases up to 65535px")
-
-    rows = (height + settings.tile_height - 1) // settings.tile_height
-    columns = (width + settings.tile_width - 1) // settings.tile_width
-    if previous is None or previous.shape != current.shape:
-        dirty_tiles = np.ones((rows, columns), dtype=np.bool_)
-    else:
-        changed_pixels = np.any(current != previous, axis=2)
-        padded = np.pad(
-            changed_pixels,
-            (
-                (0, rows * settings.tile_height - height),
-                (0, columns * settings.tile_width - width),
-            ),
-        )
-        dirty_tiles = padded.reshape(
-            rows,
-            settings.tile_height,
-            columns,
-            settings.tile_width,
-        ).any(axis=(1, 3))
-    diffed = time.perf_counter()
-
-    dirty_positions = np.argwhere(dirty_tiles)
-    if not len(dirty_positions):
-        return current, None, _Metrics(
-            decode_ms=(decoded - started) * 1000,
-            diff_ms=(diffed - decoded) * 1000,
-            encode_ms=0,
-            dirty_ratio=0,
-        )
-
-    parts = [
-        _FRAME_HEADER.pack(_MAGIC, _VERSION, width, height, len(dirty_positions))
-    ]
-    for row, column in dirty_positions:
-        x = int(column) * settings.tile_width
-        y = int(row) * settings.tile_height
-        patch_width = min(settings.tile_width, width - x)
-        patch_height = min(settings.tile_height, height - y)
-        patch = Image.fromarray(
-            current[y : y + patch_height, x : x + patch_width]
-        )
-        output = io.BytesIO()
-        patch.save(output, format="JPEG", quality=settings.jpeg_quality)
-        jpeg = output.getvalue()
-        parts.extend(
-            (
-                _PATCH_HEADER.pack(
-                    x,
-                    y,
-                    patch_width,
-                    patch_height,
-                    len(jpeg),
-                ),
-                jpeg,
-            )
-        )
-    encoded = time.perf_counter()
-    return current, b"".join(parts), _Metrics(
-        decode_ms=(decoded - started) * 1000,
-        diff_ms=(diffed - decoded) * 1000,
-        encode_ms=(encoded - diffed) * 1000,
-        dirty_ratio=len(dirty_positions) / dirty_tiles.size,
-    )
