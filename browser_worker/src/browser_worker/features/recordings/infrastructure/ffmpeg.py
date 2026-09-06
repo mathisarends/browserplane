@@ -1,5 +1,3 @@
-"""Everything the worker drives FFmpeg with: the binary, the encoder, the port."""
-
 import asyncio
 import logging
 import shutil
