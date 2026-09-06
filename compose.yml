@@ -122,7 +122,7 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
-    environment:
+    environment: &backend-environment
       - PORT=8000
       - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
       - BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY=${BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY:?Run scripts/generate_fernet_key.sh and add its output to .env}
@@ -136,10 +136,6 @@ services:
       - BACKEND_BROWSER_WORKER_1_URL=http://browser-worker-1:8000
       - BACKEND_BROWSER_WORKER_2_URL=http://browser-worker-2:8000
     depends_on:
-      browser-worker-1:
-        condition: service_healthy
-      browser-worker-2:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
       minio-init:
@@ -149,6 +145,21 @@ services:
       interval: 2s
       timeout: 2s
       retries: 20
+
+  scheduler:
+    image: browser-provisioner-backend:local
+    pull_policy: never
+    command: ["python", "-m", "backend.scheduler"]
+    environment: *backend-environment
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      browser-worker-1:
+        condition: service_healthy
+      browser-worker-2:
+        condition: service_healthy
 
 volumes:
   postgres-data:

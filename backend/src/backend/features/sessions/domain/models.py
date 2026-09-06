@@ -71,7 +71,7 @@ class Session:
 
 
 @dataclass(frozen=True, slots=True)
-class SessionContext:
+class ResolvedSession:
     """A session aggregate together with its currently bound resources."""
 
     session: Session
@@ -92,11 +92,13 @@ class SessionContext:
                 raise ValueError("Lease must belong to the browser")
 
     @classmethod
-    def active(cls, session: Session, lease: Lease, browser: Browser) -> SessionContext:
+    def active(
+        cls, session: Session, lease: Lease, browser: Browser
+    ) -> ResolvedSession:
         return cls(session=session, _lease=lease, _browser=browser)
 
     @classmethod
-    def inactive(cls, session: Session) -> SessionContext:
+    def inactive(cls, session: Session) -> ResolvedSession:
         return cls(session=session)
 
     @property

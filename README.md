@@ -74,6 +74,27 @@ credentials. Reachable only via `BACKEND_BROWSER_*_BROWSER_WORKER_URL`.
 Live traffic uses two transports: the backend WebSocket for JSON-RPC and
 tab/navigation/cursor state, a browser worker WebSocket for binary JPEG frames.
 
+### Control plane and data plane
+
+The line through the whole system: the **control plane** decides who may use
+which browser until when — its truth is a Postgres row, and it survives a crash.
+The **data plane** *is* the browser — its truth is a running process, and it is
+thrown away. Neither derives the other's answer.
+
+- A `READY` row does not prove a clean Chromium, and a live Chromium entitles
+  nobody to use it. Only a proven cleanup plus a fresh runtime makes a slot
+  `READY` again — an expiring lease never does.
+- A **lease** is a renewable, time-boxed claim on one browser slot: heartbeat
+  10 s, TTL 30 s, then 45 s of grace in which the same holder can come back.
+  After that the reclaim is irreversible.
+- The **generation** is the fence. It rides along on every worker lifecycle
+  call, and the hard reclaim replaces the Chromium process — so a stale holder
+  is dead, not merely unauthorized.
+- Nothing is released because a socket dropped; deadlines release things. A
+  reloaded tab reattaches, a hung stream cannot pin a browser.
+
+Details and diagrams: [`docs/`](docs/README.md).
+
 ## Tunneled events
 
 **Navigation:** navigate, back, forward, reload (optional cache bypass), stop.
@@ -140,15 +161,20 @@ one.
 
 ## Session state
 
-Two independent documents:
+Two independent documents — *who you are* and *where you were*:
 
-- `authentication_state` — cookies and origin-localStorage, reusable as a
-  browser profile.
+- `authentication_state` — cookies and origin-localStorage, reusable as a named
+  browser profile, encrypted at rest.
 - `browser_state` — tabs, active-tab index, scroll positions, per-tab
-  sessionStorage.
+  sessionStorage, captured as a checkpoint.
 
-`POST /api/v1/sessions` accepts either or both; authentication is mounted
-first, so restored tabs navigate logged in. A running session exposes each at
+Splitting them is what lets one login start fifty fresh browsers, and lets a
+restored set of tabs land on a different identity. `POST /api/v1/sessions`
+accepts either or both; authentication is mounted first, so restored tabs
+navigate logged in instead of bouncing off a login screen. Suspend captures both
+and hands the browser back; resume mounts them onto whichever slot is free, so
+the session id is stable while the browser underneath is not. See
+[`docs/session-state.md`](docs/session-state.md). A running session exposes each at
 `/api/v1/sessions/{id}/authentication-state` and
 `/api/v1/sessions/{id}/browser-state` (`GET`/`PUT`). Suspend/resume keeps both,
 stored separately.

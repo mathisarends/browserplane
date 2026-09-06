@@ -35,4 +35,4 @@ class Browser:
 
     @property
     def is_available(self) -> bool:
-        return self.state is BrowserState.READY
+        return self.state in (BrowserState.READY, BrowserState.STOPPED)

@@ -5,6 +5,7 @@ from dishka.integrations.fastapi import setup_dishka
 from fastapi import APIRouter, FastAPI
 
 from backend.container import create_container
+from backend.features.browser_requests.feature import feature as browser_requests_feature
 from backend.features.admin.feature import feature as admin_feature
 from backend.features.browser_tunnel.feature import feature as browser_tunnel_feature
 from backend.features.browsers.feature import feature as browsers_feature
@@ -19,6 +20,7 @@ from backend.shared.feature import Feature
 
 API_PREFIX = "/api/v1"
 FEATURES = (
+    browser_requests_feature,
     health_feature,
     browser_tunnel_feature,
     browsers_feature,

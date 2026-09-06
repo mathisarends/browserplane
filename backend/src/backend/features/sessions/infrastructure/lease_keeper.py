@@ -6,7 +6,7 @@ from uuid import UUID
 from dishka import AsyncContainer, Scope
 
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import SessionContext
+from backend.features.sessions.domain.models import ResolvedSession
 
 
 class SessionLeaseKeeper:
@@ -20,7 +20,9 @@ class SessionLeaseKeeper:
         self._container = container
         self._heartbeat_interval_seconds = heartbeat_interval_seconds
 
-    async def resolve(self, session_id: UUID, *, renew: bool = False) -> SessionContext:
+    async def resolve(
+        self, session_id: UUID, *, renew: bool = False
+    ) -> ResolvedSession:
         """Resolve one session in a short unit of work outside the live stream."""
         async with self._container(scope=Scope.REQUEST) as scoped:
             service = await scoped.get(SessionService)

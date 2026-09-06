@@ -8,12 +8,17 @@ from backend.features.sessions.domain.models import SessionStatus
 
 class OpenSessionRequest(BaseModel):
     owner_id: UUID
+    request_id: UUID | None = None
+    timeout_seconds: float = Field(default=60, gt=0, le=900)
+    test_run_id: UUID | None = None
     ttl_seconds: int | None = Field(default=None, deprecated=True, exclude=True)
     authentication_profile_id: UUID | None = None
     browser_checkpoint_id: UUID | None = None
 
 
 class ResumeSessionRequest(BaseModel):
+    request_id: UUID | None = None
+    timeout_seconds: float = Field(default=60, gt=0, le=900)
     ttl_seconds: int | None = Field(default=None, deprecated=True, exclude=True)
 
 

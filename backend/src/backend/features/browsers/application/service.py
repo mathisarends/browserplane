@@ -32,11 +32,12 @@ class BrowserService:
         self._repository = repository
 
     async def start(self) -> None:
+        """Register configured slots without starting worker runtimes."""
         now = datetime.now(UTC)
         for slot in await self._provisioner.provision():
             existing = await self._repository.get_by_id(browser_id=slot.id)
             browser = (
-                Browser(slot=slot, created_at=now)
+                Browser(slot=slot, created_at=now, state=BrowserState.STOPPED)
                 if existing is None
                 else Browser(
                     slot=slot,
@@ -45,7 +46,6 @@ class BrowserService:
                     generation=existing.generation,
                 )
             )
-            await self._provisioner.start(slot, browser.generation)
             await self._repository.save(browser=browser)
 
     async def stop(self) -> None:
@@ -74,6 +74,7 @@ class BrowserService:
         async with self._browser_worker(browser.slot):
             await self._provisioner.release(browser.slot, browser.generation)
         browser.state = BrowserState.STOPPED
+        browser.generation += 1
         logger.info("Browser released browser_id=%s", browser.id)
         return await self._repository.save(browser=browser)
 
@@ -103,7 +104,7 @@ class BrowserService:
         return browser.generation
 
     async def recycle(self, browser_id: UUID) -> None:
-        """Replace a leased runtime before returning its slot to the pool."""
+        """Clean a leased runtime; the next request starts its replacement."""
         browser = await self._repository.get_by_id(browser_id=browser_id)
         if browser is None or browser.state in (
             BrowserState.READY,
@@ -116,12 +117,11 @@ class BrowserService:
             async with self._browser_worker(browser.slot):
                 await self._provisioner.release(browser.slot, browser.generation)
                 browser.generation += 1
-                await self._provisioner.start(browser.slot, browser.generation)
         except Exception:
             browser.state = BrowserState.FAILED
             await self._repository.save(browser=browser)
             raise
-        browser.state = BrowserState.READY
+        browser.state = BrowserState.STOPPED
         await self._repository.save(browser=browser)
 
     @asynccontextmanager

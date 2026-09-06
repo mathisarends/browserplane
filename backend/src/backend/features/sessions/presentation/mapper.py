@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from backend.features.sessions.domain.models import (
     AuthenticationProfile,
     BrowserCheckpoint,
-    SessionContext,
+    ResolvedSession,
 )
 from backend.features.sessions.presentation.schemas import (
     AuthenticationProfileResponse,
@@ -16,7 +16,7 @@ from backend.features.sessions.presentation.schemas import (
 SESSION_PATH = "/api/v1/sessions"
 
 
-def to_session_response(context: SessionContext) -> SessionResponse:
+def to_session_response(context: ResolvedSession) -> SessionResponse:
     session = context.session
     has_browser = context.browser_id is not None
     return SessionResponse(
@@ -37,7 +37,7 @@ def to_session_response(context: SessionContext) -> SessionResponse:
 
 
 def to_open_session_response(
-    session: SessionContext, *, remaining_capacity: int
+    session: ResolvedSession, *, remaining_capacity: int
 ) -> OpenSessionResponse:
     return OpenSessionResponse(
         **to_session_response(session).model_dump(),
@@ -46,7 +46,7 @@ def to_open_session_response(
 
 
 def to_owner_sessions_response(
-    sessions: Sequence[SessionContext], *, remaining_capacity: int
+    sessions: Sequence[ResolvedSession], *, remaining_capacity: int
 ) -> OwnerSessionsResponse:
     return OwnerSessionsResponse(
         sessions=[to_session_response(session) for session in sessions],

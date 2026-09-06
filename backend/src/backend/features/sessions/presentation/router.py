@@ -3,7 +3,10 @@ from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Response, WebSocket, status
+from fastapi import APIRouter, Request, Response, WebSocket, status
+
+from backend.features.browser_requests.application import ControlPlane
+from backend.features.browser_requests.presentation import acquire_session
 
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
@@ -14,7 +17,7 @@ from backend.features.sessions.application.exceptions import (
     SessionNotActiveException,
 )
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import SessionContext
+from backend.features.sessions.domain.models import ResolvedSession
 from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
@@ -63,13 +66,19 @@ logger = logging.getLogger(__name__)
     responses=api_error_responses(NO_BROWSER_AVAILABLE),
 )
 async def open_session(
-    request: OpenSessionRequest, service: FromDishka[SessionService]
+    request: OpenSessionRequest, http_request: Request,
+    service: FromDishka[SessionService],
+    control: FromDishka[ControlPlane],
 ) -> OpenSessionResponse:
-    session = await service.open(
+    session_id = await acquire_session(http_request, http_request.app.state.dishka_container, control,
         owner_id=request.owner_id,
+        request_id=request.request_id,
+        timeout_seconds=request.timeout_seconds,
+        test_run_id=request.test_run_id,
         authentication_profile_id=request.authentication_profile_id,
         browser_checkpoint_id=request.browser_checkpoint_id,
     )
+    session = await service.get_active(session_id)
     return to_open_session_response(
         session, remaining_capacity=await service.remaining_capacity()
     )
@@ -413,9 +422,14 @@ async def resume_session(
     session_id: UUID,
     request: ResumeSessionRequest,
     service: FromDishka[SessionService],
+    http_request: Request,
+    control: FromDishka[ControlPlane],
 ) -> SessionResponse:
     """Mount a parked session onto whichever browser is free now."""
-    session = await service.resume(session_id)
+    await acquire_session(http_request, http_request.app.state.dishka_container, control,
+        resume_session_id=session_id, request_id=request.request_id,
+        timeout_seconds=request.timeout_seconds)
+    session = await service.get_active(session_id)
     return to_session_response(session)
 
 
@@ -513,7 +527,7 @@ async def _resolve(
     session_id: UUID,
     *,
     renew: bool = False,
-) -> SessionContext | None:
+) -> ResolvedSession | None:
     """Look up the live session, closing the socket in session terms when it is gone."""
     try:
         return await lease_keeper.resolve(session_id, renew=renew)
