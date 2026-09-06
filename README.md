@@ -195,10 +195,14 @@ BACKEND_LEASE_*                              heartbeat 10s, TTL 30s, grace 45s
 BACKEND_BROWSER_WORKER_{1,2}_URL             internal worker addresses only
 BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY  scripts/generate_fernet_key.sh
 BROWSER_WORKER_EXECUTABLE / _HEADLESS / _CAPACITY / _STARTUP_TIMEOUT
+STORAGE_BUCKET / _ENDPOINT / _REGION / _PREFIX / _ACCESS_KEY / _SECRET_KEY
 ```
 
 Completed recordings are streamed from the worker into the `recordings/` prefix
-of the S3-compatible `browser-recordings` bucket. MinIO serves S3 on
+of the S3-compatible `browser-recordings` bucket; leaving `STORAGE_BUCKET`
+unset drains recordings into a no-op store instead. The transfer runs through
+[obstore](https://github.com/developmentseed/obstore), which streams the body
+and switches to a multipart upload on its own. MinIO serves S3 on
 `http://localhost:9000` and its console on `http://localhost:9001`; credentials
 default to `minioadmin` / `minioadmin` and are overridden with
 `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_RECORDINGS_BUCKET`.

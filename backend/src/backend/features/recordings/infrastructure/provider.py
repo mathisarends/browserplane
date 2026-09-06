@@ -9,7 +9,7 @@ from backend.features.recordings.infrastructure.browser_worker import (
     BrowserWorkerRecorder,
 )
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
-from backend.infrastructure.bucket import Bucket
+from backend.infrastructure.storage import ObjectStorage
 
 
 class RecordingProvider(Provider):
@@ -20,12 +20,12 @@ class RecordingProvider(Provider):
     @provide(scope=Scope.APP, provides=Recorder)
     def recorder(
         self,
-        bucket: Bucket,
+        storage: ObjectStorage,
         http: AsyncClient,
         settings: BrowserWorkerSettings,
         routes: BrowserWorkerRoutes,
     ) -> Recorder:
-        return self._recorder or BrowserWorkerRecorder(bucket, http, settings, routes)
+        return self._recorder or BrowserWorkerRecorder(storage, http, settings, routes)
 
     @provide(scope=Scope.REQUEST)
     def service(self, browsers: BrowserService, recorder: Recorder) -> RecordingService:

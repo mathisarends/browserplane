@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
-class BucketObject:
+class StoredObject:
     """An object whose body can be relayed without loading it all into memory."""
 
     key: str

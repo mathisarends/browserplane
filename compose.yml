@@ -126,11 +126,11 @@ services:
       - PORT=8000
       - BACKEND_DATABASE_URL=postgresql+asyncpg://browser:browser@postgres:5432/browser
       - BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY=${BACKEND_AUTHENTICATION_STATE_ENCRYPTION_KEY:?Run scripts/generate_fernet_key.sh and add its output to .env}
-      - BUCKET_NAME=${MINIO_RECORDINGS_BUCKET:-browser-recordings}
-      - BUCKET_ENDPOINT=http://minio:9000
-      - BUCKET_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
-      - BUCKET_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
-      - BUCKET_PREFIX=recordings
+      - STORAGE_BUCKET=${MINIO_RECORDINGS_BUCKET:-browser-recordings}
+      - STORAGE_ENDPOINT=http://minio:9000
+      - STORAGE_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - STORAGE_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - STORAGE_PREFIX=recordings
       # Only internal browser-worker addresses are configured. RPC and live-traffic
       # endpoints exposed to the frontend belong to the backend itself.
       - BACKEND_BROWSER_WORKER_1_URL=http://browser-worker-1:8000

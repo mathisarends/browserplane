@@ -20,7 +20,7 @@ from backend.features.recordings.application.models import (
 )
 from backend.features.recordings.application.ports import Recorder
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
-from backend.infrastructure.bucket import Bucket, BucketObject
+from backend.infrastructure.storage import ObjectStorage, StoredObject
 from generated.browser_worker import (
     ApiError,
     GeneratedBrowserWorkerClient,
@@ -35,12 +35,12 @@ logger = logging.getLogger(__name__)
 class BrowserWorkerRecorder(Recorder):
     def __init__(
         self,
-        bucket: Bucket,
+        storage: ObjectStorage,
         http: AsyncClient,
         settings: BrowserWorkerSettings,
         routes: BrowserWorkerRoutes,
     ) -> None:
-        self._bucket = bucket
+        self._storage = storage
         self._http = http
         self._settings = settings
         self._routes = routes
@@ -111,8 +111,8 @@ class BrowserWorkerRecorder(Recorder):
                 response.raise_for_status()
                 content = response.aiter_bytes(chunk_size=64 * 1024)
                 try:
-                    await self._bucket.put(
-                        BucketObject(
+                    await self._storage.put(
+                        StoredObject(
                             key=str(
                                 PurePosixPath(
                                     str(browser.id),
