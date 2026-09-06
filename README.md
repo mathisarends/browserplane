@@ -55,7 +55,7 @@ CDP into a CSS cursor in the frontend (it is not part of the frame stream).
 session (`POST /api/v1/sessions`), gets back two backend-relative paths, draws
 frames onto a `<canvas>` and replays every DOM event as a CDP input command.
 
-**Gateway** (`backend/src/backend/browser_tunnel/`) — session-bound edge.
+**Gateway** (`backend/src/backend/features/browser_tunnel/`) — session-bound edge.
 Speaks JSON-RPC 2.0, translates to CDP, relays frames, keeps worker and CDP
 addresses off the wire. `application/` defines what a browser can do,
 `infrastructure/cdp_browser` implements it over CDP, `presentation/` exposes

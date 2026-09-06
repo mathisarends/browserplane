@@ -14,10 +14,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "generate": "npm run generate:rpc && npm run generate:api",
-    "generate:rpc": "uv run python -m backend.browser_tunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
+    "generate:rpc": "uv run python -m backend.features.browser_tunnel.schema_export && uv run python ../scripts/generate_rpc_client.py",
     "generate:api": "uv run python ../scripts/export_openapi_schemas.py && orval && prettier --write generated-backend/src/generated",
     "check:generated": "npm run check:rpc && npm run check:api",
-    "check:rpc": "uv run python -m backend.browser_tunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
+    "check:rpc": "uv run python -m backend.features.browser_tunnel.schema_export && uv run python ../scripts/generate_rpc_client.py --check",
     "check:api": "npm run generate:api && git diff --quiet -- generated-backend/src/generated",
     "check:clients": "npm run check --workspaces --if-present"
   },

@@ -1352,7 +1352,6 @@ export const getListPooledBrowsersUrl = () => {
 }
 
 /**
- * The whole pool, including the browsers no session can be opened on.
  * @summary List Pooled Browsers
  */
 export const listPooledBrowsers = async ( options?: RequestInit): Promise<listPooledBrowsersResponse> => {
@@ -1413,7 +1412,6 @@ export const getDestroyPooledBrowserUrl = (browserId: string,) => {
 }
 
 /**
- * Stop the browser process. Its session, if any, is dropped with it.
  * @summary Destroy Pooled Browser
  */
 export const destroyPooledBrowser = async (browserId: string, options?: RequestInit): Promise<destroyPooledBrowserResponse> => {
@@ -1474,7 +1472,6 @@ export const getRestartPooledBrowserUrl = (browserId: string,) => {
 }
 
 /**
- * Put a fresh browser behind the slot and hand it back to the pool.
  * @summary Restart Pooled Browser
  */
 export const restartPooledBrowser = async (browserId: string, options?: RequestInit): Promise<restartPooledBrowserResponse> => {
@@ -1525,7 +1522,6 @@ export const getListSessionsUrl = () => {
 }
 
 /**
- * Active and suspended sessions in one list, newest first.
  * @summary List Sessions
  */
 export const listSessions = async ( options?: RequestInit): Promise<listSessionsResponse> => {
