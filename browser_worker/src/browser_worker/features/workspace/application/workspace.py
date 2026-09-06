@@ -1,6 +1,8 @@
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from uuid import UUID
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,13 +28,28 @@ class Workspace:
         return self.root / "artifacts"
 
     def ensure(self) -> None:
-        for directory in (
-            self.uploads,
-            self.downloads,
-            self.recordings,
-            self.artifacts,
-        ):
+        for directory in self.directories:
             directory.mkdir(parents=True, exist_ok=True)
+
+    def create_recording_directory(self, recording_id: UUID) -> Path:
+        """Create and return the workspace directory for one recording."""
+        self.recordings.mkdir(parents=True, exist_ok=True)
+        directory = self.recordings / str(recording_id)
+        directory.mkdir()
+        return directory
+
+    @property
+    def directories(self) -> tuple[Path, ...]:
+        """Directories exclusively owned by this worker."""
+        return self.uploads, self.downloads, self.recordings, self.artifacts
+
+    def clear(self) -> None:
+        """Remove all worker-owned files while leaving the configured root alone."""
+        for directory in self.directories:
+            if directory.is_symlink() or directory.is_file():
+                directory.unlink(missing_ok=True)
+            elif directory.exists():
+                shutil.rmtree(directory)
 
     def is_available(self) -> bool:
         try:

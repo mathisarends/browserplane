@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Response, WebSocket, status
+from fastapi import APIRouter, WebSocket, status
 
 from browser_worker.features.browser.application.exceptions import (
     BrowserNotFoundException,
@@ -53,20 +53,6 @@ async def inspect_browser(
 ) -> BrowserResponse:
     browser = service.get()
     return to_browser_response(browser, settings.public_base_url)
-
-
-@browser_router.delete(
-    "/browser",
-    status_code=status.HTTP_204_NO_CONTENT,
-    operation_id="destroy_browser",
-)
-async def destroy_browser(
-    service: FromDishka[BrowserService],
-    downloads: FromDishka[DownloadService],
-) -> Response:
-    await downloads.stop()
-    await service.destroy()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @browser_router.websocket("/browser/{browser_id}/cdp")

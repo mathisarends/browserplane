@@ -8,6 +8,7 @@ from browser_worker.features.browser.infrastructure import BrowserProvider
 from browser_worker.features.downloads.feature import feature as downloads_feature
 from browser_worker.features.health.feature import feature as health_feature
 from browser_worker.features.recordings.feature import feature as recordings_feature
+from browser_worker.features.release.feature import feature as release_feature
 from browser_worker.features.screencast.feature import feature as screencast_feature
 from browser_worker.features.state.feature import feature as state_feature
 from browser_worker.lifespan import lifespan
@@ -23,6 +24,7 @@ FEATURES = (
     state_feature,
     downloads_feature,
     recordings_feature,
+    release_feature,
 )
 
 

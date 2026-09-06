@@ -37,3 +37,6 @@ class FakeFrameStream(FrameStream):
     async def _frames(self) -> AsyncIterator[bytes]:
         for frame in self._items:
             yield frame
+
+    async def close(self) -> None:
+        pass

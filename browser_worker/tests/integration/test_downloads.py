@@ -107,4 +107,4 @@ async def test_download_service_collects_and_clears_a_chromium_download(
             assert not download.path.exists()
     finally:
         await downloads.stop()
-        await browsers.destroy()
+        await browsers.release()

@@ -72,21 +72,23 @@ async def test_service_records_the_active_tab_into_one_video(tmp_path: Path) -> 
     with pytest.raises(RecordingNotRunningException):
         await service.stop(browser.id, recording.id)
 
-    await service.destroy()
-    assert recorder.closed is True
+    await service.release()
+    assert recorder.closed is False
 
 
 @pytest.mark.asyncio
 async def test_only_one_recording_can_run_at_a_time(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
-    service = RecordingService(browsers, Workspace(tmp_path), lambda _: FakeRecorder())
+    recorder = FakeRecorder()
+    service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
     browser = await browsers.create(uuid4())
     await service.start(browser.id)
 
     with pytest.raises(RecordingAlreadyRunningException):
         await service.start(browser.id)
 
-    await service.destroy()
+    await service.release()
+    assert recorder.closed is True
 
 
 @pytest.mark.asyncio
@@ -103,7 +105,7 @@ async def test_unfinished_and_unknown_recordings_have_no_files(tmp_path: Path) -
     with pytest.raises(RecordingNotFoundException):
         service.get(browser.id, uuid4())
 
-    await service.destroy()
+    await service.release()
 
 
 @pytest.mark.asyncio
@@ -111,7 +113,8 @@ async def test_failed_stop_releases_the_browser_for_another_recording(
     tmp_path: Path,
 ) -> None:
     browsers = BrowserService(FakeBrowserProcess())
-    recorders = iter((FailingRecorder(), FakeRecorder()))
+    failing_recorder = FailingRecorder()
+    recorders = iter((failing_recorder, FakeRecorder()))
     service = RecordingService(browsers, Workspace(tmp_path), lambda _: next(recorders))
     browser = await browsers.create(uuid4())
     failed = await service.start(browser.id)
@@ -120,7 +123,8 @@ async def test_failed_stop_releases_the_browser_for_another_recording(
         await service.stop(browser.id, failed.id)
 
     assert service.get(browser.id, failed.id).state is RecordingState.FAILED
+    assert failing_recorder.closed is True
     replacement = await service.start(browser.id)
     assert replacement.state is RecordingState.RECORDING
 
-    await service.destroy()
+    await service.release()

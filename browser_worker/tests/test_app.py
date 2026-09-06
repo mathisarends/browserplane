@@ -19,7 +19,11 @@ def test_worker_exposes_health_and_readiness() -> None:
     assert process.stop_count == 0
 
 
-def test_openapi_identifies_the_browser_worker() -> None:
+def test_openapi_identifies_the_browser_worker_and_release_route() -> None:
     document = create_app().openapi()
 
     assert document["info"]["title"] == "Browser Worker"
+    assert document["paths"]["/api/v1/release"]["post"]["operationId"] == (
+        "release_worker"
+    )
+    assert "delete" not in document["paths"]["/api/v1/browser"]

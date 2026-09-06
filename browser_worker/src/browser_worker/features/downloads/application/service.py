@@ -102,17 +102,17 @@ class DownloadService:
 
     async def stop(self) -> None:
         tasks, self._tasks = self._tasks, ()
+        client, self._client = self._client, None
+        self._browser_id = None
+        self._pending.clear()
+        self._downloads.clear()
         for task in tasks:
             task.cancel()
         for task in tasks:
             with suppress(asyncio.CancelledError):
                 await task
-        if self._client is not None:
-            await self._client.disconnect()
-        self._client = None
-        self._browser_id = None
-        self._pending.clear()
-        self._downloads.clear()
+        if client is not None:
+            await client.disconnect()
 
     async def _listen_for_starts(self, client: Client) -> None:
         async for event in client.listen(

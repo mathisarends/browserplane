@@ -10,5 +10,9 @@ class FrameStream(ABC):
     @abstractmethod
     def subscribe(self) -> FrameSubscription: ...
 
+    @abstractmethod
+    async def close(self) -> None:
+        """Close the stream and all of its browser-side resources."""
+
 
 type FrameStreamFactory = Callable[[str], FrameStream]

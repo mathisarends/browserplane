@@ -1,9 +1,7 @@
 import asyncio
-import shutil
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import UUID, uuid4
 
 from browser_worker.features.browser.application.service import BrowserService
@@ -26,12 +24,11 @@ RecorderFactory = Callable[[str], ScreenRecorder]
 
 
 @dataclass(slots=True)
-class StoredRecording:
-    """A recording together with the recorder and directory backing it."""
+class ActiveRecording:
+    """The single recorder that currently owns live browser resources."""
 
-    recording: Recording
+    id: UUID
     recorder: ScreenRecorder
-    directory: Path
 
 
 class RecordingService:
@@ -44,15 +41,16 @@ class RecordingService:
         self._browsers = browsers
         self._workspace = workspace
         self._recorder_factory = recorder_factory
-        self._stored: dict[UUID, StoredRecording] = {}
-        self._active: UUID | None = None
-        self._storage: Path | None = None
+        # Completed and failed recordings remain queryable until the worker is reset.
+        # Only _active_recording owns a live recorder; recordings are not segments.
+        self._recordings_by_id: dict[UUID, Recording] = {}
+        self._active_recording: ActiveRecording | None = None
         self._lock = asyncio.Lock()
 
     async def start(self, browser_id: UUID) -> Recording:
         async with self._lock:
             upstream_cdp_url = self._browsers.upstream_cdp_url(browser_id)
-            if self._active is not None:
+            if self._active_recording is not None:
                 raise RecordingAlreadyRunningException
             recording = Recording(
                 id=uuid4(),
@@ -60,44 +58,55 @@ class RecordingService:
                 state=RecordingState.RECORDING,
                 started_at=datetime.now(UTC),
             )
-            directory = self._storage_path() / str(recording.id)
-            directory.mkdir()
+            directory = self._workspace.create_recording_directory(recording.id)
             recorder = self._recorder_factory(upstream_cdp_url)
             await recorder.start(directory)
-            self._stored[recording.id] = StoredRecording(
-                recording=recording,
+            self._recordings_by_id[recording.id] = recording
+            self._active_recording = ActiveRecording(
+                id=recording.id,
                 recorder=recorder,
-                directory=directory,
             )
-            self._active = recording.id
             return recording
 
     async def stop(self, browser_id: UUID, recording_id: UUID) -> Recording:
         async with self._lock:
-            stored = self._get(browser_id, recording_id)
-            if stored.recording.state is not RecordingState.RECORDING:
+            recording = self._get(browser_id, recording_id)
+            active = self._active_recording
+            if (
+                recording.state is not RecordingState.RECORDING
+                or active is None
+                or active.id != recording_id
+            ):
                 raise RecordingNotRunningException
             try:
-                video = await stored.recorder.stop()
-            except Exception:
-                stored.recording = replace(
-                    stored.recording,
+                video = await active.recorder.stop()
+            except Exception as stop_error:
+                self._recordings_by_id[recording_id] = replace(
+                    recording,
                     state=RecordingState.FAILED,
                     stopped_at=datetime.now(UTC),
                 )
+                try:
+                    await active.recorder.close()
+                except Exception as close_error:
+                    raise ExceptionGroup(
+                        "Could not stop and close recording",
+                        [stop_error, close_error],
+                    ) from stop_error
                 raise
             finally:
-                self._active = None
-            stored.recording = replace(
-                stored.recording,
+                self._active_recording = None
+            completed = replace(
+                recording,
                 state=RecordingState.COMPLETED,
                 stopped_at=datetime.now(UTC),
                 video=video,
             )
-            return stored.recording
+            self._recordings_by_id[recording_id] = completed
+            return completed
 
     def get(self, browser_id: UUID, recording_id: UUID) -> Recording:
-        return self._get(browser_id, recording_id).recording
+        return self._get(browser_id, recording_id)
 
     def file(self, browser_id: UUID, recording_id: UUID) -> RecordingFile:
         return _to_file(recording_id, self._completed_video(browser_id, recording_id))
@@ -112,38 +121,32 @@ class RecordingService:
             raise RecordingNotFoundException(f"Recording has no segment {index}")
         return self.file(browser_id, recording_id)
 
-    async def destroy(self) -> None:
+    async def release(self) -> None:
+        """Close the active recorder and forget the in-memory history.
+
+        The worker-level release owns deletion of files through ``Workspace.clear``.
+        """
         async with self._lock:
-            stored = tuple(self._stored.values())
-            self._stored.clear()
-            self._active = None
-            for entry in stored:
-                await entry.recorder.close()
-                shutil.rmtree(entry.directory, ignore_errors=True)
-            if self._storage is not None:
-                self._storage = None
+            active, self._active_recording = self._active_recording, None
+            self._recordings_by_id.clear()
+            if active is not None:
+                await active.recorder.close()
 
     def _completed_video(
         self,
         browser_id: UUID,
         recording_id: UUID,
     ) -> RecordedVideo:
-        recording = self._get(browser_id, recording_id).recording
+        recording = self._get(browser_id, recording_id)
         if recording.state is not RecordingState.COMPLETED or recording.video is None:
             raise RecordingNotCompletedException
         return recording.video
 
-    def _get(self, browser_id: UUID, recording_id: UUID) -> StoredRecording:
-        stored = self._stored.get(recording_id)
-        if stored is None or stored.recording.browser_id != browser_id:
+    def _get(self, browser_id: UUID, recording_id: UUID) -> Recording:
+        recording = self._recordings_by_id.get(recording_id)
+        if recording is None or recording.browser_id != browser_id:
             raise RecordingNotFoundException
-        return stored
-
-    def _storage_path(self) -> Path:
-        if self._storage is None:
-            self._storage = self._workspace.recordings
-            self._storage.mkdir(parents=True, exist_ok=True)
-        return self._storage
+        return recording
 
 
 def _to_file(recording_id: UUID, video: RecordedVideo) -> RecordingFile:

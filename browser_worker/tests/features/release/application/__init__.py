@@ -1,0 +1,1 @@
+"""Worker release application tests."""

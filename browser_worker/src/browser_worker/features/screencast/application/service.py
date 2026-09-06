@@ -15,3 +15,10 @@ class ScreencastService:
             self._stream = self._stream_factory(cdp_url)
             self._cdp_url = cdp_url
         return self._stream
+
+    async def release(self) -> None:
+        """Close and forget the stream associated with the released browser."""
+        stream, self._stream = self._stream, None
+        self._cdp_url = None
+        if stream is not None:
+            await stream.close()

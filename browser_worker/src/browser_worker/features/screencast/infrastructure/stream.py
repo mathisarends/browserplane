@@ -80,6 +80,20 @@ class CdpFrameStream(FrameStream):
                 with suppress(Exception):
                     await client.disconnect()
 
+    async def close(self) -> None:
+        """Stop publishing and disconnect even while consumers are subscribed."""
+        async with self._lock:
+            publisher, self._publisher = self._publisher, None
+            client, self._client = self._client, None
+            if publisher is not None:
+                await cancel_and_wait(publisher)
+            if client is not None:
+                with suppress(Exception):
+                    await client.disconnect()
+            error = ScreencastStoppedException("Browser was released")
+            for subscriber in tuple(self._subscribers):
+                subscriber.fail(error)
+
     async def _publish(self, client: Client) -> None:
         bridge = ActiveTabBridge(client, self._options)
         error: Exception = ScreencastStoppedException("Screencast publisher stopped")
