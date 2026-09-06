@@ -3,6 +3,7 @@ import { APP_VIEWS, type AppView } from "./view-mode";
 
 const LABELS: Record<AppView, string> = {
   browsers: "Browsers",
+  focus: "Focus",
   admin: "Admin",
 };
 
@@ -35,7 +36,7 @@ const LABELS: Record<AppView, string> = {
     }
     div {
       display: inline-flex;
-      width: 204px;
+      width: 288px;
       padding: 2px;
       background: #191a1d;
       border: 1px solid #2b2d31;
@@ -83,7 +84,7 @@ const LABELS: Record<AppView, string> = {
       }
       div {
         width: 100%;
-        max-width: 204px;
+        max-width: 288px;
       }
       button {
         padding: 0 10px;

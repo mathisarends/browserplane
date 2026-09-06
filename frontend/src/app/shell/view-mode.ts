@@ -1,6 +1,6 @@
 import { Injectable, signal } from "@angular/core";
 
-export const APP_VIEWS = ["browsers", "admin"] as const;
+export const APP_VIEWS = ["browsers", "focus", "admin"] as const;
 export type AppView = (typeof APP_VIEWS)[number];
 
 const VIEW_PARAM = "view";
