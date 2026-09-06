@@ -6,6 +6,12 @@
  */
 
 export interface ResumeSessionRequest {
+  request_id?: string | null;
+  /**
+     * @maximum 900
+     * @exclusiveMinimum 0
+     */
+  timeout_seconds?: number;
   /** @deprecated */
   ttl_seconds?: number | null;
 }

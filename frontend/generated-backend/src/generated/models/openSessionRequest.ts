@@ -7,6 +7,13 @@
 
 export interface OpenSessionRequest {
   owner_id: string;
+  request_id?: string | null;
+  /**
+     * @maximum 900
+     * @exclusiveMinimum 0
+     */
+  timeout_seconds?: number;
+  test_run_id?: string | null;
   /** @deprecated */
   ttl_seconds?: number | null;
   authentication_profile_id?: string | null;

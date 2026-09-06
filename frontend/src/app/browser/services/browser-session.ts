@@ -1,10 +1,13 @@
 import { computed, inject, Injectable, signal } from "@angular/core";
 import {
+  cancelBrowserRequest,
   closeSession,
+  getBrowserRequest,
   getSession,
   openSession,
   resumeSession,
   type openSessionResponse,
+  type RequestStatus,
   type SessionResponse,
 } from "@browsertunnel/backend-client";
 import { ClientIdentity } from "./client-identity";
@@ -31,15 +34,14 @@ export interface BrowserTabState extends TabResult {
 
 export type ConnectionState = "connecting" | "connected" | "disconnected";
 
-/**
- * How long a browser stays leased without anyone asking for it again.
- *
- * The lease deliberately survives a dropped tunnel — that is what lets a
- * reloaded page pick its session back up — so this is what eventually hands
- * the browser back when the page never returns.
- */
-const SESSION_TTL_SECONDS = 600;
+/** How long one request may wait for browser capacity. */
+const SESSION_REQUEST_TIMEOUT_SECONDS = 60;
 const DUCKDUCKGO_SEARCH_URL = "https://duckduckgo.com/?q=";
+
+interface PendingBrowserRequest {
+  readonly id: string;
+  readonly controller: AbortController;
+}
 
 /** Signal-based UI facade around the generated RPC client. */
 @Injectable()
@@ -48,16 +50,19 @@ export class BrowserSession {
   private transport?: WebSocketRpcTransport;
   private client?: BackendBrowserClient;
   private screencast?: WebSocket;
+  private pendingRequest?: PendingBrowserRequest;
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly tabsState = signal<readonly BrowserTabState[]>([]);
   private readonly navigationState = signal(new Map<string, NavigationState>());
   private readonly connectionState = signal<ConnectionState>("disconnected");
+  private readonly requestStatusState = signal<RequestStatus | undefined>(undefined);
   private readonly errorState = signal<string | undefined>(undefined);
   private readonly frameState = signal<Blob | undefined>(undefined);
   private readonly cursorState = signal("default");
 
   readonly tabs = this.tabsState.asReadonly();
   readonly connection = this.connectionState.asReadonly();
+  readonly requestStatus = this.requestStatusState.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly frame = this.frameState.asReadonly();
   readonly cursor = this.cursorState.asReadonly();
@@ -86,17 +91,24 @@ export class BrowserSession {
   async open(): Promise<number | undefined> {
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
+    const request = this.beginRequest();
     try {
-      const response = await openSession({
-        owner_id: this.identity.ownerId,
-        ttl_seconds: SESSION_TTL_SECONDS,
-      });
+      const response = await openSession(
+        {
+          owner_id: this.identity.ownerId,
+          request_id: request.id,
+          timeout_seconds: SESSION_REQUEST_TIMEOUT_SECONDS,
+        },
+        { signal: request.controller.signal },
+      );
       if (response.status !== 201) throw new Error(openSessionError(response));
       await this.start(response.data);
       return response.data.remaining_capacity;
     } catch (error) {
       await this.abandon(error);
       return undefined;
+    } finally {
+      this.finishRequest(request);
     }
   }
 
@@ -116,7 +128,7 @@ export class BrowserSession {
         throw new Error(`Session could not be read (${response.status})`);
       }
       await this.start(
-        response.data.status === "suspended" ? await resume(sessionId) : response.data,
+        response.data.status === "suspended" ? await this.resume(sessionId) : response.data,
       );
       return true;
     } catch (error) {
@@ -130,6 +142,10 @@ export class BrowserSession {
     const client = this.client;
     const screencast = this.screencast;
     const session = this.sessionState();
+    const request = this.pendingRequest;
+    this.pendingRequest = undefined;
+    this.requestStatusState.set(undefined);
+    request?.controller.abort();
     this.client = undefined;
     this.transport = undefined;
     this.screencast = undefined;
@@ -137,6 +153,11 @@ export class BrowserSession {
     this.frameState.set(undefined);
     screencast?.close();
     await client?.close().catch(() => undefined);
+    if (request) {
+      await cancelBrowserRequest(request.id, { owner_id: this.identity.ownerId }).catch(
+        () => undefined,
+      );
+    }
     // The lease would expire on its own, but releasing it hands the browser
     // back to the pool right away.
     if (session) await closeSession(session.id).catch(() => undefined);
@@ -228,6 +249,60 @@ export class BrowserSession {
     this.connectionState.set("connected");
     void this.receiveNotifications();
     this.tabsState.set((await client.browser.tab.list()).tabs);
+  }
+
+  private async resume(sessionId: string): Promise<SessionResponse> {
+    const request = this.beginRequest();
+    try {
+      const response = await resumeSession(
+        sessionId,
+        {
+          request_id: request.id,
+          timeout_seconds: SESSION_REQUEST_TIMEOUT_SECONDS,
+        },
+        { signal: request.controller.signal },
+      );
+      if (response.status !== 200) {
+        throw new Error(`Session could not be resumed (${response.status})`);
+      }
+      return response.data;
+    } finally {
+      this.finishRequest(request);
+    }
+  }
+
+  private beginRequest(): PendingBrowserRequest {
+    const request = { id: crypto.randomUUID(), controller: new AbortController() };
+    this.pendingRequest = request;
+    this.requestStatusState.set(undefined);
+    void this.watchRequest(request);
+    return request;
+  }
+
+  private finishRequest(request: PendingBrowserRequest): void {
+    if (this.pendingRequest !== request) return;
+    this.pendingRequest = undefined;
+    this.requestStatusState.set(undefined);
+    request.controller.abort();
+  }
+
+  private async watchRequest(request: PendingBrowserRequest): Promise<void> {
+    try {
+      while (this.pendingRequest === request) {
+        await delay(500);
+        if (this.pendingRequest !== request) return;
+        const response = await getBrowserRequest(
+          request.id,
+          { owner_id: this.identity.ownerId },
+          { signal: request.controller.signal },
+        );
+        if (response.status === 200) this.requestStatusState.set(response.data.status);
+      }
+    } catch {
+      // The blocking session request remains authoritative. A missed status
+      // poll should not make an otherwise healthy acquisition fail.
+      return;
+    }
   }
 
   /** Give up on a half-built connection without leaving its browser leased. */
@@ -367,15 +442,11 @@ function socketOpened(socket: WebSocket): Promise<void> {
   });
 }
 
-async function resume(sessionId: string): Promise<SessionResponse> {
-  const response = await resumeSession(sessionId, { ttl_seconds: SESSION_TTL_SECONDS });
-  if (response.status !== 200) {
-    throw new Error(`Session could not be resumed (${response.status})`);
-  }
-  return response.data;
-}
-
 function openSessionError(response: openSessionResponse): string {
   if (response.status === 503) return response.data.message;
   return `Session could not be opened (${response.status})`;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }

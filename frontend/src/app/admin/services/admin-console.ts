@@ -16,8 +16,8 @@ import type {
 } from "@browsertunnel/backend-client";
 import { shortId } from "./format";
 
-/** How long a session resumed from the admin panel may hold its browser. */
-const RESUME_TTL_SECONDS = 600;
+/** How long an admin resume request may wait for browser capacity. */
+const RESUME_REQUEST_TIMEOUT_SECONDS = 60;
 
 export type AdminNotice = { readonly tone: "success" | "error"; readonly text: string };
 
@@ -112,7 +112,10 @@ export class AdminConsole {
 
   resumeSession(sessionId: string): Promise<void> {
     return this.run(sessionId, `Session ${shortId(sessionId)} resumed`, async () => {
-      const response = await resumeSession(sessionId, { ttl_seconds: RESUME_TTL_SECONDS });
+      const response = await resumeSession(sessionId, {
+        request_id: crypto.randomUUID(),
+        timeout_seconds: RESUME_REQUEST_TIMEOUT_SECONDS,
+      });
       if (response.status !== 200) throw failure("Session could not be resumed", response);
     });
   }

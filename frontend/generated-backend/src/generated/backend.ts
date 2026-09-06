@@ -11,12 +11,15 @@ import type {
   BrowserCheckpointResponse,
   BrowserNotFoundError,
   BrowserProvisioningFailedError,
+  BrowserRequestResponse,
   BrowserStateSchema,
   BrowserStateTransferFailedError,
+  CancelBrowserRequestParams,
   CreateAuthenticationProfileRequest,
   CreateBrowserCheckpointRequest,
   DownloadNotFoundError,
   DownloadResponse,
+  GetBrowserRequestParams,
   HTTPValidationError,
   Health,
   ListOwnerSessionsParams,
@@ -39,6 +42,124 @@ import type {
   SessionResponse,
   UpdateAuthenticationProfileRequest
 } from './models';
+
+
+export type getBrowserRequestResponse200 = {
+  data: BrowserRequestResponse
+  status: 200
+}
+
+export type getBrowserRequestResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getBrowserRequestResponseSuccess = (getBrowserRequestResponse200) & {
+  headers: Headers;
+};
+export type getBrowserRequestResponseError = (getBrowserRequestResponse422) & {
+  headers: Headers;
+};
+
+export type getBrowserRequestResponse = (getBrowserRequestResponseSuccess | getBrowserRequestResponseError)
+
+export const getGetBrowserRequestUrl = (requestId: string,
+    params: GetBrowserRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/browser-requests/${requestId}?${stringifiedParams}` : `/api/v1/browser-requests/${requestId}`
+}
+
+/**
+ * @summary Get Browser Request
+ */
+export const getBrowserRequest = async (requestId: string,
+    params: GetBrowserRequestParams, options?: RequestInit): Promise<getBrowserRequestResponse> => {
+
+  const res = await fetch(getGetBrowserRequestUrl(requestId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getBrowserRequestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getBrowserRequestResponse
+}
+
+
+
+export type cancelBrowserRequestResponse200 = {
+  data: BrowserRequestResponse
+  status: 200
+}
+
+export type cancelBrowserRequestResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type cancelBrowserRequestResponseSuccess = (cancelBrowserRequestResponse200) & {
+  headers: Headers;
+};
+export type cancelBrowserRequestResponseError = (cancelBrowserRequestResponse422) & {
+  headers: Headers;
+};
+
+export type cancelBrowserRequestResponse = (cancelBrowserRequestResponseSuccess | cancelBrowserRequestResponseError)
+
+export const getCancelBrowserRequestUrl = (requestId: string,
+    params: CancelBrowserRequestParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/browser-requests/${requestId}?${stringifiedParams}` : `/api/v1/browser-requests/${requestId}`
+}
+
+/**
+ * @summary Cancel Browser Request
+ */
+export const cancelBrowserRequest = async (requestId: string,
+    params: CancelBrowserRequestParams, options?: RequestInit): Promise<cancelBrowserRequestResponse> => {
+
+  const res = await fetch(getCancelBrowserRequestUrl(requestId,params),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: cancelBrowserRequestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as cancelBrowserRequestResponse
+}
+
 
 
 export type healthResponse200 = {

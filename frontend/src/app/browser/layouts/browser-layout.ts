@@ -103,11 +103,8 @@ export class BrowserLayout implements OnInit {
   protected readonly panels = signal<readonly GalleryPanel[]>([]);
   protected readonly restoreFailed = signal(false);
   private readonly restoring = signal(true);
-  private readonly remainingCapacity = signal<number | undefined>(undefined);
   private readonly creating = signal(false);
-  protected readonly canCreate = computed(
-    () => !this.restoring() && !this.creating() && (this.remainingCapacity() ?? 1) > 0,
-  );
+  protected readonly canCreate = computed(() => !this.restoring() && !this.creating());
 
   ngOnInit(): void {
     void this.restore();
@@ -119,8 +116,7 @@ export class BrowserLayout implements OnInit {
     this.panels.update((panels) => [...panels, { key: crypto.randomUUID() }]);
   }
 
-  protected handleCapacityChange(remainingCapacity: number): void {
-    this.remainingCapacity.set(remainingCapacity);
+  protected handleCapacityChange(_remainingCapacity: number): void {
     this.creating.set(false);
   }
 
@@ -140,7 +136,6 @@ export class BrowserLayout implements OnInit {
     try {
       const response = await listOwnerSessions({ owner_id: this.identity.ownerId });
       if (response.status !== 200) throw new Error(`Status ${response.status}`);
-      this.remainingCapacity.set(response.data.remaining_capacity);
       this.panels.set(
         [...response.data.sessions].sort(byAge).map((session) => ({
           key: session.id,

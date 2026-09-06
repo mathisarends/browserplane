@@ -43,8 +43,21 @@ import { BrowserTabStrip } from "./browser-tab-strip";
           (reloadOrStop)="session.reloadOrStop()"
         />
       </header>
-      <app-browser-canvas />
-      <app-browser-state-toolbar [position]="position()" />
+      @if (session.requestStatus() === "QUEUED" || session.requestStatus() === "PROVISIONING") {
+        <div class="request-state" role="status" aria-live="polite">
+          <span class="request-spinner" aria-hidden="true"></span>
+          @if (session.requestStatus() === "QUEUED") {
+            <strong>Waiting for capacity</strong>
+            <span>All browser slots are busy. This browser will start automatically.</span>
+          } @else {
+            <strong>Starting browser</strong>
+            <span>Capacity is reserved and the browser is being prepared.</span>
+          }
+        </div>
+      } @else {
+        <app-browser-canvas />
+        <app-browser-state-toolbar [position]="position()" />
+      }
     </section>
   `,
   styles: `
@@ -60,6 +73,43 @@ import { BrowserTabStrip } from "./browser-tab-strip";
     }
     .browser-chrome {
       background: linear-gradient(180deg, #1a202a, #171c24);
+    }
+    .request-state {
+      display: flex;
+      aspect-ratio: 16 / 9;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      padding: 28px;
+      color: #929fb2;
+      text-align: center;
+      background:
+        radial-gradient(circle at 50% 42%, rgb(52 73 108 / 24%), transparent 34%), #080b10;
+    }
+    .request-state strong {
+      color: #e7edf7;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .request-state span:last-child {
+      max-width: 34ch;
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+    .request-spinner {
+      width: 28px;
+      height: 28px;
+      margin-bottom: 4px;
+      border: 2px solid #283143;
+      border-top-color: #6797ff;
+      border-radius: 50%;
+      animation: request-spin 900ms linear infinite;
+    }
+    @keyframes request-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
     @media (max-width: 580px) {
       .browser-panel {
@@ -79,6 +129,12 @@ import { BrowserTabStrip } from "./browser-tab-strip";
           opacity: 1;
           transform: translateY(0);
         }
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .request-spinner {
+        animation: none;
+        border-color: #6797ff;
       }
     }
   `,
