@@ -15,10 +15,10 @@ from backend.features.browser_tunnel.application import (
     TargetDetached,
 )
 from backend.features.browser_tunnel.infrastructure.cdp_browser.active_page import (
-    ActiveClipboard,
-    ActiveInput,
-    ActiveNavigation,
     ActivePage,
+    CdpClipboard,
+    CdpInput,
+    CdpNavigation,
 )
 from backend.features.browser_tunnel.infrastructure.cdp_browser.page import CdpPage
 from backend.features.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs
@@ -37,9 +37,9 @@ class CdpBrowser(Browser):
         self._client: Client | None = None
         self._active = ActivePage()
         self._events = BrowserEventStream()
-        self._navigation = ActiveNavigation(self._active)
-        self._input = ActiveInput(self._active)
-        self._clipboard = ActiveClipboard(self._active)
+        self._navigation = CdpNavigation(self._active)
+        self._input = CdpInput(self._active)
+        self._clipboard = CdpClipboard(self._active)
         self._tabs = CdpTabs(
             self._connected_client,
             self._active_target_id,
@@ -54,15 +54,15 @@ class CdpBrowser(Browser):
         )
 
     @property
-    def navigation(self) -> ActiveNavigation:
+    def navigation(self) -> CdpNavigation:
         return self._navigation
 
     @property
-    def input(self) -> ActiveInput:
+    def input(self) -> CdpInput:
         return self._input
 
     @property
-    def clipboard(self) -> ActiveClipboard:
+    def clipboard(self) -> CdpClipboard:
         return self._clipboard
 
     @property

@@ -40,14 +40,14 @@ def recording_session() -> tuple[CDPSession, RecordingInput]:
 @pytest.mark.asyncio
 async def test_mouse_primitives_preserve_the_held_button_during_a_drag() -> None:
     session, input_domain = recording_session()
-    browser_input = CdpInput(session, CdpClipboard(session))
+    cdp_input = CdpInput(session, CdpClipboard(session))
 
     for event_type, x, y, button, buttons in (
         (MouseEventType.DOWN, 10, 20, "left", 1),
         (MouseEventType.MOVE, 10, 80, "left", 1),
         (MouseEventType.UP, 10, 80, "left", 0),
     ):
-        await browser_input.mouse(
+        await cdp_input.mouse(
             event_type=event_type,
             x=x,
             y=y,
@@ -76,9 +76,9 @@ async def test_mouse_primitives_preserve_the_held_button_during_a_drag() -> None
 @pytest.mark.asyncio
 async def test_special_key_metadata_is_forwarded_unchanged_to_cdp() -> None:
     session, input_domain = recording_session()
-    browser_input = CdpInput(session, CdpClipboard(session))
+    cdp_input = CdpInput(session, CdpClipboard(session))
 
-    await browser_input.key(
+    await cdp_input.key(
         event_type=KeyEventType.RAW_DOWN,
         key="Backspace",
         code="Backspace",

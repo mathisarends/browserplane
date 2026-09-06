@@ -28,7 +28,7 @@ class ActivePage:
             yield self.page
 
 
-class ActiveInput(BrowserInput):
+class CdpInput(BrowserInput):
     def __init__(self, active: ActivePage) -> None:
         self._active = active
 
@@ -101,7 +101,7 @@ class ActiveInput(BrowserInput):
             return await page.input.paste(text=text)
 
 
-class ActiveNavigation(BrowserNavigation):
+class CdpNavigation(BrowserNavigation):
     def __init__(self, active: ActivePage) -> None:
         self._active = active
 
@@ -126,7 +126,7 @@ class ActiveNavigation(BrowserNavigation):
             return await page.navigation.stop()
 
 
-class ActiveClipboard(BrowserClipboard):
+class CdpClipboard(BrowserClipboard):
     def __init__(self, active: ActivePage) -> None:
         self._active = active
 
