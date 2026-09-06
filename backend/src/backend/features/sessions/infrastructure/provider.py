@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from dishka import Provider, Scope, provide
+from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.features.browsers.application.service import BrowserService
@@ -21,7 +22,7 @@ from backend.features.sessions.infrastructure.repository import (
     SqlSuspendedSessionRepository,
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
-from backend.infrastructure.browser_worker import BrowserWorkerClient
+from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class SessionProvider(Provider):
@@ -47,8 +48,12 @@ class SessionProvider(Provider):
         return self._suspensions or SqlSuspendedSessionRepository(session)
 
     @provide(scope=Scope.APP, provides=BrowserRuntime)
-    def browser_state(self, client: BrowserWorkerClient) -> BrowserRuntime:
-        return self._browser_state or BrowserWorkerRuntime(client)
+    def browser_state(
+        self,
+        http: AsyncClient,
+        settings: BrowserWorkerSettings,
+    ) -> BrowserRuntime:
+        return self._browser_state or BrowserWorkerRuntime(http, settings)
 
     @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
     def snapshots(self, session: AsyncSession) -> BrowserStateSnapshotRepository:

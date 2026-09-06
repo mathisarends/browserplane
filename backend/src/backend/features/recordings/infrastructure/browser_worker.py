@@ -1,7 +1,10 @@
 import logging
-from collections.abc import Awaitable, Callable
 from pathlib import PurePosixPath
+from typing import Any, cast
 from uuid import UUID
+
+from httpx2 import AsyncClient, HTTPError
+from pydantic import ValidationError
 
 from backend.features.browsers.application.models import Browser
 from backend.features.recordings.application.exceptions import (
@@ -17,13 +20,11 @@ from backend.features.recordings.application.models import (
     RecordingState,
 )
 from backend.features.recordings.application.ports import Recorder
-from backend.infrastructure.browser_worker import (
-    BrowserWorkerClient,
-    BrowserWorkerError,
-    BrowserWorkerResponseError,
-)
+from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.bucket import Bucket, BucketObject
+from backend.presentation.middleware import current_request_id
 from generated.browser_worker import (
+    ApiError,
     GeneratedBrowserWorkerClient,
 )
 from generated.browser_worker import (
@@ -34,33 +35,47 @@ logger = logging.getLogger(__name__)
 
 
 class BrowserWorkerRecorder(Recorder):
-    def __init__(self, bucket: Bucket, client: BrowserWorkerClient) -> None:
+    def __init__(
+        self,
+        bucket: Bucket,
+        http: AsyncClient,
+        settings: BrowserWorkerSettings,
+    ) -> None:
         self._bucket = bucket
-        self._client = client
+        self._http = http
+        self._settings = settings
 
     async def start(self, browser: Browser) -> Recording:
-        recording = await self._request(
-            browser,
-            "start",
-            lambda client: client.start_recording(browser.id),
-        )
+        try:
+            recording = await self._client(browser).start_recording(browser.id)
+        except ApiError as error:
+            raise _recording_error(error) from error
+        except (HTTPError, ValidationError, ValueError) as error:
+            raise _transfer_error("start", error) from error
         return _to_recording(recording)
 
     async def inspect(self, browser: Browser, recording_id: UUID) -> Recording:
-        recording = await self._request(
-            browser,
-            "inspect",
-            lambda client: client.inspect_recording(browser.id, recording_id),
-        )
+        try:
+            recording = await self._client(browser).inspect_recording(
+                browser.id,
+                recording_id,
+            )
+        except ApiError as error:
+            raise _recording_error(error) from error
+        except (HTTPError, ValidationError, ValueError) as error:
+            raise _transfer_error("inspect", error) from error
         return _to_recording(recording)
 
     async def stop_and_store(self, browser: Browser, recording_id: UUID) -> Recording:
-        recording = await self._request(
-            browser,
-            "stop",
-            lambda client: client.stop_recording(browser.id, recording_id),
-            transfer=True,
-        )
+        try:
+            recording = await self._client(
+                browser,
+                transfer=True,
+            ).stop_recording(browser.id, recording_id)
+        except ApiError as error:
+            raise _recording_error(error) from error
+        except (HTTPError, ValidationError, ValueError) as error:
+            raise _transfer_error("stop", error) from error
         for segment in recording.segments:
             await self._store_segment(
                 browser,
@@ -70,24 +85,25 @@ class BrowserWorkerRecorder(Recorder):
             )
         return _to_recording(recording)
 
-    async def _request[T](
+    def _client(
         self,
         browser: Browser,
-        action: str,
-        operation: Callable[[GeneratedBrowserWorkerClient], Awaitable[T]],
         *,
         transfer: bool = False,
-    ) -> T:
-        try:
-            return await self._client.request(
-                browser.slot.browser_worker_url,
-                operation,
-                transfer=transfer,
-            )
-        except BrowserWorkerResponseError as error:
-            raise _recording_error(error) from error
-        except BrowserWorkerError as error:
-            raise _transfer_error(action, error) from error
+    ) -> GeneratedBrowserWorkerClient:
+        request_id = current_request_id()
+        headers = {"X-Request-ID": request_id} if request_id is not None else None
+        timeout = (
+            self._settings.transfer_timeout_seconds
+            if transfer
+            else self._settings.request_timeout_seconds
+        )
+        return GeneratedBrowserWorkerClient(
+            cast(Any, self._http),
+            browser.slot.browser_worker_url,
+            headers=headers,
+            timeout=timeout,
+        )
 
     async def _store_segment(
         self,
@@ -101,10 +117,17 @@ class BrowserWorkerRecorder(Recorder):
             f"/segments/{index}/file"
         )
         try:
-            async with self._client.stream(
-                browser.slot.browser_worker_url,
-                path,
-            ) as content:
+            url = f"{browser.slot.browser_worker_url.rstrip('/')}/{path.lstrip('/')}"
+            request_id = current_request_id()
+            headers = {"X-Request-ID": request_id} if request_id is not None else None
+            async with self._http.stream(
+                "GET",
+                url,
+                headers=headers,
+                timeout=self._settings.transfer_timeout_seconds,
+            ) as response:
+                response.raise_for_status()
+                content = response.aiter_bytes(chunk_size=64 * 1024)
                 try:
                     await self._bucket.put(
                         BucketObject(
@@ -121,16 +144,17 @@ class BrowserWorkerRecorder(Recorder):
                     )
                 except Exception as error:
                     raise _transfer_error("store", error) from error
-        except BrowserWorkerError as error:
+        except HTTPError as error:
             raise _transfer_error("download", error) from error
 
 
-def _recording_error(error: BrowserWorkerResponseError) -> Exception:
-    if error.code == "recording_not_found":
+def _recording_error(error: ApiError) -> Exception:
+    code = getattr(error.parsed_body, "code", None)
+    if code == "recording_not_found":
         return RecordingNotFoundException()
-    if error.code == "recording_already_running":
+    if code == "recording_already_running":
         return RecordingAlreadyRunningException()
-    if error.code == "recording_not_running":
+    if code == "recording_not_running":
         return RecordingNotRunningException()
     return _transfer_error("communicate with", error)
 

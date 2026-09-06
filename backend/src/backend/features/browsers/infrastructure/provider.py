@@ -1,4 +1,5 @@
 from dishka import Provider, Scope, provide
+from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.features.browsers.application.ports import (
@@ -11,7 +12,7 @@ from backend.features.browsers.infrastructure.browser_worker_provisioner import 
 )
 from backend.features.browsers.infrastructure.repository import SqlBrowserRepository
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
-from backend.infrastructure.browser_worker import BrowserWorkerClient
+from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 
 class BrowserProvider(Provider):
@@ -32,9 +33,14 @@ class BrowserProvider(Provider):
     def provisioner(
         self,
         settings: BrowserPoolSettings,
-        client: BrowserWorkerClient,
+        http: AsyncClient,
+        worker_settings: BrowserWorkerSettings,
     ) -> BrowserProvisioner:
-        return self._provisioner or BrowserWorkerProvisioner(settings, client)
+        return self._provisioner or BrowserWorkerProvisioner(
+            settings,
+            http,
+            worker_settings,
+        )
 
     @provide(scope=Scope.REQUEST, provides=BrowserRepository)
     def repository(self, session: AsyncSession) -> BrowserRepository:

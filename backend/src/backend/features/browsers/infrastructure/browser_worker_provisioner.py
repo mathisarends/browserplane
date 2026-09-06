@@ -1,9 +1,13 @@
 from collections.abc import Sequence
+from typing import Any, cast
+
+from httpx2 import AsyncClient
 
 from backend.features.browsers.application.models import BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
-from backend.infrastructure.browser_worker import BrowserWorkerClient
+from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
+from backend.presentation.middleware import current_request_id
 from generated.browser_worker import CreateBrowserRequest, GeneratedBrowserWorkerClient
 
 
@@ -13,10 +17,12 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
     def __init__(
         self,
         settings: BrowserPoolSettings,
-        client: BrowserWorkerClient,
+        http: AsyncClient,
+        worker_settings: BrowserWorkerSettings,
     ) -> None:
         self._settings = settings
-        self._client = client
+        self._http = http
+        self._worker_settings = worker_settings
         self._provisioned: list[BrowserSlot] = []
 
     async def provision(self) -> Sequence[BrowserSlot]:
@@ -32,13 +38,19 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
         self._provisioned.clear()
 
     async def start(self, slot: BrowserSlot) -> None:
-        await self._client.request(
-            slot.browser_worker_url,
-            lambda client: client.create_browser(CreateBrowserRequest(id=slot.id)),
-        )
+        client = self._client(slot)
+        await client.create_browser(CreateBrowserRequest(id=slot.id))
 
     async def stop(self, slot: BrowserSlot) -> None:
-        await self._client.request(
+        client = self._client(slot)
+        await client.destroy_browser()
+
+    def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
+        request_id = current_request_id()
+        headers = {"X-Request-ID": request_id} if request_id is not None else None
+        return GeneratedBrowserWorkerClient(
+            cast(Any, self._http),
             slot.browser_worker_url,
-            GeneratedBrowserWorkerClient.destroy_browser,
+            headers=headers,
+            timeout=self._worker_settings.request_timeout_seconds,
         )
