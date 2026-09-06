@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field
 
+from backend.exceptions import BackendException
 from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,11 @@ def _handler(
             type(error).__name__,
             str(error),
         )
-        body = spec.response_model(code=spec.code, message=str(error))
-        return JSONResponse(status_code=spec.status_code, content=body.model_dump())
+        details = error.details if isinstance(error, BackendException) else {}
+        body = spec.response_model(code=spec.code, message=str(error), **details)
+        return JSONResponse(
+            status_code=spec.status_code,
+            content=body.model_dump(mode="json"),
+        )
 
     return handle
