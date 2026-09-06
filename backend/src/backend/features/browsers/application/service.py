@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from uuid import UUID
@@ -108,7 +108,7 @@ class BrowserService:
             await self._repository.save(browser=browser)
 
     @asynccontextmanager
-    async def _browser_worker(self, slot: BrowserSlot) -> AsyncIterator[None]:
+    async def _browser_worker(self, slot: BrowserSlot) -> AsyncGenerator[None]:
         """Report a worker that will not cooperate in the pool's own terms."""
         try:
             yield

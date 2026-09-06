@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from tests.fakes import FakeBrowserProcess
@@ -89,9 +89,9 @@ async def _running_service(
     store: FakeStore,
     *,
     max_tabs: int | None = None,
-) -> tuple[BrowserStateService, object]:
+) -> tuple[BrowserStateService, UUID]:
     browsers = BrowserService(FakeBrowserProcess())
-    browser = await browsers.create(uuid4())
+    browser_id = await browsers.create(uuid4())
     service = BrowserStateService(
         browsers,
         max_tabs
@@ -99,7 +99,7 @@ async def _running_service(
         else BrowserStateSettings(_env_file=None).max_tabs,
         lambda _: store,
     )
-    return service, browser.id
+    return service, browser_id
 
 
 @pytest.mark.asyncio

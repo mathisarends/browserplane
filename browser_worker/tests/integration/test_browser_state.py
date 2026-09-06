@@ -1,7 +1,7 @@
 import functools
 import http.server
 import threading
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -30,7 +30,7 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
 
 @contextmanager
-def serve(directory: Path) -> Iterator[str]:
+def serve(directory: Path) -> Generator[str]:
     handler = functools.partial(QuietHandler, directory=str(directory))
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)

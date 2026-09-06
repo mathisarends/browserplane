@@ -1,7 +1,7 @@
 import asyncio
 import http.server
 import threading
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -50,7 +50,7 @@ class DownloadHandler(http.server.BaseHTTPRequestHandler):
 
 
 @contextmanager
-def serve_download() -> Iterator[str]:
+def serve_download() -> Generator[str]:
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), DownloadHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -78,14 +78,14 @@ async def test_download_service_collects_and_clears_a_chromium_download(
         pytest.skip("Chromium is not available")
 
     browsers = BrowserService(ChromeProcess(settings))
-    browser = await browsers.create(uuid4())
+    browser_id = await browsers.create(uuid4())
     downloads = DownloadService(browsers, Workspace(tmp_path / "workspace"))
-    await downloads.start(browser.id)
+    await downloads.start(browser_id)
 
     try:
         with serve_download() as origin:
             state = CdpBrowserStateStore(
-                browsers.upstream_cdp_url(browser.id),
+                browsers.upstream_cdp_url(browser_id),
                 BrowserStateSettings(_env_file=None, restore_timeout=5),
             )
             await state.restore_browser(
@@ -93,17 +93,17 @@ async def test_download_service_collects_and_clears_a_chromium_download(
             )
 
             async with asyncio.timeout(10):
-                while not downloads.list(browser.id):
+                while not downloads.list(browser_id):
                     await asyncio.sleep(0.05)
 
-            (download,) = downloads.list(browser.id)
+            (download,) = downloads.list(browser_id)
             assert download.filename == "artifact.txt"
-            assert downloads.file(browser.id, download.id).path.read_bytes() == (
+            assert downloads.file(browser_id, download.id).path.read_bytes() == (
                 b"downloaded through Chromium\n"
             )
 
-            await downloads.clear(browser.id)
-            assert downloads.list(browser.id) == ()
+            await downloads.clear(browser_id)
+            assert downloads.list(browser_id) == ()
             assert not download.path.exists()
     finally:
         await downloads.stop()
