@@ -19,3 +19,15 @@ class BrowserStateTransferException(BackendException):
 
 class DownloadNotFoundException(BackendException):
     message = "Download not found"
+
+
+class AuthenticationProfileNotFoundException(BackendException):
+    message = "Authentication profile not found"
+
+
+class BrowserCheckpointNotFoundException(BackendException):
+    message = "Browser checkpoint not found"
+
+
+class SessionNotFoundException(BackendException):
+    message = "Session not found"

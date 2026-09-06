@@ -3,43 +3,50 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from backend.features.sessions.application.models import SessionStatus
-from generated.browser_worker import AuthenticationStateSchema, BrowserStateSchema
+from backend.features.sessions.domain.models import SessionStatus
 
 
 class OpenSessionRequest(BaseModel):
     owner_id: UUID
     ttl_seconds: int = Field(default=300, gt=0, le=86_400)
-    authentication_state: AuthenticationStateSchema | None = None
-    browser_state: BrowserStateSchema | None = None
+    authentication_profile_id: UUID | None = None
+    browser_checkpoint_id: UUID | None = None
 
 
 class ResumeSessionRequest(BaseModel):
     ttl_seconds: int = Field(default=300, gt=0, le=86_400)
 
 
-class CaptureBrowserStateSnapshotRequest(BaseModel):
+class CreateBrowserCheckpointRequest(BaseModel):
+    authentication_profile_id: UUID | None = None
+
+
+class BrowserCheckpointResponse(BaseModel):
+    id: UUID
+    created_at: datetime
+    authentication_profile_id: UUID | None
+
+
+class MountBrowserCheckpointRequest(BaseModel):
+    browser_checkpoint_id: UUID
+
+
+class CreateAuthenticationProfileRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    source_browser: str = Field(min_length=1, max_length=200)
 
 
-class BrowserStateSnapshotResponse(BaseModel):
+class UpdateAuthenticationProfileRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class MountAuthenticationProfileRequest(BaseModel):
+    authentication_profile_id: UUID
+
+
+class AuthenticationProfileResponse(BaseModel):
     id: UUID
     name: str
-    source_browser: str
     created_at: datetime
-    browser_state: BrowserStateSchema
-
-
-class CaptureAuthenticationStateSnapshotRequest(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-
-
-class AuthenticationStateSnapshotResponse(BaseModel):
-    id: UUID
-    name: str
-    created_at: datetime
-    authentication_state: AuthenticationStateSchema
 
 
 class SessionResponse(BaseModel):
@@ -54,11 +61,12 @@ class SessionResponse(BaseModel):
     id: UUID
     status: SessionStatus
     owner_id: UUID
-    expires_at: datetime
+    expires_at: datetime | None
     created_at: datetime
     browser_id: UUID | None = None
     tunnel_path: str | None = None
     screencast_path: str | None = None
+    browser_checkpoint_id: UUID | None = None
 
 
 class OpenSessionResponse(SessionResponse):

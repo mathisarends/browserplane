@@ -1,10 +1,3 @@
-"""
-SQLModel table definitions for the backend's schema.
-
-One file is the single registration point Alembic imports to see the metadata;
-split it per feature only once it grows hard to navigate.
-"""
-
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -13,12 +6,10 @@ from sqlalchemy import Column, DateTime, LargeBinary, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from backend.features.browsers.application.models import BrowserState
+from backend.features.browsers.domain.models import BrowserState
 
 
 class DatabaseModel(SQLModel):
-    """Columns every table carries."""
-
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     # sa_type, not sa_column: a Column instance belongs to one table, and this
     # base class is shared by all of them.
@@ -30,8 +21,6 @@ class DatabaseModel(SQLModel):
 
 
 class BrowserModel(DatabaseModel, table=True):
-    """A provisioned browser slot and the state the pool last saw it in."""
-
     __tablename__ = "browsers"
 
     browser_worker_url: str
@@ -41,8 +30,6 @@ class BrowserModel(DatabaseModel, table=True):
 
 
 class LeaseModel(DatabaseModel, table=True):
-    """A persisted, time-boxed claim of one browser by one owner."""
-
     __tablename__ = "leases"
 
     browser_id: UUID = Field(index=True)
@@ -54,39 +41,40 @@ class LeaseModel(DatabaseModel, table=True):
     )
 
 
-class SuspendedSessionModel(DatabaseModel, table=True):
-    """A session that gave its browser back, and what it needs to come back."""
+class AuthenticationProfileModel(DatabaseModel, table=True):
+    __tablename__ = "authentication_profiles"
 
-    __tablename__ = "suspended_sessions"
+    owner_id: UUID = Field(index=True)
+    name: str
+    authentication_state: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
 
-    owner_id: UUID
-    expires_at: datetime = Field(
-        sa_type=DateTime(timezone=True),
-        nullable=False,
+
+class BrowserCheckpointModel(DatabaseModel, table=True):
+    __tablename__ = "browser_checkpoints"
+
+    owner_id: UUID = Field(index=True)
+    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
+    authentication_profile_id: UUID | None = Field(
+        default=None,
+        foreign_key="authentication_profiles.id",
+        ondelete="SET NULL",
         index=True,
     )
-    # Kept as separate opaque browser-worker documents: authentication can be
-    # reused without also restoring a suspended browser's tabs (and vice versa).
-    authentication_state: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
-    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
 
 
-class BrowserStateSnapshotModel(DatabaseModel, table=True):
-    """Reusable tabs and UI state captured explicitly by a user."""
-
-    __tablename__ = "browser_state_snapshots"
+class SessionModel(DatabaseModel, table=True):
+    __tablename__ = "sessions"
 
     owner_id: UUID = Field(index=True)
-    name: str
-    source_browser: str
-    browser_state: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
-
-
-class AuthenticationStateSnapshotModel(DatabaseModel, table=True):
-    """Reusable cookies and origin storage captured explicitly by a user."""
-
-    __tablename__ = "authentication_state_snapshots"
-
-    owner_id: UUID = Field(index=True)
-    name: str
-    authentication_state: bytes = Field(sa_column=Column(LargeBinary, nullable=False))
+    status: str = Field(sa_column=Column(String, nullable=False))
+    expires_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),
+        index=True,
+    )
+    browser_checkpoint_id: UUID | None = Field(
+        default=None,
+        foreign_key="browser_checkpoints.id",
+        ondelete="SET NULL",
+        index=True,
+    )

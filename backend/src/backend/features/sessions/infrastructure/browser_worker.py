@@ -4,17 +4,17 @@ from typing import Any, cast
 from httpx2 import AsyncClient, HTTPError
 from pydantic import ValidationError
 
-from backend.features.browsers.application.models import Browser
+from backend.features.browsers.domain.models import Browser
 from backend.features.sessions.application.exceptions import (
     BrowserStateTransferException,
     DownloadNotFoundException,
 )
-from backend.features.sessions.application.models import (
+from backend.features.sessions.application.ports import BrowserRuntime
+from backend.features.sessions.domain.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
 )
-from backend.features.sessions.application.ports import BrowserRuntime
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     ApiError,

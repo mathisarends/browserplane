@@ -4,53 +4,56 @@ from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from backend.features.browsers.application.models import Browser
 from backend.features.browsers.application.service import BrowserService
+from backend.features.browsers.domain.models import Browser
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.service import LeaseService
 from backend.features.sessions.application.exceptions import (
+    AuthenticationProfileNotFoundException,
+    BrowserCheckpointNotFoundException,
     DownloadNotFoundException,
     NoBrowserAvailableException,
     SessionNotActiveException,
+    SessionNotFoundException,
     SessionNotSuspendedException,
 )
-from backend.features.sessions.application.models import (
-    AuthenticationStateDocument,
-    AuthenticationStateSnapshot,
+from backend.features.sessions.application.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    BrowserRuntime,
+    SessionRepository,
+)
+from backend.features.sessions.domain.models import (
+    ActiveSession,
+    AuthenticationProfile,
+    BrowserCheckpoint,
     BrowserStateDocument,
-    BrowserStateSnapshot,
     Download,
     Session,
-    SuspendedSession,
-)
-from backend.features.sessions.application.ports import (
-    AuthenticationStateSnapshotRepository,
-    BrowserRuntime,
-    BrowserStateSnapshotRepository,
-    SuspendedSessionRepository,
+    SessionStatus,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class SessionService:
-    """Frontend-facing view on the browser pool and the lease lifecycle."""
+    """Orchestrates the persistent session aggregate and temporary leases."""
 
     def __init__(
         self,
         browsers: BrowserService,
         leases: LeaseService,
-        suspensions: SuspendedSessionRepository,
-        snapshots: BrowserStateSnapshotRepository,
-        authentication_snapshots: AuthenticationStateSnapshotRepository,
+        sessions: SessionRepository,
+        checkpoints: BrowserCheckpointRepository,
+        authentication_profiles: AuthenticationProfileRepository,
         browser_state: BrowserRuntime,
         suspension_ttl: timedelta,
     ) -> None:
         self._browsers = browsers
         self._leases = leases
-        self._suspensions = suspensions
-        self._snapshots = snapshots
-        self._authentication_snapshots = authentication_snapshots
+        self._sessions = sessions
+        self._checkpoints = checkpoints
+        self._authentication_profiles = authentication_profiles
         self._browser_state = browser_state
         self._suspension_ttl = suspension_ttl
 
@@ -58,104 +61,127 @@ class SessionService:
         self,
         owner_id: UUID,
         ttl: timedelta,
-        authentication_state: AuthenticationStateDocument | None = None,
-        browser_state: BrowserStateDocument | None = None,
-    ) -> Session:
+        *,
+        authentication_profile_id: UUID | None = None,
+        browser_checkpoint_id: UUID | None = None,
+    ) -> ActiveSession:
+        checkpoint = (
+            await self.get_browser_checkpoint(browser_checkpoint_id)
+            if browser_checkpoint_id is not None
+            else None
+        )
+        profile_id = authentication_profile_id or (
+            checkpoint.authentication_profile_id if checkpoint is not None else None
+        )
+        profile = (
+            await self.get_authentication_profile(profile_id)
+            if profile_id is not None
+            else None
+        )
         browser = await self._pick_available_browser()
         lease = await self._leases.create(browser.id, owner_id, ttl)
         try:
             await self._browser_state.clear_downloads(browser)
-            if authentication_state is not None:
+            if profile is not None:
                 await self._browser_state.mount_authentication(
-                    browser, authentication_state
+                    browser, profile.authentication_state
                 )
-            if browser_state is not None:
-                await self._browser_state.mount_browser(browser, browser_state)
+            if checkpoint is not None:
+                await self._browser_state.mount_browser(
+                    browser, checkpoint.browser_state
+                )
         except Exception:
             with suppress(LeaseNotFoundException):
                 await self._leases.release(lease.id, reason="open_state_mount_failed")
             raise
-        leased = await self._browsers.get(lease.browser_id)
-        return Session(lease=lease, browser=leased)
+        aggregate = await self._sessions.save(
+            Session(
+                id=lease.id,
+                owner_id=owner_id,
+                status=SessionStatus.ACTIVE,
+                created_at=lease.created_at,
+                expires_at=lease.expires_at,
+            )
+        )
+        return ActiveSession(
+            session=aggregate,
+            lease=lease,
+            browser=await self._browsers.get(lease.browser_id),
+        )
 
     async def remaining_capacity(self) -> int:
         return await self._browsers.remaining_capacity()
 
-    async def get(self, session_id: UUID) -> Session | SuspendedSession:
-        """Look a session up, whether it currently holds a browser or not."""
-        suspended = await self._find_suspended(session_id)
-        if suspended is not None:
-            return suspended
-        return await self.get_active(session_id)
-
-    async def get_active(self, session_id: UUID) -> Session:
+    async def get(self, session_id: UUID) -> ActiveSession | Session:
+        aggregate = await self._session(session_id)
+        if aggregate.status is not SessionStatus.ACTIVE:
+            return aggregate
         lease = await self._leases.get(session_id)
-        browser = await self._browsers.get(lease.browser_id)
-        return Session(lease=lease, browser=browser)
+        return ActiveSession(
+            session=aggregate,
+            lease=lease,
+            browser=await self._browsers.get(lease.browser_id),
+        )
+
+    async def get_active(self, session_id: UUID) -> ActiveSession:
+        session = await self.get(session_id)
+        if not isinstance(session, ActiveSession):
+            raise SessionNotActiveException()
+        return session
 
     async def list(
         self, owner_id: UUID | None = None
-    ) -> tuple[Session | SuspendedSession, ...]:
-        """Every session the backend still holds, with a browser or parked.
-
-        Narrowed to one owner it answers the question a returning client asks:
-        which sessions are still mine, so the page can pick them back up.
-        """
-        active = [
-            Session(lease=lease, browser=await self._browsers.get(lease.browser_id))
-            for lease in await self._leases.list()
-        ]
-        now = datetime.now(UTC)
-        parked = [
-            suspended
-            for suspended in await self._suspensions.list()
-            if not suspended.is_expired(now)
-        ]
-        sessions = (*active, *parked)
+    ) -> tuple[ActiveSession | Session, ...]:
+        result: list[ActiveSession | Session] = []
+        for aggregate in await self._sessions.list():
+            if aggregate.status is SessionStatus.SUSPENDED and aggregate.is_expired(
+                datetime.now(UTC)
+            ):
+                aggregate = await self._sessions.save(aggregate.close())
+            if aggregate.status is SessionStatus.ACTIVE:
+                lease = await self._leases.get(aggregate.id)
+                result.append(
+                    ActiveSession(
+                        session=aggregate,
+                        lease=lease,
+                        browser=await self._browsers.get(lease.browser_id),
+                    )
+                )
+            else:
+                result.append(aggregate)
         if owner_id is None:
-            return sessions
-        return tuple(session for session in sessions if session.owner_id == owner_id)
-
-    async def capture_authentication(
-        self, session_id: UUID
-    ) -> AuthenticationStateDocument:
-        session = await self._active_session(session_id)
-        logger.info(
-            "Capturing authentication state session_id=%s browser_id=%s",
-            session_id,
-            session.browser_id,
-        )
-        return await self._browser_state.capture_authentication(session.browser)
-
-    async def mount_authentication(
-        self, session_id: UUID, state: AuthenticationStateDocument
-    ) -> None:
-        session = await self._active_session(session_id)
-        await self._browser_state.mount_authentication(session.browser, state)
+            return tuple(result)
+        return tuple(item for item in result if item.owner_id == owner_id)
 
     async def capture_browser(self, session_id: UUID) -> BrowserStateDocument:
-        session = await self._active_session(session_id)
-        logger.info(
-            "Capturing browser state session_id=%s browser_id=%s",
-            session_id,
-            session.browser_id,
-        )
+        session = await self.get_active(session_id)
         return await self._browser_state.capture_browser(session.browser)
 
     async def mount_browser(
         self, session_id: UUID, state: BrowserStateDocument
     ) -> None:
-        session = await self._active_session(session_id)
+        session = await self.get_active(session_id)
         await self._browser_state.mount_browser(session.browser, state)
 
+    async def mount_authentication_profile(
+        self, session_id: UUID, profile_id: UUID
+    ) -> None:
+        session, profile = await asyncio.gather(
+            self.get_active(session_id),
+            self.get_authentication_profile(profile_id),
+        )
+        await self._browser_state.mount_authentication(
+            session.browser, profile.authentication_state
+        )
+
     async def list_downloads(self, session_id: UUID) -> tuple[Download, ...]:
-        session = await self._active_session(session_id)
+        session = await self.get_active(session_id)
         return await self._browser_state.list_downloads(session.browser)
 
     async def download_file(
         self, session_id: UUID, download_id: str
     ) -> tuple[str, bytes]:
-        session = await self._active_session(session_id)
+        session = await self.get_active(session_id)
         downloads = await self._browser_state.list_downloads(session.browser)
         download = next((item for item in downloads if item.id == download_id), None)
         if download is None:
@@ -163,145 +189,177 @@ class SessionService:
         content = await self._browser_state.download_file(session.browser, download_id)
         return download.filename, content
 
-    async def capture_browser_snapshot(
-        self, session_id: UUID, *, name: str, source_browser: str
-    ) -> BrowserStateSnapshot:
-        session = await self._active_session(session_id)
-        browser_state = await self._browser_state.capture_browser(session.browser)
-        return await self._snapshots.save(
-            snapshot=BrowserStateSnapshot(
-                id=uuid4(),
-                owner_id=session.lease.owner_id,
-                name=name,
-                source_browser=source_browser,
-                browser_state=browser_state,
-                created_at=datetime.now(UTC),
-            )
-        )
-
-    async def list_snapshots(self) -> tuple[BrowserStateSnapshot, ...]:
-        return await self._snapshots.list()
-
-    async def capture_authentication_snapshot(
-        self, session_id: UUID, *, name: str
-    ) -> AuthenticationStateSnapshot:
-        session = await self._active_session(session_id)
-        authentication_state = await self._browser_state.capture_authentication(
-            session.browser
-        )
-        return await self._authentication_snapshots.save(
-            snapshot=AuthenticationStateSnapshot(
-                id=uuid4(),
-                owner_id=session.lease.owner_id,
-                name=name,
-                authentication_state=authentication_state,
-                created_at=datetime.now(UTC),
-            )
-        )
-
-    async def list_authentication_snapshots(
+    async def create_browser_checkpoint(
         self,
-    ) -> tuple[AuthenticationStateSnapshot, ...]:
-        return await self._authentication_snapshots.list()
+        session_id: UUID,
+        *,
+        authentication_profile_id: UUID | None = None,
+    ) -> BrowserCheckpoint:
+        session = await self.get_active(session_id)
+        if authentication_profile_id is not None:
+            await self.get_authentication_profile(authentication_profile_id)
+        browser_state = await self._browser_state.capture_browser(session.browser)
+        return await self._checkpoints.save(
+            BrowserCheckpoint(
+                id=uuid4(),
+                owner_id=session.owner_id,
+                browser_state=browser_state,
+                authentication_profile_id=authentication_profile_id,
+                created_at=datetime.now(UTC),
+            )
+        )
 
-    async def suspend(self, session_id: UUID) -> SuspendedSession:
-        """Store what the browser holds and give the browser back to the pool.
+    async def get_browser_checkpoint(self, checkpoint_id: UUID) -> BrowserCheckpoint:
+        checkpoint = await self._checkpoints.get_by_id(checkpoint_id=checkpoint_id)
+        if checkpoint is None:
+            raise BrowserCheckpointNotFoundException()
+        return checkpoint
 
-        The state is captured and written before the lease goes, so a failure
-        anywhere in between leaves the session running rather than empty.
-        """
-        session = await self._active_session(session_id)
+    async def list_browser_checkpoints(self) -> tuple[BrowserCheckpoint, ...]:
+        return await self._checkpoints.list()
+
+    async def delete_browser_checkpoint(self, checkpoint_id: UUID) -> None:
+        if not await self._checkpoints.delete(checkpoint_id):
+            raise BrowserCheckpointNotFoundException()
+
+    async def create_authentication_profile(
+        self, session_id: UUID, *, name: str
+    ) -> AuthenticationProfile:
+        session = await self.get_active(session_id)
+        state = await self._browser_state.capture_authentication(session.browser)
+        return await self._authentication_profiles.save(
+            AuthenticationProfile(
+                id=uuid4(),
+                owner_id=session.owner_id,
+                name=name,
+                authentication_state=state,
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    async def get_authentication_profile(
+        self, profile_id: UUID
+    ) -> AuthenticationProfile:
+        profile = await self._authentication_profiles.get_by_id(profile_id=profile_id)
+        if profile is None:
+            raise AuthenticationProfileNotFoundException()
+        return profile
+
+    async def list_authentication_profiles(self) -> tuple[AuthenticationProfile, ...]:
+        return await self._authentication_profiles.list()
+
+    async def update_authentication_profile(
+        self, profile_id: UUID, *, session_id: UUID, name: str
+    ) -> AuthenticationProfile:
+        current, session = await asyncio.gather(
+            self.get_authentication_profile(profile_id),
+            self.get_active(session_id),
+        )
+        state = await self._browser_state.capture_authentication(session.browser)
+        return await self._authentication_profiles.save(
+            AuthenticationProfile(
+                id=current.id,
+                owner_id=current.owner_id,
+                name=name,
+                authentication_state=state,
+                created_at=current.created_at,
+            )
+        )
+
+    async def delete_authentication_profile(self, profile_id: UUID) -> None:
+        if not await self._authentication_profiles.delete(profile_id):
+            raise AuthenticationProfileNotFoundException()
+
+    async def suspend(self, session_id: UUID) -> Session:
+        active = await self.get_active(session_id)
         authentication_state, browser_state = await asyncio.gather(
-            self._browser_state.capture_authentication(session.browser),
-            self._browser_state.capture_browser(session.browser),
+            self._browser_state.capture_authentication(active.browser),
+            self._browser_state.capture_browser(active.browser),
         )
         now = datetime.now(UTC)
-        suspended = await self._suspensions.save(
-            suspended=SuspendedSession(
-                id=session.id,
-                owner_id=session.lease.owner_id,
+        profile = await self._authentication_profiles.save(
+            AuthenticationProfile(
+                id=uuid4(),
+                owner_id=active.owner_id,
+                name=f"Session {active.id}",
                 authentication_state=authentication_state,
-                browser_state=browser_state,
                 created_at=now,
-                expires_at=now + self._suspension_ttl,
             )
+        )
+        checkpoint = await self._checkpoints.save(
+            BrowserCheckpoint(
+                id=uuid4(),
+                owner_id=active.owner_id,
+                browser_state=browser_state,
+                authentication_profile_id=profile.id,
+                created_at=now,
+            )
+        )
+        suspended = await self._sessions.save(
+            active.session.suspend(checkpoint.id, now + self._suspension_ttl)
         )
         await self._leases.release(session_id, reason="session_suspended")
         return suspended
 
-    async def resume(self, session_id: UUID, ttl: timedelta) -> Session:
-        """Put a suspended session back onto whichever browser is free now.
-
-        The lease keeps the old session id, so the tunnel and screencast paths
-        a client was handed before suspending still point at this session.
-        """
-        suspended = await self._suspended_session(session_id)
+    async def resume(self, session_id: UUID, ttl: timedelta) -> ActiveSession:
+        aggregate = await self._suspended_session(session_id)
+        checkpoint = await self.get_browser_checkpoint(aggregate.browser_checkpoint_id)  # type: ignore[arg-type]
+        profile = (
+            await self.get_authentication_profile(checkpoint.authentication_profile_id)
+            if checkpoint.authentication_profile_id is not None
+            else None
+        )
         browser = await self._pick_available_browser()
         lease = await self._leases.create(
-            browser.id,
-            suspended.owner_id,
-            ttl,
-            lease_id=suspended.id,
+            browser.id, aggregate.owner_id, ttl, lease_id=aggregate.id
         )
         try:
             await self._browser_state.clear_downloads(browser)
-            # Authentication must be present before restored tabs navigate.
-            await self._browser_state.mount_authentication(
-                browser, suspended.authentication_state
-            )
-            await self._browser_state.mount_browser(browser, suspended.browser_state)
+            if profile is not None:
+                await self._browser_state.mount_authentication(
+                    browser, profile.authentication_state
+                )
+            await self._browser_state.mount_browser(browser, checkpoint.browser_state)
         except Exception:
-            # The state is still stored, so the session stays resumable.
             with suppress(LeaseNotFoundException):
                 await self._leases.release(lease.id, reason="resume_state_mount_failed")
             raise
-        await self._suspensions.delete(session_id=suspended.id)
-        leased = await self._browsers.get(lease.browser_id)
-        return Session(lease=lease, browser=leased)
+        resumed = await self._sessions.save(aggregate.resume(lease.expires_at))
+        return ActiveSession(
+            session=resumed,
+            lease=lease,
+            browser=await self._browsers.get(lease.browser_id),
+        )
 
     async def close(self, session_id: UUID) -> None:
-        if await self._find_suspended(session_id) is not None:
-            await self._suspensions.delete(session_id=session_id)
-            return
-        await self._leases.release(session_id, reason="session_closed")
+        aggregate = await self._session(session_id)
+        if aggregate.status is SessionStatus.ACTIVE:
+            await self._leases.release(session_id, reason="session_closed")
+        await self._sessions.save(aggregate.close())
 
     async def upstream_cdp_url(self, session_id: UUID) -> str:
-        """Resolve the internal CDP stream used by the backend RPC endpoint."""
-        session = await self._active_session(session_id)
-        return session.cdp_url
+        return (await self.get_active(session_id)).browser.slot.cdp_url
 
     async def upstream_screencast_url(self, session_id: UUID) -> str:
-        """Resolve where a session's frame stream actually lives."""
-        session = await self._active_session(session_id)
-        return session.screencast_url
+        return (await self.get_active(session_id)).browser.slot.screencast_url
 
     async def upstream_fmp4_screencast_url(self, session_id: UUID) -> str:
-        """Resolve the encoded frame stream without replacing the raw stream."""
-        session = await self._active_session(session_id)
-        return session.fmp4_screencast_url
+        return (await self.get_active(session_id)).browser.slot.fmp4_screencast_url
 
-    async def _active_session(self, session_id: UUID) -> Session:
-        if await self._find_suspended(session_id) is not None:
-            raise SessionNotActiveException()
-        return await self.get_active(session_id)
+    async def _session(self, session_id: UUID) -> Session:
+        session = await self._sessions.get_by_id(session_id=session_id)
+        if session is None:
+            raise SessionNotFoundException()
+        return session
 
-    async def _suspended_session(self, session_id: UUID) -> SuspendedSession:
-        suspended = await self._find_suspended(session_id)
-        if suspended is not None:
-            return suspended
-        # An unknown session must read as gone, not as "not suspended".
-        await self.get_active(session_id)
-        raise SessionNotSuspendedException()
-
-    async def _find_suspended(self, session_id: UUID) -> SuspendedSession | None:
-        """Drop a suspension nobody came back for, the way leases expire."""
-        suspended = await self._suspensions.get_by_id(session_id=session_id)
-        if suspended is None:
-            return None
-        if suspended.is_expired(datetime.now(UTC)):
-            await self._suspensions.delete(session_id=suspended.id)
-            return None
-        return suspended
+    async def _suspended_session(self, session_id: UUID) -> Session:
+        session = await self._session(session_id)
+        if session.status is not SessionStatus.SUSPENDED:
+            raise SessionNotSuspendedException()
+        if session.is_expired(datetime.now(UTC)):
+            await self._sessions.save(session.close())
+            raise SessionNotFoundException()
+        return session
 
     async def _pick_available_browser(self) -> Browser:
         browser = await self._browsers.find_available()

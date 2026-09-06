@@ -8,10 +8,13 @@ from backend.features.browsers.application.exceptions import (
 )
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.sessions.application.exceptions import (
+    AuthenticationProfileNotFoundException,
+    BrowserCheckpointNotFoundException,
     BrowserStateTransferException,
     DownloadNotFoundException,
     NoBrowserAvailableException,
     SessionNotActiveException,
+    SessionNotFoundException,
     SessionNotSuspendedException,
 )
 from backend.presentation.api_errors import ApiErrorSpec
@@ -42,10 +45,18 @@ class DownloadNotFoundError(ApiErrorResponse):
     code: Literal[ApiErrorCode.DOWNLOAD_NOT_FOUND]
 
 
+class AuthenticationProfileNotFoundError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.AUTHENTICATION_PROFILE_NOT_FOUND]
+
+
+class BrowserCheckpointNotFoundError(ApiErrorResponse):
+    code: Literal[ApiErrorCode.BROWSER_CHECKPOINT_NOT_FOUND]
+
+
 # An expired lease is dropped on access, so it reaches the edge as "not found".
 # A lease whose browser vanished answers with the pool's own BROWSER_NOT_FOUND.
 SESSION_NOT_FOUND = ApiErrorSpec(
-    exceptions=(LeaseNotFoundException,),
+    exceptions=(LeaseNotFoundException, SessionNotFoundException),
     status_code=status.HTTP_404_NOT_FOUND,
     code=ApiErrorCode.SESSION_NOT_FOUND,
     response_model=SessionNotFoundError,
@@ -95,6 +106,20 @@ DOWNLOAD_NOT_FOUND = ApiErrorSpec(
     response_model=DownloadNotFoundError,
     description="Download not found",
 )
+AUTHENTICATION_PROFILE_NOT_FOUND = ApiErrorSpec(
+    exceptions=(AuthenticationProfileNotFoundException,),
+    status_code=status.HTTP_404_NOT_FOUND,
+    code=ApiErrorCode.AUTHENTICATION_PROFILE_NOT_FOUND,
+    response_model=AuthenticationProfileNotFoundError,
+    description="Authentication profile not found",
+)
+BROWSER_CHECKPOINT_NOT_FOUND = ApiErrorSpec(
+    exceptions=(BrowserCheckpointNotFoundException,),
+    status_code=status.HTTP_404_NOT_FOUND,
+    code=ApiErrorCode.BROWSER_CHECKPOINT_NOT_FOUND,
+    response_model=BrowserCheckpointNotFoundError,
+    description="Browser checkpoint not found",
+)
 
 API_ERRORS = (
     SESSION_NOT_FOUND,
@@ -103,4 +128,6 @@ API_ERRORS = (
     SESSION_NOT_SUSPENDED,
     BROWSER_STATE_TRANSFER_FAILED,
     DOWNLOAD_NOT_FOUND,
+    AUTHENTICATION_PROFILE_NOT_FOUND,
+    BROWSER_CHECKPOINT_NOT_FOUND,
 )

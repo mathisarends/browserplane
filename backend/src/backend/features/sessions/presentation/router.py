@@ -20,6 +20,8 @@ from backend.features.sessions.application.exceptions import (
 from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
 from backend.features.sessions.presentation.errors import (
+    AUTHENTICATION_PROFILE_NOT_FOUND,
+    BROWSER_CHECKPOINT_NOT_FOUND,
     BROWSER_STATE_TRANSFER_FAILED,
     DOWNLOAD_NOT_FOUND,
     NO_BROWSER_AVAILABLE,
@@ -28,29 +30,28 @@ from backend.features.sessions.presentation.errors import (
     SESSION_NOT_SUSPENDED,
 )
 from backend.features.sessions.presentation.mapper import (
-    to_authentication_state_snapshot_response,
-    to_browser_state_snapshot_response,
+    to_authentication_profile_response,
+    to_browser_checkpoint_response,
     to_open_session_response,
     to_owner_sessions_response,
     to_session_response,
 )
 from backend.features.sessions.presentation.schemas import (
-    AuthenticationStateSnapshotResponse,
-    BrowserStateSnapshotResponse,
-    CaptureAuthenticationStateSnapshotRequest,
-    CaptureBrowserStateSnapshotRequest,
+    AuthenticationProfileResponse,
+    BrowserCheckpointResponse,
+    CreateAuthenticationProfileRequest,
+    CreateBrowserCheckpointRequest,
+    MountAuthenticationProfileRequest,
+    MountBrowserCheckpointRequest,
     OpenSessionRequest,
     OpenSessionResponse,
     OwnerSessionsResponse,
     ResumeSessionRequest,
     SessionResponse,
+    UpdateAuthenticationProfileRequest,
 )
 from backend.presentation.api_errors import api_error_responses
-from generated.browser_worker import (
-    AuthenticationStateSchema,
-    BrowserStateSchema,
-    DownloadResponse,
-)
+from generated.browser_worker import BrowserStateSchema, DownloadResponse
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
 logger = logging.getLogger(__name__)
@@ -69,16 +70,8 @@ async def open_session(
     session = await service.open(
         owner_id=request.owner_id,
         ttl=timedelta(seconds=request.ttl_seconds),
-        authentication_state=(
-            request.authentication_state.model_dump(mode="json", by_alias=True)
-            if request.authentication_state is not None
-            else None
-        ),
-        browser_state=(
-            request.browser_state.model_dump(mode="json", by_alias=True)
-            if request.browser_state is not None
-            else None
-        ),
+        authentication_profile_id=request.authentication_profile_id,
+        browser_checkpoint_id=request.browser_checkpoint_id,
     )
     return to_open_session_response(
         session, remaining_capacity=await service.remaining_capacity()
@@ -114,44 +107,26 @@ async def get_session(
     return to_session_response(session)
 
 
-@session_router.get(
-    "/sessions/{session_id}/authentication-state",
-    operation_id="capture_session_authentication_state",
-    responses=api_error_responses(
-        SESSION_NOT_FOUND,
-        BROWSER_NOT_FOUND,
-        SESSION_NOT_ACTIVE,
-        BROWSER_STATE_TRANSFER_FAILED,
-    ),
-)
-async def capture_session_authentication_state(
-    session_id: UUID,
-    response: Response,
-    service: FromDishka[SessionService],
-) -> AuthenticationStateSchema:
-    state = await service.capture_authentication(session_id)
-    response.headers["Cache-Control"] = "no-store"
-    return AuthenticationStateSchema.model_validate(state)
-
-
 @session_router.put(
-    "/sessions/{session_id}/authentication-state",
+    "/sessions/{session_id}/authentication-profile",
     status_code=status.HTTP_204_NO_CONTENT,
-    operation_id="mount_session_authentication_state",
+    operation_id="mount_session_authentication_profile",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
 )
-async def mount_session_authentication_state(
+async def mount_session_authentication_profile(
     session_id: UUID,
-    state: AuthenticationStateSchema,
+    request: MountAuthenticationProfileRequest,
     service: FromDishka[SessionService],
 ) -> Response:
-    await service.mount_authentication(
-        session_id, state.model_dump(mode="json", by_alias=True)
+    await service.mount_authentication_profile(
+        session_id, request.authentication_profile_id
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -163,6 +138,8 @@ async def mount_session_authentication_state(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
         BROWSER_STATE_TRANSFER_FAILED,
     ),
 )
@@ -254,24 +231,24 @@ async def download_session_file(
 
 
 @session_router.get(
-    "/browser-state-snapshots",
-    response_model=list[BrowserStateSnapshotResponse],
-    operation_id="list_browser_state_snapshots",
+    "/browser-checkpoints",
+    response_model=list[BrowserCheckpointResponse],
+    operation_id="list_browser_checkpoints",
 )
-async def list_browser_state_snapshots(
+async def list_browser_checkpoints(
     response: Response,
     service: FromDishka[SessionService],
-) -> list[BrowserStateSnapshotResponse]:
+) -> list[BrowserCheckpointResponse]:
     response.headers["Cache-Control"] = "no-store"
-    snapshots = await service.list_snapshots()
-    return [to_browser_state_snapshot_response(snapshot) for snapshot in snapshots]
+    checkpoints = await service.list_browser_checkpoints()
+    return [to_browser_checkpoint_response(item) for item in checkpoints]
 
 
 @session_router.post(
-    "/sessions/{session_id}/browser-state-snapshots",
-    response_model=BrowserStateSnapshotResponse,
+    "/sessions/{session_id}/browser-checkpoints",
+    response_model=BrowserCheckpointResponse,
     status_code=status.HTTP_201_CREATED,
-    operation_id="capture_browser_state_snapshot",
+    operation_id="create_browser_checkpoint",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
@@ -279,38 +256,37 @@ async def list_browser_state_snapshots(
         BROWSER_STATE_TRANSFER_FAILED,
     ),
 )
-async def capture_browser_state_snapshot(
+async def create_browser_checkpoint(
     session_id: UUID,
-    request: CaptureBrowserStateSnapshotRequest,
+    request: CreateBrowserCheckpointRequest,
     service: FromDishka[SessionService],
-) -> BrowserStateSnapshotResponse:
-    snapshot = await service.capture_browser_snapshot(
+) -> BrowserCheckpointResponse:
+    checkpoint = await service.create_browser_checkpoint(
         session_id,
-        name=request.name,
-        source_browser=request.source_browser,
+        authentication_profile_id=request.authentication_profile_id,
     )
-    return to_browser_state_snapshot_response(snapshot)
+    return to_browser_checkpoint_response(checkpoint)
 
 
 @session_router.get(
-    "/authentication-state-snapshots",
-    response_model=list[AuthenticationStateSnapshotResponse],
-    operation_id="list_authentication_state_snapshots",
+    "/authentication-profiles",
+    response_model=list[AuthenticationProfileResponse],
+    operation_id="list_authentication_profiles",
 )
-async def list_authentication_state_snapshots(
+async def list_authentication_profiles(
     response: Response,
     service: FromDishka[SessionService],
-) -> list[AuthenticationStateSnapshotResponse]:
+) -> list[AuthenticationProfileResponse]:
     response.headers["Cache-Control"] = "no-store"
-    snapshots = await service.list_authentication_snapshots()
-    return [to_authentication_state_snapshot_response(item) for item in snapshots]
+    profiles = await service.list_authentication_profiles()
+    return [to_authentication_profile_response(item) for item in profiles]
 
 
 @session_router.post(
-    "/sessions/{session_id}/authentication-state-snapshots",
-    response_model=AuthenticationStateSnapshotResponse,
+    "/sessions/{session_id}/authentication-profiles",
+    response_model=AuthenticationProfileResponse,
     status_code=status.HTTP_201_CREATED,
-    operation_id="capture_authentication_state_snapshot",
+    operation_id="create_authentication_profile",
     responses=api_error_responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
@@ -318,16 +294,91 @@ async def list_authentication_state_snapshots(
         BROWSER_STATE_TRANSFER_FAILED,
     ),
 )
-async def capture_authentication_state_snapshot(
+async def create_authentication_profile(
     session_id: UUID,
-    request: CaptureAuthenticationStateSnapshotRequest,
+    request: CreateAuthenticationProfileRequest,
     service: FromDishka[SessionService],
-) -> AuthenticationStateSnapshotResponse:
-    snapshot = await service.capture_authentication_snapshot(
+) -> AuthenticationProfileResponse:
+    profile = await service.create_authentication_profile(
         session_id,
         name=request.name,
     )
-    return to_authentication_state_snapshot_response(snapshot)
+    return to_authentication_profile_response(profile)
+
+
+@session_router.get(
+    "/authentication-profiles/{profile_id}",
+    response_model=AuthenticationProfileResponse,
+    operation_id="get_authentication_profile",
+    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+)
+async def get_authentication_profile(
+    profile_id: UUID,
+    response: Response,
+    service: FromDishka[SessionService],
+) -> AuthenticationProfileResponse:
+    response.headers["Cache-Control"] = "no-store"
+    return to_authentication_profile_response(
+        await service.get_authentication_profile(profile_id)
+    )
+
+
+@session_router.put(
+    "/sessions/{session_id}/authentication-profiles/{profile_id}",
+    response_model=AuthenticationProfileResponse,
+    operation_id="update_authentication_profile",
+    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+)
+async def update_authentication_profile(
+    session_id: UUID,
+    profile_id: UUID,
+    request: UpdateAuthenticationProfileRequest,
+    service: FromDishka[SessionService],
+) -> AuthenticationProfileResponse:
+    profile = await service.update_authentication_profile(
+        profile_id,
+        session_id=session_id,
+        name=request.name,
+    )
+    return to_authentication_profile_response(profile)
+
+
+@session_router.delete(
+    "/authentication-profiles/{profile_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="delete_authentication_profile",
+    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+)
+async def delete_authentication_profile(
+    profile_id: UUID, service: FromDishka[SessionService]
+) -> None:
+    await service.delete_authentication_profile(profile_id)
+
+
+@session_router.put(
+    "/sessions/{session_id}/browser-checkpoint",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="mount_session_browser_checkpoint",
+    responses=api_error_responses(
+        SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
+)
+async def mount_session_browser_checkpoint(
+    session_id: UUID,
+    request: MountBrowserCheckpointRequest,
+    service: FromDishka[SessionService],
+) -> Response:
+    checkpoint = await service.get_browser_checkpoint(request.browser_checkpoint_id)
+    if checkpoint.authentication_profile_id is not None:
+        await service.mount_authentication_profile(
+            session_id, checkpoint.authentication_profile_id
+        )
+    await service.mount_browser(session_id, checkpoint.browser_state)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @session_router.post(

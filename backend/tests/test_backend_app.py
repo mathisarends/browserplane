@@ -4,27 +4,27 @@ from dishka import Provider, Scope, provide
 from fakes.browser_repository import InMemoryBrowserRepository
 from fakes.lease_store import InMemoryLeaseStore
 from fakes.session_repositories import (
-    InMemoryAuthenticationStateSnapshotRepository,
-    InMemoryBrowserStateSnapshotRepository,
-    InMemorySuspendedSessionRepository,
+    InMemoryAuthenticationProfileRepository,
+    InMemoryBrowserCheckpointRepository,
+    InMemorySessionRepository,
 )
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
-from backend.features.browsers.application.models import Browser, BrowserSlot
 from backend.features.browsers.application.ports import BrowserProvisioner
+from backend.features.browsers.domain.models import Browser, BrowserSlot
 from backend.features.browsers.infrastructure import BrowserProvider
 from backend.features.leases.infrastructure import LeaseProvider
-from backend.features.sessions.application.models import (
+from backend.features.sessions.application.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    BrowserRuntime,
+    SessionRepository,
+)
+from backend.features.sessions.domain.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
-)
-from backend.features.sessions.application.ports import (
-    AuthenticationStateSnapshotRepository,
-    BrowserRuntime,
-    BrowserStateSnapshotRepository,
-    SuspendedSessionRepository,
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
 
@@ -102,45 +102,45 @@ class FakeBrowserRuntime(BrowserRuntime):
 class FakeSessionProvider(Provider):
     def __init__(
         self,
-        suspensions: SuspendedSessionRepository,
+        sessions: SessionRepository,
         browser_runtime: BrowserRuntime,
-        snapshots: BrowserStateSnapshotRepository,
-        authentication_snapshots: AuthenticationStateSnapshotRepository,
+        checkpoints: BrowserCheckpointRepository,
+        authentication_profiles: AuthenticationProfileRepository,
     ) -> None:
         super().__init__()
-        self._suspensions = suspensions
+        self._sessions = sessions
         self._browser_runtime = browser_runtime
-        self._snapshots = snapshots
-        self._authentication_snapshots = authentication_snapshots
+        self._checkpoints = checkpoints
+        self._authentication_profiles = authentication_profiles
 
     @provide(scope=Scope.APP)
     def settings(self) -> SessionSettings:
         return SessionSettings(authentication_state_encryption_key=TEST_ENCRYPTION_KEY)
 
-    @provide(scope=Scope.REQUEST, provides=SuspendedSessionRepository)
-    def suspensions(self) -> SuspendedSessionRepository:
-        return self._suspensions
+    @provide(scope=Scope.REQUEST, provides=SessionRepository)
+    def sessions(self) -> SessionRepository:
+        return self._sessions
 
     @provide(scope=Scope.APP, provides=BrowserRuntime)
     def browser_runtime(self) -> BrowserRuntime:
         return self._browser_runtime
 
-    @provide(scope=Scope.REQUEST, provides=BrowserStateSnapshotRepository)
-    def snapshots(self) -> BrowserStateSnapshotRepository:
-        return self._snapshots
+    @provide(scope=Scope.REQUEST, provides=BrowserCheckpointRepository)
+    def checkpoints(self) -> BrowserCheckpointRepository:
+        return self._checkpoints
 
-    @provide(scope=Scope.REQUEST, provides=AuthenticationStateSnapshotRepository)
-    def authentication_snapshots(self) -> AuthenticationStateSnapshotRepository:
-        return self._authentication_snapshots
+    @provide(scope=Scope.REQUEST, provides=AuthenticationProfileRepository)
+    def authentication_profiles(self) -> AuthenticationProfileRepository:
+        return self._authentication_profiles
 
 
 def create_test_app(
     provisioner: BrowserProvisioner,
     repository: InMemoryBrowserRepository,
-    suspensions: InMemorySuspendedSessionRepository,
+    sessions: InMemorySessionRepository,
     browser_state: BrowserRuntime,
-    snapshots: InMemoryBrowserStateSnapshotRepository | None = None,
-    authentication_snapshots: InMemoryAuthenticationStateSnapshotRepository
+    checkpoints: InMemoryBrowserCheckpointRepository | None = None,
+    authentication_profiles: InMemoryAuthenticationProfileRepository
     | None = None,
 ):
     return create_app(
@@ -148,12 +148,12 @@ def create_test_app(
             BrowserProvider(provisioner, repository),
             LeaseProvider(InMemoryLeaseStore()),
             FakeSessionProvider(
-                suspensions=suspensions,
+                sessions=sessions,
                 browser_runtime=browser_state,
-                snapshots=snapshots or InMemoryBrowserStateSnapshotRepository(),
-                authentication_snapshots=(
-                    authentication_snapshots
-                    or InMemoryAuthenticationStateSnapshotRepository()
+                checkpoints=checkpoints or InMemoryBrowserCheckpointRepository(),
+                authentication_profiles=(
+                    authentication_profiles
+                    or InMemoryAuthenticationProfileRepository()
                 ),
             ),
         )
@@ -165,7 +165,7 @@ def test_backend_serves_a_session_lifecycle() -> None:
     app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
-        InMemorySuspendedSessionRepository(),
+        InMemorySessionRepository(),
         state,
     )
     with TestClient(app) as client:
@@ -173,32 +173,11 @@ def test_backend_serves_a_session_lifecycle() -> None:
 
         created = client.post(
             "/api/v1/sessions",
-            json={
-                "owner_id": OWNER_ID,
-                "authentication_state": {"cookies": [], "localStorage": []},
-                "browser_state": {
-                    "tabs": [
-                        {
-                            "url": "https://example.com/profile",
-                            "scroll": {"x": 0, "y": 0},
-                            "sessionStorage": [],
-                        }
-                    ],
-                    "active_tab_index": 0,
-                },
-            },
+            json={"owner_id": OWNER_ID},
         )
         assert created.status_code == 201
         session = created.json()
         assert session["remaining_capacity"] == 0
-        assert state.mounted_authentication == {"cookies": [], "localStorage": []}
-        assert state.mounted_browser is not None
-        assert state.mounted_browser["tabs"][0]["url"].endswith("/profile")
-        authentication = client.get(
-            f"/api/v1/sessions/{session['id']}/authentication-state"
-        )
-        assert authentication.status_code == 200
-        assert authentication.headers["cache-control"] == "no-store"
         browser_state = client.get(f"/api/v1/sessions/{session['id']}/browser-state")
         assert browser_state.status_code == 200
         assert browser_state.json()["tabs"][0]["url"].endswith("/inbox")
@@ -217,9 +196,9 @@ def test_backend_serves_a_session_lifecycle() -> None:
         assert client.get(f"/api/v1/sessions/{session['id']}").status_code == 200
         assert client.delete(f"/api/v1/sessions/{session['id']}").status_code == 204
 
-        missing = client.get(f"/api/v1/sessions/{session['id']}")
-        assert missing.status_code == 404
-        assert missing.json()["code"] == "session_not_found"
+        closed = client.get(f"/api/v1/sessions/{session['id']}")
+        assert closed.status_code == 200
+        assert closed.json()["status"] == "closed"
 
         # Releasing the lease returned the browser to the pool.
         reopened = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID})
@@ -231,7 +210,7 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
     app = create_test_app(
         provisioner,
         InMemoryBrowserRepository(),
-        InMemorySuspendedSessionRepository(),
+        InMemorySessionRepository(),
         FakeBrowserRuntime(),
     )
     with TestClient(app) as client:
@@ -252,8 +231,9 @@ def test_admin_sees_the_pool_and_can_pull_a_browser_out_of_it() -> None:
         assert released.status_code == 200
         assert released.json()["state"] == "stopped"
         assert provisioner.released == [UUID(int=1)]
-        # The browser is gone, so the session that sat on it is gone with it.
-        assert client.get("/api/v1/admin/sessions").json() == []
+        # The aggregate remains available as history after its browser is gone.
+        closed_sessions = client.get("/api/v1/admin/sessions").json()
+        assert [entry["status"] for entry in closed_sessions] == ["closed"]
 
         restarted = client.post(
             f"/api/v1/admin/browsers/{session['browser_id']}/restart"
@@ -276,7 +256,7 @@ def test_a_suspended_session_frees_its_browser_and_comes_back() -> None:
     app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
-        InMemorySuspendedSessionRepository(),
+        InMemorySessionRepository(),
         state,
     )
     with TestClient(app) as client:
@@ -306,32 +286,45 @@ def test_saved_browser_and_authentication_states_are_independent() -> None:
     app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
-        InMemorySuspendedSessionRepository(),
+        InMemorySessionRepository(),
         FakeBrowserRuntime(),
-        InMemoryBrowserStateSnapshotRepository(),
-        InMemoryAuthenticationStateSnapshotRepository(),
+        InMemoryBrowserCheckpointRepository(),
+        InMemoryAuthenticationProfileRepository(),
     )
     with TestClient(app) as client:
         session = client.post("/api/v1/sessions", json={"owner_id": OWNER_ID}).json()
-        request = {"name": "Work", "source_browser": "Browser 01"}
-
         browser = client.post(
-            f"/api/v1/sessions/{session['id']}/browser-state-snapshots",
-            json=request,
+            f"/api/v1/sessions/{session['id']}/browser-checkpoints",
+            json={},
         )
         authentication = client.post(
-            f"/api/v1/sessions/{session['id']}/authentication-state-snapshots",
+            f"/api/v1/sessions/{session['id']}/authentication-profiles",
             json={"name": "Work"},
         )
 
         assert browser.status_code == authentication.status_code == 201
-        assert "authentication_state" not in browser.json()
-        assert "browser_state" not in authentication.json()
-        assert "source_browser" not in authentication.json()
-        assert len(client.get("/api/v1/browser-state-snapshots").json()) == 1
-        auth_list = client.get("/api/v1/authentication-state-snapshots")
+        assert "browser_state" not in browser.json()
+        assert "authentication_state" not in authentication.json()
+        assert len(client.get("/api/v1/browser-checkpoints").json()) == 1
+        auth_list = client.get("/api/v1/authentication-profiles")
         assert auth_list.headers["cache-control"] == "no-store"
         assert len(auth_list.json()) == 1
+
+        profile_id = authentication.json()["id"]
+        updated = client.put(
+            f"/api/v1/sessions/{session['id']}/authentication-profiles/{profile_id}",
+            json={"name": "Work updated"},
+        )
+        assert updated.status_code == 200
+        assert updated.json()["name"] == "Work updated"
+        assert "authentication_state" not in updated.json()
+        mounted = client.put(
+            f"/api/v1/sessions/{session['id']}/authentication-profile",
+            json={"authentication_profile_id": profile_id},
+        )
+        assert mounted.status_code == 204
+        deleted = client.delete(f"/api/v1/authentication-profiles/{profile_id}")
+        assert deleted.status_code == 204
 
 
 def test_a_client_finds_its_own_sessions_again() -> None:
@@ -339,7 +332,7 @@ def test_a_client_finds_its_own_sessions_again() -> None:
     app = create_test_app(
         FakeProvisioner(),
         InMemoryBrowserRepository(),
-        InMemorySuspendedSessionRepository(),
+        InMemorySessionRepository(),
         FakeBrowserRuntime(),
     )
     with TestClient(app) as client:

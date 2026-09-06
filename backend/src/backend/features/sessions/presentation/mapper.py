@@ -1,50 +1,56 @@
 from collections.abc import Sequence
 
-from backend.features.sessions.application.models import (
-    AuthenticationStateSnapshot,
-    BrowserStateSnapshot,
+from backend.features.sessions.domain.models import (
+    ActiveSession,
+    AuthenticationProfile,
+    BrowserCheckpoint,
     Session,
-    SessionStatus,
-    SuspendedSession,
 )
 from backend.features.sessions.presentation.schemas import (
-    AuthenticationStateSnapshotResponse,
-    BrowserStateSnapshotResponse,
+    AuthenticationProfileResponse,
+    BrowserCheckpointResponse,
     OpenSessionResponse,
     OwnerSessionsResponse,
     SessionResponse,
 )
-from generated.browser_worker import AuthenticationStateSchema, BrowserStateSchema
 
 SESSION_PATH = "/api/v1/sessions"
 
 
-def to_session_response(session: Session | SuspendedSession) -> SessionResponse:
-    if isinstance(session, SuspendedSession):
-        return _to_suspended_response(session)
+def to_session_response(session: ActiveSession | Session) -> SessionResponse:
+    aggregate = session.session if isinstance(session, ActiveSession) else session
     return SessionResponse(
-        id=session.id,
-        status=SessionStatus.ACTIVE,
-        owner_id=session.lease.owner_id,
-        expires_at=session.lease.expires_at,
-        created_at=session.lease.created_at,
-        browser_id=session.browser_id,
-        tunnel_path=f"{SESSION_PATH}/{session.id}/tunnel",
-        screencast_path=f"{SESSION_PATH}/{session.id}/screencast",
+        id=aggregate.id,
+        status=aggregate.status,
+        owner_id=aggregate.owner_id,
+        expires_at=aggregate.expires_at,
+        created_at=aggregate.created_at,
+        browser_checkpoint_id=aggregate.browser_checkpoint_id,
+        browser_id=session.browser_id if isinstance(session, ActiveSession) else None,
+        tunnel_path=(
+            f"{SESSION_PATH}/{aggregate.id}/tunnel"
+            if isinstance(session, ActiveSession)
+            else None
+        ),
+        screencast_path=(
+            f"{SESSION_PATH}/{aggregate.id}/screencast"
+            if isinstance(session, ActiveSession)
+            else None
+        ),
     )
 
 
 def to_open_session_response(
-    session: Session, *, remaining_capacity: int
+    session: ActiveSession, *, remaining_capacity: int
 ) -> OpenSessionResponse:
-    response = to_session_response(session)
     return OpenSessionResponse(
-        **response.model_dump(), remaining_capacity=remaining_capacity
+        **to_session_response(session).model_dump(),
+        remaining_capacity=remaining_capacity,
     )
 
 
 def to_owner_sessions_response(
-    sessions: Sequence[Session | SuspendedSession], *, remaining_capacity: int
+    sessions: Sequence[ActiveSession | Session], *, remaining_capacity: int
 ) -> OwnerSessionsResponse:
     return OwnerSessionsResponse(
         sessions=[to_session_response(session) for session in sessions],
@@ -52,36 +58,21 @@ def to_owner_sessions_response(
     )
 
 
-def _to_suspended_response(suspended: SuspendedSession) -> SessionResponse:
-    return SessionResponse(
-        id=suspended.id,
-        status=SessionStatus.SUSPENDED,
-        owner_id=suspended.owner_id,
-        expires_at=suspended.expires_at,
-        created_at=suspended.created_at,
+def to_browser_checkpoint_response(
+    checkpoint: BrowserCheckpoint,
+) -> BrowserCheckpointResponse:
+    return BrowserCheckpointResponse(
+        id=checkpoint.id,
+        created_at=checkpoint.created_at,
+        authentication_profile_id=checkpoint.authentication_profile_id,
     )
 
 
-def to_browser_state_snapshot_response(
-    snapshot: BrowserStateSnapshot,
-) -> BrowserStateSnapshotResponse:
-    return BrowserStateSnapshotResponse(
-        id=snapshot.id,
-        name=snapshot.name,
-        source_browser=snapshot.source_browser,
-        created_at=snapshot.created_at,
-        browser_state=BrowserStateSchema.model_validate(snapshot.browser_state),
-    )
-
-
-def to_authentication_state_snapshot_response(
-    snapshot: AuthenticationStateSnapshot,
-) -> AuthenticationStateSnapshotResponse:
-    return AuthenticationStateSnapshotResponse(
-        id=snapshot.id,
-        name=snapshot.name,
-        created_at=snapshot.created_at,
-        authentication_state=AuthenticationStateSchema.model_validate(
-            snapshot.authentication_state
-        ),
+def to_authentication_profile_response(
+    profile: AuthenticationProfile,
+) -> AuthenticationProfileResponse:
+    return AuthenticationProfileResponse(
+        id=profile.id,
+        name=profile.name,
+        created_at=profile.created_at,
     )

@@ -1,32 +1,28 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from backend.features.browsers.application.models import Browser
-from backend.features.sessions.application.models import (
+from backend.features.browsers.domain.models import Browser
+from backend.features.sessions.domain.models import (
+    AuthenticationProfile,
     AuthenticationStateDocument,
-    AuthenticationStateSnapshot,
+    BrowserCheckpoint,
     BrowserStateDocument,
-    BrowserStateSnapshot,
     Download,
-    SuspendedSession,
+    Session,
 )
 
 
-class SuspendedSessionRepository(ABC):
-    """Persistence contract for sessions that currently hold no browser."""
+class SessionRepository(ABC):
+    """Persistence contract for session aggregate roots."""
 
     @abstractmethod
-    async def save(self, *, suspended: SuspendedSession) -> SuspendedSession: ...
+    async def save(self, session: Session) -> Session: ...
 
     @abstractmethod
-    async def get_by_id(self, *, session_id: UUID) -> SuspendedSession | None: ...
+    async def get_by_id(self, *, session_id: UUID) -> Session | None: ...
 
     @abstractmethod
-    async def list(self) -> tuple[SuspendedSession, ...]:
-        """Everything parked right now, newest first."""
-
-    @abstractmethod
-    async def delete(self, *, session_id: UUID) -> None: ...
+    async def list(self) -> tuple[Session, ...]: ...
 
 
 class BrowserRuntime(ABC):
@@ -60,23 +56,33 @@ class BrowserRuntime(ABC):
     async def download_file(self, browser: Browser, download_id: str) -> bytes: ...
 
 
-class BrowserStateSnapshotRepository(ABC):
-    """Persistence contract for reusable, named browser states."""
+class BrowserCheckpointRepository(ABC):
+    """Persistence contract for named browser checkpoints."""
 
     @abstractmethod
-    async def save(self, *, snapshot: BrowserStateSnapshot) -> BrowserStateSnapshot: ...
+    async def save(self, checkpoint: BrowserCheckpoint) -> BrowserCheckpoint: ...
 
     @abstractmethod
-    async def list(self) -> tuple[BrowserStateSnapshot, ...]: ...
-
-
-class AuthenticationStateSnapshotRepository(ABC):
-    """Persistence contract for reusable, named authentication states."""
+    async def get_by_id(self, *, checkpoint_id: UUID) -> BrowserCheckpoint | None: ...
 
     @abstractmethod
-    async def save(
-        self, *, snapshot: AuthenticationStateSnapshot
-    ) -> AuthenticationStateSnapshot: ...
+    async def list(self) -> tuple[BrowserCheckpoint, ...]: ...
 
     @abstractmethod
-    async def list(self) -> tuple[AuthenticationStateSnapshot, ...]: ...
+    async def delete(self, checkpoint_id: UUID) -> bool: ...
+
+
+class AuthenticationProfileRepository(ABC):
+    """Persistence contract for reusable, mutable login identities."""
+
+    @abstractmethod
+    async def save(self, profile: AuthenticationProfile) -> AuthenticationProfile: ...
+
+    @abstractmethod
+    async def get_by_id(self, *, profile_id: UUID) -> AuthenticationProfile | None: ...
+
+    @abstractmethod
+    async def list(self) -> tuple[AuthenticationProfile, ...]: ...
+
+    @abstractmethod
+    async def delete(self, profile_id: UUID) -> bool: ...
