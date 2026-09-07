@@ -11,6 +11,8 @@ class FakeBrowserAllocator(BrowserAllocator):
         self.reserved: list[UUID] = []
         self.recycled: list[UUID] = []
         self.recycle_error: Exception | None = None
+        self.replaced: list[UUID] = []
+        self.replace_error: Exception | None = None
 
     async def reserve(self, browser_id: UUID) -> int:
         self.reserved.append(browser_id)
@@ -20,3 +22,8 @@ class FakeBrowserAllocator(BrowserAllocator):
         self.recycled.append(browser_id)
         if self.recycle_error is not None:
             raise self.recycle_error
+
+    async def replace(self, browser_id: UUID) -> None:
+        self.replaced.append(browser_id)
+        if self.replace_error is not None:
+            raise self.replace_error

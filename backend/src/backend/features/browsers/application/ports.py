@@ -2,7 +2,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from uuid import UUID
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserWorker
+from backend.features.browsers.domain.models import (
+    Browser,
+    BrowserSlot,
+    BrowserWorker,
+    WorkerIncarnation,
+)
 
 
 class BrowserWorkerDirectory(ABC):
@@ -29,6 +34,20 @@ class BrowserProvisioner(ABC):
     @abstractmethod
     async def release(self, slot: BrowserSlot, generation: int) -> None:
         """Reset one worker to its empty initial state; the slot itself stays."""
+
+
+class WorkerRecovery(ABC):
+    """Replaces the worker instance a slot runs on."""
+
+    @abstractmethod
+    async def replace(self, slot: BrowserSlot) -> WorkerIncarnation:
+        """Retire the slot's worker and return the incarnation that took over.
+
+        This is the escalation for a runtime that will not clean itself up.
+        It returns only once a different instance reports itself ready, so the
+        caller may treat it as proof that the old process and everything it
+        held are gone. The slot itself survives; only its worker is new.
+        """
 
 
 class BrowserRepository(ABC):

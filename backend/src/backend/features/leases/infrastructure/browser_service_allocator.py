@@ -15,3 +15,6 @@ class BrowserServiceAllocator(BrowserAllocator):
 
     async def recycle(self, browser_id: UUID) -> None:
         await self._browsers.recycle(browser_id)
+
+    async def replace(self, browser_id: UUID) -> None:
+        await self._browsers.replace(browser_id)

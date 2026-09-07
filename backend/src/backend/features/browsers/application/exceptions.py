@@ -11,3 +11,7 @@ class BrowserUnavailableException(BackendException):
 
 class BrowserProvisioningException(BackendException):
     message = "The browser could not be provisioned on its worker"
+
+
+class WorkerRecoveryException(BackendException):
+    message = "The browser worker could not be replaced"

@@ -10,12 +10,14 @@ from fakes.session_repositories import (
     InMemorySessionRepository,
 )
 from fakes.session_requests import ImmediateSessionRequestRepository
+from fakes.worker_recovery import FakeWorkerRecovery
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
+    WorkerRecovery,
 )
 from backend.features.browsers.application.service import BrowserService
 from backend.features.browsers.domain.models import Browser, BrowserSlot
@@ -119,6 +121,10 @@ class FakeBrowserProvider(Provider):
     def provisioner(self) -> BrowserProvisioner:
         return self._provisioner
 
+    @provide(scope=Scope.APP, provides=WorkerRecovery)
+    def recovery(self) -> WorkerRecovery:
+        return FakeWorkerRecovery()
+
     @provide(scope=Scope.REQUEST, provides=BrowserRepository)
     def repository(self) -> BrowserRepository:
         return self._repository
@@ -187,7 +193,7 @@ def create_test_app(
     checkpoints: InMemoryBrowserCheckpointRepository | None = None,
     authentication_profiles: InMemoryAuthenticationProfileRepository | None = None,
 ):
-    asyncio.run(BrowserService(provisioner, repository).start())
+    asyncio.run(BrowserService(provisioner, repository, FakeWorkerRecovery()).start())
     lease_store = InMemoryLeaseStore()
     checkpoints = checkpoints or InMemoryBrowserCheckpointRepository()
     authentication_profiles = (

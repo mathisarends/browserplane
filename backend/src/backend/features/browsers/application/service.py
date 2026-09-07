@@ -13,6 +13,7 @@ from backend.features.browsers.application.exceptions import (
 from backend.features.browsers.application.ports import (
     BrowserProvisioner,
     BrowserRepository,
+    WorkerRecovery,
 )
 from backend.features.browsers.domain.models import (
     Browser,
@@ -25,10 +26,14 @@ logger = logging.getLogger(__name__)
 
 class BrowserService:
     def __init__(
-        self, provisioner: BrowserProvisioner, repository: BrowserRepository
+        self,
+        provisioner: BrowserProvisioner,
+        repository: BrowserRepository,
+        recovery: WorkerRecovery,
     ) -> None:
         self._provisioner = provisioner
         self._repository = repository
+        self._recovery = recovery
 
     async def start(self) -> None:
         """Register configured slots without starting worker runtimes."""
@@ -116,6 +121,24 @@ class BrowserService:
             raise
         browser.state = BrowserState.STOPPED
         await self._repository.save(browser)
+
+    async def replace(self, browser_id: UUID) -> Browser:
+        """Swap the worker under a slot whose runtime will not clean itself up.
+
+        Only a worker that came back as a new instance may end a lease, so the
+        fresh process - not an optimistic guess - is what frees the slot again.
+        """
+        browser = await self.get(browser_id)
+        async with self._browser_worker(browser.slot):
+            await self._recovery.replace(browser.slot)
+        browser.state = BrowserState.STOPPED
+        browser.generation += 1
+        logger.warning(
+            "Browser recovered by replacing its worker browser_id=%s generation=%d",
+            browser.id,
+            browser.generation,
+        )
+        return await self._repository.save(browser)
 
     @asynccontextmanager
     async def _browser_worker(self, slot: BrowserSlot) -> AsyncGenerator[None]:

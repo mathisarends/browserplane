@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from fakes.browser_provisioner import FakeBrowserProvisioner
 from fakes.browser_repository import InMemoryBrowserRepository
+from fakes.worker_recovery import FakeWorkerRecovery
 
 from backend.features.browsers.application.exceptions import (
     BrowserNotFoundException,
@@ -31,7 +32,9 @@ async def test_start_registers_slots_and_preserves_existing_lifecycle() -> None:
             generation=4,
         )
     )
-    service = BrowserService(FakeBrowserProvisioner((first, second)), repository)
+    service = BrowserService(
+        FakeBrowserProvisioner((first, second)), repository, FakeWorkerRecovery()
+    )
 
     await service.start()
 
@@ -49,7 +52,7 @@ async def test_pool_operations_keep_availability_and_generations_consistent() ->
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
     browser = await repository.save(_browser(slot))
-    service = BrowserService(provisioner, repository)
+    service = BrowserService(provisioner, repository, FakeWorkerRecovery())
 
     assert await service.remaining_capacity() == 1
     assert await service.reserve(browser.id) == 0
@@ -77,7 +80,7 @@ async def test_recycle_ignores_unassigned_slots_and_cleans_leased_ones() -> None
     repository = InMemoryBrowserRepository()
     ready = await repository.save(_browser(ready_slot))
     leased = await repository.save(_browser(leased_slot, state=BrowserState.LEASED))
-    service = BrowserService(provisioner, repository)
+    service = BrowserService(provisioner, repository, FakeWorkerRecovery())
 
     await service.recycle(ready.id)
     await service.recycle(leased.id)
@@ -95,7 +98,7 @@ async def test_worker_failures_are_translated_and_mark_recycling_failed() -> Non
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
     browser = await repository.save(_browser(slot, state=BrowserState.LEASED))
-    service = BrowserService(provisioner, repository)
+    service = BrowserService(provisioner, repository, FakeWorkerRecovery())
     provisioner.release_error = RuntimeError("worker unavailable")
 
     with pytest.raises(BrowserProvisioningException):

@@ -13,3 +13,6 @@ class BrowserWorkerSettings(BaseSettings):
 
     request_timeout_seconds: float = Field(default=30, gt=0)
     transfer_timeout_seconds: float = Field(default=3600, gt=0)
+    # How long a replaced worker has to come back as a new, ready instance.
+    replacement_timeout_seconds: float = Field(default=60, gt=0)
+    readiness_poll_seconds: float = Field(default=2, gt=0)

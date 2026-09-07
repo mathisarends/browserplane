@@ -22,6 +22,13 @@ class BrowserSlot:
 
 
 @dataclass(frozen=True, slots=True)
+class WorkerIncarnation:
+    """One worker process. A different id proves the previous one is gone."""
+
+    instance_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
 class BrowserWorker:
     id: UUID
     url: str

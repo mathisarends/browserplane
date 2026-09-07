@@ -44,3 +44,11 @@ class BrowserAllocator(ABC):
 
     @abstractmethod
     async def recycle(self, browser_id: UUID) -> None: ...
+
+    @abstractmethod
+    async def replace(self, browser_id: UUID) -> None:
+        """Replace the worker the browser runs on, once cleanup has given up.
+
+        Returns only when a new worker instance is confirmed ready, so a lease
+        may be ended on the strength of it.
+        """
