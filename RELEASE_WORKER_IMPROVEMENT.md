@@ -417,8 +417,9 @@ LEASED -> RECYCLING -> STOPPED
                FAILED -> Retry -> Worker-Ersetzung -> STOPPED
 ```
 
-Optional kann `QUARANTINED` einen dauerhaft defekten Slot deutlicher von einem
-temporären `FAILED` unterscheiden.
+`QUARANTINED` unterscheidet den dauerhaft defekten Slot vom temporären
+`FAILED`. Die Lease kennt beide Zustände; der Browser-Slot bleibt bei `FAILED`,
+weil er schon dort nicht mehr planbar ist.
 
 Zwingend sind folgende Regeln:
 
@@ -477,6 +478,90 @@ Zwingend sind folgende Regeln:
 - `instance_id` im Health-Endpunkt bereitstellen.
 - `WorkerRecovery` für die verwendete Plattform implementieren.
 - Worker nach der Retry-Grenze ersetzen und neue Readiness bestätigen.
+
+Der Stand dieser Phase ist unten unter „Umgesetzter Stand“ beschrieben.
+
+## Umgesetzter Stand
+
+Die Phasen 1 bis 4 sind implementiert. Die harte Recovery aus Phase 4 verteilt
+sich auf drei Stellen.
+
+### Worker: `POST /api/v1/restart`
+
+Der Worker kann sich selbst beenden. Die Antwort nennt die Instanz, die
+verschwindet, damit die Control Plane ihren Nachfolger erkennen kann:
+
+```json
+{ "instance_id": "018f...." }
+```
+
+Danach schickt `WorkerRestartService` ein `SIGTERM` an den eigenen Prozess. Ein
+Watchdog beendet ihn hart, falls der Shutdown genau an dem Zustand hängt, den
+der Restart loswerden soll. Im Container ist der Worker PID 1: mit ihm sterben
+Chromium, dessen Kindprozesse und jeder Handle, den ein Retry nicht mehr
+erreicht.
+
+Die Route antwortet nur bei `BROWSER_WORKER_RESTART_SUPERVISED=true`. Ohne
+garantierte Restart-Policy wäre die Selbstbeendigung keine Ersetzung, sondern
+ein Kapazitätsverlust; der Slot geht dann stattdessen in Quarantäne.
+`compose.yml` setzt beide Hälften: `restart: unless-stopped` und das Flag.
+
+### Backend: `WorkerRecovery`
+
+`SupervisedWorkerRecovery` fordert den Restart an und wartet anschließend auf
+`GET /api/v1/readiness`, bis eine *andere* `instance_id` `ok` meldet. Erst
+diese Bestätigung setzt den Slot auf `STOPPED` und erhöht die Generation.
+Antwortet der Worker gar nicht mehr, gibt es nichts zu unterscheiden: dann gilt
+die erste bereite Instanz als Nachfolger. Kommt keine, läuft das Zeitbudget ab
+und die Ersetzung schlägt fehl.
+
+### Lease: endliche Retries statt dauerhaftem `FAILED`
+
+```text
+RECLAIMING --Cleanup erfolgreich--> RELEASED
+    |
+    | Cleanup fehlgeschlagen
+    v
+  FAILED --Backoff mit Jitter--> RECLAIMING
+    |
+    | Versuche oder Zeitbudget erschoepft
+    v
+Worker ersetzen --bestaetigt--> RELEASED
+    |
+    | Ersetzung fehlgeschlagen
+    v
+QUARANTINED  (kein automatischer Retry mehr, Slot bleibt belegt)
+```
+
+`CleanupRetryPolicy` staffelt die Wartezeit als `5 s, 10 s, 20 s, 40 s, 60 s`,
+jeweils mit einem Jitter von 50 bis 100 Prozent. `reclaim_started_at` wird nur
+beim ersten Versuch gesetzt; ein hängender Worker kann sein eigenes
+Recovery-Budget dadurch nicht verlängern.
+
+`QUARANTINED` ist für den Reaper terminal. Die Lease bleibt im partiellen
+Unique-Index über `browser_id`, der Slot also belegt, bis jemand hinschaut. Das
+ist beabsichtigt: ein Browser, den weder Cleanup noch Ersetzung sauber bekommen
+hat, darf nicht wieder vergeben werden.
+
+| Einstellung | Default | Bedeutung |
+| --- | ---: | --- |
+| `BACKEND_LEASE_CLEANUP_RETRY_SECONDS` | 5 | Basisverzögerung |
+| `BACKEND_LEASE_CLEANUP_RETRY_CEILING_SECONDS` | 60 | Obergrenze je Retry |
+| `BACKEND_LEASE_CLEANUP_MAX_ATTEMPTS` | 5 | Versuche bis zur Ersetzung |
+| `BACKEND_LEASE_CLEANUP_MAX_DURATION_SECONDS` | 120 | Alter bis zur Ersetzung |
+| `BACKEND_BROWSER_WORKER_REPLACEMENT_TIMEOUT_SECONDS` | 60 | Budget der Ersetzung |
+| `BACKEND_BROWSER_WORKER_READINESS_POLL_SECONDS` | 2 | Abstand der Readiness-Polls |
+| `BROWSER_WORKER_RESTART_SUPERVISED` | `false` | Restart-Policy zugesichert |
+| `BROWSER_WORKER_RESTART_SHUTDOWN_TIMEOUT` | 15 | Frist bis zum harten Exit |
+
+### Bewusst offen
+
+Die High-Water-Mark der Generation lebt weiterhin nur im Worker-Prozess und
+überlebt eine Ersetzung nicht. Ein sehr spät zugestellter `create` einer alten
+Generation könnte auf dem frischen Worker also angenommen werden. Er trifft
+dann auf einen leeren Workspace, verletzt keine Session-Isolation und
+blockiert den Slot nur bis zum nächsten Release. Persistenz außerhalb des
+Workers lohnt erst, wenn Kommandos wirklich über Minuten zugestellt werden.
 
 ## Minimale Validierung
 
