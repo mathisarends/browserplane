@@ -29,11 +29,6 @@ class FakeRecorder(Recorder):
         self.operations.append("start")
         return self.recording
 
-    async def inspect(self, browser: Browser, recording_id: UUID) -> Recording:
-        self.operations.append("inspect")
-        assert recording_id == self.recording.id
-        return self.recording
-
     async def stop_and_store(self, browser: Browser, recording_id: UUID) -> Recording:
         self.operations.append("stop")
         assert recording_id == self.recording.id
@@ -62,8 +57,7 @@ async def test_recording_service_routes_each_operation_to_the_resolved_browser(
     service = RecordingService(browsers, recorder)  # type: ignore[arg-type]
 
     assert await service.start(browser.id) == recording
-    assert await service.inspect(browser.id, recording.id) == recording
     assert await service.stop(browser.id, recording.id) == recording
     assert await service.file(browser.id, recording.id) == b"video"
-    assert browsers.requested == [browser.id] * 4
-    assert recorder.operations == ["start", "inspect", "stop", "file"]
+    assert browsers.requested == [browser.id] * 3
+    assert recorder.operations == ["start", "stop", "file"]

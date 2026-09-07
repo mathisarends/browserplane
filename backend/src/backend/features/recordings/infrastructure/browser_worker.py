@@ -55,16 +55,6 @@ class BrowserWorkerRecorder(Recorder):
             raise _transfer_error("start", error) from error
         return _to_recording(recording, browser_id=browser.id)
 
-    async def inspect(self, browser: Browser, recording_id: UUID) -> Recording:
-        try:
-            client = self._client(browser)
-            recording = await client.inspect_recording(recording_id)
-        except ApiError as error:
-            raise _recording_error(error) from error
-        except (HTTPError, ValidationError, ValueError) as error:
-            raise _transfer_error("inspect", error) from error
-        return _to_recording(recording, browser_id=browser.id)
-
     async def stop_and_store(self, browser: Browser, recording_id: UUID) -> Recording:
         try:
             client = self._client(

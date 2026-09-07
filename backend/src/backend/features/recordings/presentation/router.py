@@ -36,24 +36,6 @@ async def start_recording(
     return to_recording_response(recording)
 
 
-@recording_router.get(
-    "/browser/{browser_id}/recordings/{recording_id}",
-    operation_id="inspect_recording",
-    responses=api_error_responses(
-        BROWSER_NOT_FOUND,
-        RECORDING_NOT_FOUND,
-        RECORDING_TRANSFER_FAILED,
-    ),
-)
-async def inspect_recording(
-    browser_id: UUID,
-    recording_id: UUID,
-    service: FromDishka[RecordingService],
-) -> RecordingResponse:
-    recording = await service.inspect(browser_id, recording_id)
-    return to_recording_response(recording)
-
-
 @recording_router.post(
     "/browser/{browser_id}/recordings/{recording_id}/stop",
     operation_id="stop_recording",

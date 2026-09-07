@@ -315,38 +315,6 @@ class GeneratedBrowserWorkerClient:
 
         raise ApiError(response.status_code, response.text, response=response)
 
-    async def inspect_recording(
-        self,
-        recording_id: UUID,
-        *,
-        timeout: float | None = None,
-    ) -> RecordingResponse:
-        path = "/api/v1/browser/recordings/{recording_id}"
-        path = path.replace(
-            "{recording_id}", serialize_path("recording_id", recording_id)
-        )
-
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
-
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
-
-        if response.status_code == 200:
-            return RecordingResponse.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = RecordingNotFoundError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-
-        raise ApiError(response.status_code, response.text, response=response)
-
     async def download_recording(
         self,
         recording_id: UUID,

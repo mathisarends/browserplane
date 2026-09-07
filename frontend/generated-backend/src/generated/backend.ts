@@ -1593,68 +1593,6 @@ export const startRecording = async (browserId: string, options?: RequestInit): 
 
 
 
-export type inspectRecordingResponse200 = {
-  data: RecordingResponse
-  status: 200
-}
-
-export type inspectRecordingResponse404 = {
-  data: BrowserNotFoundError | RecordingNotFoundError
-  status: 404
-}
-
-export type inspectRecordingResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type inspectRecordingResponse503 = {
-  data: RecordingTransferFailedError
-  status: 503
-}
-
-export type inspectRecordingResponseSuccess = (inspectRecordingResponse200) & {
-  headers: Headers;
-};
-export type inspectRecordingResponseError = (inspectRecordingResponse404 | inspectRecordingResponse422 | inspectRecordingResponse503) & {
-  headers: Headers;
-};
-
-export type inspectRecordingResponse = (inspectRecordingResponseSuccess | inspectRecordingResponseError)
-
-export const getInspectRecordingUrl = (browserId: string,
-    recordingId: string,) => {
-
-
-
-
-  return `/api/v1/browser/${browserId}/recordings/${recordingId}`
-}
-
-/**
- * @summary Inspect Recording
- */
-export const inspectRecording = async (browserId: string,
-    recordingId: string, options?: RequestInit): Promise<inspectRecordingResponse> => {
-
-  const res = await fetch(getInspectRecordingUrl(browserId,recordingId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-)
-
-
-  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-  const data: inspectRecordingResponse['data'] = body ? JSON.parse(body) : {}
-  return { data, status: res.status, headers: res.headers } as inspectRecordingResponse
-}
-
-
-
 export type stopRecordingResponse200 = {
   data: RecordingResponse
   status: 200
