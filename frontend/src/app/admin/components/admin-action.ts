@@ -1,14 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from "@angular/core";
 
-/** Quiet by default: an operator's eye should land on state, not on buttons. */
 export type ActionTone = "quiet" | "danger";
 
-/**
- * The one button of the admin view, worn by a real `<button>`.
- *
- * Attaching to the element instead of wrapping it keeps `disabled`, `click`
- * and focus native, so every call site stays plain HTML.
- */
 @Component({
   selector: "button[appAdminAction]",
   template: `<ng-content />`,

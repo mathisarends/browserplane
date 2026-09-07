@@ -46,7 +46,6 @@ export class AdminBrowserCard {
   readonly browser = input.required<PooledBrowserResponse>();
 
   protected readonly console = inject(AdminConsole);
-  /** Releasing removes a live runtime, so it takes a second, deliberate click. */
   protected readonly confirming = signal(false);
 
   protected readonly label = computed(() => shortId(this.browser().id));

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from "@angular/core";
 import { AdminConsole } from "../services/admin-console";
 
-/** The outcome of the last action, until it is dismissed or replaced. */
 @Component({
   selector: "app-admin-notice",
   template: `

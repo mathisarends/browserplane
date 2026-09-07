@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from "@angular/core";
 
-/** Colour tiers, not one colour per state: green is free, amber is in use. */
 type Tone = "free" | "busy" | "idle" | "bad";
 
 const TONES: Record<string, Tone> = {

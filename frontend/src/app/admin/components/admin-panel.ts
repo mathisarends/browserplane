@@ -16,7 +16,6 @@ import { AdminCheckpointList } from "./admin-checkpoint-list";
 import { AdminStatStrip } from "./admin-stat-strip";
 import { clockTime } from "../services/format";
 
-/** The pool moves without us, so a visible panel keeps pulling. */
 const POLL_INTERVAL_MS = 5000;
 
 @Component({
@@ -59,7 +58,6 @@ const POLL_INTERVAL_MS = 5000;
   `,
   styles: `
     :host {
-      /* One palette for the whole panel; every child inherits these. */
       --admin-surface: #0e1117;
       --admin-raised: #171b22;
       --admin-hover: #1f242c;
@@ -143,7 +141,6 @@ const POLL_INTERVAL_MS = 5000;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AdminPanel {
-  /** The panel stays mounted behind the other tabs; only a visible one polls. */
   readonly active = input(false);
 
   protected readonly console = inject(AdminConsole);

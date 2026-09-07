@@ -2,7 +2,6 @@ import { decodeDirtyRectangleUpdate, type DirtyRectangleUpdate } from "./dirty-r
 import { DirtyRectangleReconciliation } from "./dirty-rectangle-reconciliation";
 
 export interface DirtyRectangleScreencastState {
-  /** Counts the subscriptions; a change means the canvas has to start empty. */
   readonly generation: number;
   readonly connected: boolean;
   readonly complete: boolean;
@@ -13,12 +12,10 @@ export interface DirtyRectangleScreencastState {
   readonly packets: number;
   readonly patches: number;
   readonly bytes: number;
-  /** Reconnects taken to rebuild a canvas the patch stream could not complete. */
   readonly resyncs: number;
 }
 
 export interface DirtyRectangleScreencastHandlers {
-  /** Drop the canvas: a new subscription is about to repaint it from scratch. */
   onReset(generation: number): void;
   onUpdate(update: DirtyRectangleUpdate, generation: number): void;
   onState(state: DirtyRectangleScreencastState): void;
@@ -28,19 +25,8 @@ export interface DirtyRectangleScreencastHandlers {
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 250;
 const RECONNECT_MAX_DELAY_MS = 4_000;
-/** How many partial updates to accept before demanding a whole canvas again. */
 const UPDATES_BEFORE_RESYNC = 60;
 
-/**
- * A changed-tile screencast subscription that can rebuild its own canvas.
- *
- * The worker keeps the diff state per subscription and opens every one with a
- * packet covering the whole canvas. That is the only full frame in the stream,
- * which makes reconnecting the reconciliation primitive: when the transport
- * breaks, or when the tiles received never add up to a whole canvas, this drops
- * what it holds, subscribes again, and repaints from the full canvas that a
- * fresh subscription is guaranteed to start with.
- */
 export class DirtyRectangleScreencast {
   private readonly reconciliation = new DirtyRectangleReconciliation();
   private socket?: WebSocket;
@@ -68,12 +54,6 @@ export class DirtyRectangleScreencast {
     private readonly handlers: DirtyRectangleScreencastHandlers,
   ) {}
 
-  /**
-   * Open the first subscription. Later ones are taken without being asked.
-   *
-   * A first connect that fails is the caller's to handle - there is no session
-   * to keep alive yet - so this stops retrying and reports the failure.
-   */
   async connect(): Promise<void> {
     const socket = this.open();
     try {
@@ -138,9 +118,6 @@ export class DirtyRectangleScreencast {
     }
 
     const coverage = this.reconciliation.apply(update);
-    // A resize invalidates the canvas mid-subscription; the update that
-    // reported it carries the new canvas whole, so it repaints rather than
-    // patches - the consumer is told to start empty first.
     if (coverage.resized && this.updatesSinceReset > 0) {
       this.handlers.onReset(this.generation);
     }
@@ -163,13 +140,6 @@ export class DirtyRectangleScreencast {
     }
   }
 
-  /**
-   * Subscribe again to get a whole canvas.
-   *
-   * Reached when tiles keep arriving but never cover everything - a canvas that
-   * grew, a packet lost with the transport that carried it. Patches alone can
-   * never repair that, only a new subscription can.
-   */
   private resync(): void {
     this.publish({ resyncs: this.state.resyncs + 1 });
     const socket = this.socket;
@@ -214,13 +184,6 @@ function emptyCoverage() {
   };
 }
 
-/**
- * What a canvas has to replay, in order.
- *
- * A reset has to stay in line with the updates around it: applying patches that
- * were meant for a canvas thrown away in between paints them onto the wrong
- * picture.
- */
 export type DirtyRectangleEvent =
   | { readonly kind: "reset"; readonly generation: number }
   | { readonly kind: "update"; readonly update: DirtyRectangleUpdate };

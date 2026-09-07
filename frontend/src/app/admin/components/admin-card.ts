@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from "@angular/core";
 import { AdminStatusPill } from "./admin-status-pill";
 
-/** One labelled line of a card. `id` renders the value as an identifier. */
 export type AdminFact = {
   readonly label: string;
   readonly value: string;
@@ -9,10 +8,6 @@ export type AdminFact = {
   readonly id?: boolean;
 };
 
-/**
- * The shape every resource in the panel takes: an identifier, its state, a
- * short column of facts, and the actions it accepts.
- */
 @Component({
   selector: "app-admin-card",
   imports: [AdminStatusPill],
@@ -118,7 +113,6 @@ export class AdminCard {
   readonly heading = input.required<string>();
   readonly status = input.required<string>();
   readonly facts = input.required<readonly AdminFact[]>();
-  /** The untruncated identifier, kept for the tooltip. */
   readonly full = input<string>();
   readonly busy = input(false);
 }

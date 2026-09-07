@@ -37,7 +37,6 @@ type Stat = { readonly label: string; readonly value: number; readonly tone: Ton
       padding: 11px 14px;
       background: var(--admin-surface);
     }
-    /* The count leads, the label follows; the markup stays dt-then-dd. */
     dd {
       order: -1;
       margin: 0;

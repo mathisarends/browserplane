@@ -16,18 +16,10 @@ import type {
 } from "@browsertunnel/backend-client";
 import { shortId } from "./format";
 
-/** How long an admin resume request may wait for browser capacity. */
 const RESUME_REQUEST_TIMEOUT_SECONDS = 60;
 
 export type AdminNotice = { readonly tone: "success" | "error"; readonly text: string };
 
-/**
- * The operator's read of the backend, refreshed as a whole.
- *
- * Every action here changes something another list already shows — releasing
- * a browser ends its session — so nothing is patched in place: one refresh
- * after each call keeps the panel honest instead of merely fast.
- */
 @Injectable({ providedIn: "root" })
 export class AdminConsole {
   private readonly browserState = signal<readonly PooledBrowserResponse[]>([]);
@@ -45,7 +37,6 @@ export class AdminConsole {
   readonly notice = this.noticeState.asReadonly();
   readonly refreshedAt = this.refreshedState.asReadonly();
 
-  /** Whether the first read landed, so empty lists can be told from no data. */
   readonly loaded = computed(() => this.refreshedAt() !== undefined);
   readonly activeSessions = computed(() =>
     this.sessions().filter((session) => session.status === "active"),
@@ -152,7 +143,6 @@ export class AdminConsole {
   }
 }
 
-/** Prefer the backend's own explanation; fall back to the bare status. */
 function failure(fallback: string, response: { status: number; data: unknown }): Error {
   const data = response.data;
   if (data && typeof data === "object" && "message" in data && typeof data.message === "string") {

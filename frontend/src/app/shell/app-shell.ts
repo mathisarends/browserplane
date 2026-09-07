@@ -11,16 +11,7 @@ import { ShellViewSwitcher } from "./shell-view-switcher";
     <div class="shell">
       <app-shell-view-switcher [view]="views.view()" (viewChange)="views.select($event)" />
 
-      <!--
-        Both tabs stay mounted: tearing the gallery down would close every live
-        session, so looking at the admin view must not cost the browsers it lists.
-      -->
       <div class="pane" [class.is-hidden]="views.view() === 'admin'">
-        <!--
-          Focus is a way of looking at the same gallery, not a second one: the
-          layout stays put and only changes shape, so stepping through the
-          carousel never restarts a session.
-        -->
         <app-browser-layout [focused]="views.view() === 'focus'" />
       </div>
       <div class="pane" [class.is-hidden]="views.view() !== 'admin'">

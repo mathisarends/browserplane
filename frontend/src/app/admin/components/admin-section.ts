@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from "@angular/core";
 
-/** A titled band of the panel: a hairline heading, then whatever it holds. */
 @Component({
   selector: "app-admin-section",
   template: `

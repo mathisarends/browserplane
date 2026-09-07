@@ -9,7 +9,6 @@ type CheckpointRow = {
   readonly age: string;
 };
 
-/** Checkpoints carry no admin actions yet, so they stay a compact list. */
 @Component({
   selector: "app-admin-checkpoint-list",
   imports: [AdminSection],

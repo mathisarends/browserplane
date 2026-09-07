@@ -12,12 +12,10 @@ const CLOCK = new Intl.DateTimeFormat("en-US", {
   second: "2-digit",
 });
 
-/** Ids are UUID-shaped: eight characters already tell two of them apart. */
 export function shortId(id: string): string {
   return id.slice(0, 8);
 }
 
-/** "3m ago" / "in 8m", so an operator reads age and expiry at a glance. */
 export function relativeTime(timestamp: string, now: number = Date.now()): string {
   let value = (new Date(timestamp).getTime() - now) / 1000;
   if (!Number.isFinite(value)) return "unknown";

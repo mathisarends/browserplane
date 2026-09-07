@@ -5,12 +5,10 @@ export interface DirtyRectangleCoverage {
   readonly canvasHeight: number;
   readonly tiles: number;
   readonly coveredTiles: number;
-  /** Every tile of the canvas has been painted at least once since the reset. */
   readonly complete: boolean;
 }
 
 export interface DirtyRectangleReconciliationResult extends DirtyRectangleCoverage {
-  /** The canvas changed size, so whatever was painted before is worthless. */
   readonly resized: boolean;
 }
 
@@ -22,20 +20,6 @@ const EMPTY_COVERAGE: DirtyRectangleCoverage = {
   complete: false,
 };
 
-/**
- * Tracks how much of the canvas a patch stream has actually painted.
- *
- * A dirty rectangle stream only ever describes what changed, so a client that
- * joins late, drops a packet, or loses its canvas holds a picture it cannot
- * tell apart from a correct one. This keeps that judgement explicit: it starts
- * from nothing on every reset, marks the tiles each update paints, and reports
- * whether the canvas is whole. Until it is, the caller has to ask the worker
- * for a full canvas rather than trust what is on screen.
- *
- * The grid comes from the packet. A patch covers as many tiles as it spans,
- * because the worker merges neighbouring changed tiles into one rectangle
- * before encoding them.
- */
 export class DirtyRectangleReconciliation {
   private tileWidth = 0;
   private tileHeight = 0;
@@ -57,7 +41,6 @@ export class DirtyRectangleReconciliation {
     };
   }
 
-  /** Forget the painted canvas — used whenever the transport was interrupted. */
   reset(): void {
     this.tileWidth = 0;
     this.tileHeight = 0;
@@ -98,7 +81,6 @@ export class DirtyRectangleReconciliation {
     return this.columns * this.rows;
   }
 
-  /** Lay out a fresh, empty grid for the canvas the update describes. */
   private regrid(update: DirtyRectangleUpdate): void {
     this.canvasWidth = update.canvasWidth;
     this.canvasHeight = update.canvasHeight;

@@ -19,8 +19,6 @@ import { ChangeDetectionStrategy, Component, output } from "@angular/core";
     :host {
       display: grid;
       min-width: 0;
-      /* Stretches to the row a browser panel sets, so the tile reads as an
-         empty slot in the gallery rather than a button dropped beside it. */
       height: 100%;
       min-height: 300px;
     }
