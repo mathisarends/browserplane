@@ -13,7 +13,7 @@ from backend.features.leases.settings import LeaseSettings
 from backend.features.session_requests.application.wakeups import Wakeups
 from backend.features.session_requests.domain import RequestStatus, SessionRequest
 from backend.features.session_requests.infrastructure.notifications import (
-    connection_options,
+    connection_dsn,
 )
 from backend.features.session_requests.infrastructure.repository import (
     SqlSessionRequestRepository,
@@ -58,7 +58,7 @@ class Dispatcher:
             connection = None
             try:
                 connection = await asyncpg.connect(
-                    **connection_options(self._settings), timeout=5
+                    connection_dsn(self._settings), timeout=5
                 )
                 elected = await connection.fetchval(
                     "SELECT pg_try_advisory_lock($1)", LEADER_LOCK

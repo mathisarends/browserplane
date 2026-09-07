@@ -15,16 +15,10 @@ logger = logging.getLogger(__name__)
 CHANNEL = "browser_capacity_changed"
 
 
-def connection_options(settings: DatabaseSettings) -> dict:
-    url = make_url(settings.database_url)
-    return dict(
-        host=url.host,
-        port=url.port or 5432,
-        user=url.username,
-        password=url.password,
-        database=url.database,
-        **dict(url.query),
-    )
+def connection_dsn(settings: DatabaseSettings) -> str:
+    """The configured URL as a plain libpq DSN, without the SQLAlchemy driver."""
+    url = make_url(settings.database_url).set(drivername="postgresql")
+    return url.render_as_string(hide_password=False)
 
 
 async def notify_transaction(session: AsyncSession) -> None:
@@ -63,7 +57,7 @@ class PostgresListener:
             connection = None
             try:
                 connection = await asyncpg.connect(
-                    **connection_options(self._settings), timeout=5
+                    connection_dsn(self._settings), timeout=5
                 )
                 await connection.add_listener(CHANNEL, lambda *_: self._wakeups.wake())
                 self._wakeups.wake()
