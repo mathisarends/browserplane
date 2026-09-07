@@ -2,7 +2,15 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from uuid import UUID
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot
+from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserWorker
+
+
+class BrowserWorkerDirectory(ABC):
+    """Where the pool learns which workers exist."""
+
+    @abstractmethod
+    async def snapshot(self) -> Sequence[BrowserWorker]:
+        """The workers known right now; a complete set, not a delta."""
 
 
 class BrowserProvisioner(ABC):

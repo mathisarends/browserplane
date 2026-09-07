@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -7,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlmodel import select
 
 from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserState
-from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 from backend.features.leases.settings import LeaseSettings
 from backend.features.session_requests.application.ports import SessionRequestRepository
 from backend.features.session_requests.domain import (
@@ -91,9 +91,9 @@ class SqlSessionRequestRepository(SessionRequestRepository):
                 row.status = status
             return self.domain(row)
 
-    async def reconcile(self, settings: BrowserPoolSettings) -> None:
+    async def reconcile(self, slots: Sequence[BrowserSlot]) -> None:
         async with self._factory.begin() as session:
-            for slot in settings.slots():
+            for slot in slots:
                 await session.execute(
                     insert(BrowserModel)
                     .values(

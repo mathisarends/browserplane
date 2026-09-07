@@ -4,9 +4,11 @@ from uuid import UUID
 
 from httpx2 import AsyncClient
 
-from backend.features.browsers.application.ports import BrowserProvisioner
-from backend.features.browsers.domain.models import BrowserSlot
-from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
+from backend.features.browsers.application.ports import (
+    BrowserProvisioner,
+    BrowserWorkerDirectory,
+)
+from backend.features.browsers.domain.models import BrowserSlot, slots_of
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     CreateBrowserRequest,
@@ -16,24 +18,23 @@ from generated.browser_worker import (
 
 
 class BrowserWorkerProvisioner(BrowserProvisioner):
-    """Create one browser on each configured browser worker."""
+    """Create the browsers the directory's workers have room for."""
 
     def __init__(
         self,
-        settings: BrowserPoolSettings,
+        directory: BrowserWorkerDirectory,
         http: AsyncClient,
         worker_settings: BrowserWorkerSettings,
     ) -> None:
-        self._settings = settings
+        self._directory = directory
         self._http = http
         self._worker_settings = worker_settings
         self._provisioned: list[BrowserSlot] = []
         self._generations: dict[UUID, int] = {}
 
     async def provision(self) -> Sequence[BrowserSlot]:
-        slots = self._settings.slots()
-        for slot in slots:
-            self._provisioned.append(slot)
+        slots = slots_of(await self._directory.snapshot())
+        self._provisioned.extend(slots)
         return slots
 
     async def deprovision(self) -> None:

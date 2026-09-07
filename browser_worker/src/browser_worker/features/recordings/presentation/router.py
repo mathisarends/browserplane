@@ -56,19 +56,6 @@ async def stop_recording(
 
 
 @recording_router.get(
-    "/browser/recordings/{recording_id}",
-    operation_id="inspect_recording",
-    responses=api_error_responses(RECORDING_NOT_FOUND),
-)
-async def inspect_recording(
-    recording_id: UUID,
-    service: FromDishka[RecordingService],
-) -> RecordingResponse:
-    recording = service.get(recording_id)
-    return RecordingResponse.model_validate(recording)
-
-
-@recording_router.get(
     "/browser/recordings/{recording_id}/file",
     operation_id="download_recording",
     response_class=FileResponse,

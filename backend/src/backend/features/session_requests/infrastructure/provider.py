@@ -1,8 +1,10 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.features.browsers.application.ports import BrowserProvisioner
-from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
+from backend.features.browsers.application.ports import (
+    BrowserProvisioner,
+    BrowserWorkerDirectory,
+)
 from backend.features.leases.settings import LeaseSettings
 from backend.features.session_requests.application.acquisition import SessionAcquisition
 from backend.features.session_requests.application.control_plane import ControlPlane
@@ -57,10 +59,17 @@ class SessionRequestProvider(Provider):
         provisioner: BrowserProvisioner,
         runtime: BrowserRuntime,
         settings: DatabaseSettings,
-        pool: BrowserPoolSettings,
+        directory: BrowserWorkerDirectory,
         wakeups: Wakeups,
         leases: LeaseSettings,
     ) -> Dispatcher:
         return Dispatcher(
-            sessions, repository, provisioner, runtime, settings, pool, wakeups, leases
+            sessions,
+            repository,
+            provisioner,
+            runtime,
+            settings,
+            directory,
+            wakeups,
+            leases,
         )

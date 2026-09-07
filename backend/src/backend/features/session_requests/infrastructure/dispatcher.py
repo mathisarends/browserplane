@@ -4,9 +4,11 @@ from contextlib import suppress
 
 import asyncpg
 
-from backend.features.browsers.application.ports import BrowserProvisioner
-from backend.features.browsers.domain.models import Browser
-from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
+from backend.features.browsers.application.ports import (
+    BrowserProvisioner,
+    BrowserWorkerDirectory,
+)
+from backend.features.browsers.domain.models import Browser, slots_of
 from backend.features.leases.settings import LeaseSettings
 from backend.features.session_requests.application.wakeups import Wakeups
 from backend.features.session_requests.domain import RequestStatus, SessionRequest
@@ -33,7 +35,7 @@ class Dispatcher:
         provisioner: BrowserProvisioner,
         runtime: BrowserRuntime,
         settings: DatabaseSettings,
-        pool: BrowserPoolSettings,
+        directory: BrowserWorkerDirectory,
         wakeups: Wakeups,
         leases: LeaseSettings,
     ):
@@ -42,7 +44,7 @@ class Dispatcher:
         self._provisioner = provisioner
         self._runtime = runtime
         self._settings = settings
-        self._pool = pool
+        self._directory = directory
         self._wakeups = wakeups
         self._leases = leases
 
@@ -63,7 +65,8 @@ class Dispatcher:
                 )
                 if elected:
                     logger.info("Browser scheduler elected")
-                    await self._repository.reconcile(self._pool)
+                    workers = await self._directory.snapshot()
+                    await self._repository.reconcile(slots_of(workers))
                     async with asyncio.TaskGroup() as group:
                         group.create_task(self._watch_leadership(connection))
                         group.create_task(self._dispatch())
