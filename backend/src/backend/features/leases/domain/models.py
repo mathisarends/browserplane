@@ -1,5 +1,6 @@
+import random
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
 
@@ -9,6 +10,9 @@ class LeaseState(StrEnum):
     RECLAIMING = "reclaiming"
     RELEASED = "released"
     FAILED = "failed"
+    # Cleanup and worker replacement both ran out; nothing retries this on its
+    # own any more. The browser stays unschedulable until someone looks at it.
+    QUARANTINED = "quarantined"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,7 +64,9 @@ class Lease:
         return replace(
             self,
             state=LeaseState.RECLAIMING,
-            reclaim_started_at=now,
+            # The first attempt dates the reclaim. Retries share its deadline,
+            # so a stuck worker cannot renew its own recovery budget.
+            reclaim_started_at=self.reclaim_started_at or now,
             release_reason=reason,
             cleanup_attempts=self.cleanup_attempts + 1,
             cleanup_retry_at=None,
@@ -80,3 +86,38 @@ class Lease:
             state=LeaseState.FAILED,
             cleanup_retry_at=retry_at,
         )
+
+    def quarantined(self) -> Lease:
+        """Stop recovering this lease; both cleanup and replacement failed."""
+        return replace(
+            self,
+            state=LeaseState.QUARANTINED,
+            cleanup_retry_at=None,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class CleanupRetryPolicy:
+    """How long a failed reclaim is retried before the worker gets replaced.
+
+    Retries exist for the transient failure: a worker that is busy, restarting
+    or briefly unreachable. Past these bounds, waiting longer only keeps the
+    slot occupied, so recovery escalates instead of repeating itself.
+    """
+
+    base_delay: timedelta
+    max_delay: timedelta
+    max_attempts: int
+    max_duration: timedelta
+
+    def is_exhausted(self, lease: Lease, *, now: datetime) -> bool:
+        if lease.cleanup_attempts >= self.max_attempts:
+            return True
+        started_at = lease.reclaim_started_at
+        return started_at is not None and now - started_at >= self.max_duration
+
+    def retry_at(self, lease: Lease, *, now: datetime) -> datetime:
+        """Back off exponentially, jittered so retries never march in step."""
+        attempts_so_far = max(lease.cleanup_attempts - 1, 0)
+        delay = min(self.base_delay * 2**attempts_so_far, self.max_delay)
+        return now + delay * random.uniform(0.5, 1.0)

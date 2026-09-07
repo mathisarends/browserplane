@@ -3,7 +3,11 @@ from uuid import uuid4
 
 import pytest
 
-from backend.features.leases.domain.models import Lease, LeaseState
+from backend.features.leases.domain.models import (
+    CleanupRetryPolicy,
+    Lease,
+    LeaseState,
+)
 
 
 def _lease(*, state: LeaseState = LeaseState.ACTIVE) -> Lease:
@@ -55,3 +59,23 @@ def test_reclaim_transitions_are_idempotent_and_retryable() -> None:
     assert failed.begin_reclaim(now + timedelta(seconds=2), reason="retry").released(
         now
     ).state is LeaseState.RELEASED
+
+
+def test_retries_back_off_within_one_shared_recovery_budget() -> None:
+    policy = CleanupRetryPolicy(
+        base_delay=timedelta(seconds=5),
+        max_delay=timedelta(seconds=20),
+        max_attempts=4,
+        max_duration=timedelta(minutes=2),
+    )
+    now = datetime.now(UTC)
+    first = _lease().begin_reclaim(now, reason="expired")
+    second = first.cleanup_failed(now).begin_reclaim(
+        now + timedelta(seconds=5), reason="retry"
+    )
+
+    assert second.reclaim_started_at == first.reclaim_started_at
+    assert policy.retry_at(first, now=now) <= policy.retry_at(second, now=now)
+    assert policy.retry_at(second, now=now) <= now + policy.max_delay
+    assert not policy.is_exhausted(second, now=now)
+    assert policy.is_exhausted(second, now=now + timedelta(minutes=3))

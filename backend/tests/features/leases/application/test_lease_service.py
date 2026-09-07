@@ -12,7 +12,10 @@ from backend.features.leases.settings import LeaseSettings
 
 
 def _service(
-    allocator: FakeBrowserAllocator, store: InMemoryLeaseStore
+    allocator: FakeBrowserAllocator,
+    store: InMemoryLeaseStore,
+    *,
+    cleanup_max_attempts: int = 5,
 ) -> LeaseService:
     return LeaseService(
         allocator,
@@ -21,8 +24,24 @@ def _service(
             ttl_seconds=30,
             grace_period_seconds=10,
             cleanup_retry_seconds=1,
+            cleanup_max_attempts=cleanup_max_attempts,
             _env_file=None,
         ),
+    )
+
+
+def _due_lease() -> Lease:
+    now = datetime.now(UTC)
+    return Lease(
+        id=uuid4(),
+        browser_id=uuid4(),
+        owner_id=uuid4(),
+        generation=2,
+        state=LeaseState.ACTIVE,
+        created_at=now - timedelta(minutes=2),
+        last_renewed_at=now - timedelta(minutes=2),
+        expires_at=now - timedelta(minutes=1),
+        reclaim_after=now - timedelta(seconds=1),
     )
 
 
@@ -106,3 +125,48 @@ async def test_reaper_retries_failed_cleanup_then_releases_it() -> None:
     assert await service.reap_due() == (lease.id,)
     assert allocator.recycled == [lease.browser_id, lease.browser_id]
     assert (await store.get(lease.id)).state is LeaseState.RELEASED
+
+
+@pytest.mark.asyncio
+async def test_cleanup_that_stays_broken_replaces_the_worker() -> None:
+    allocator = FakeBrowserAllocator()
+    store = InMemoryLeaseStore()
+    service = _service(allocator, store, cleanup_max_attempts=2)
+    lease = _due_lease()
+    await store.save(lease)
+    allocator.recycle_error = RuntimeError("worker will not clean up")
+
+    assert await service.reap_due() == ()
+    backed_off = await store.get(lease.id)
+    assert backed_off is not None
+    assert backed_off.state is LeaseState.FAILED
+    assert backed_off.cleanup_retry_at is not None
+
+    due_again = backed_off.cleanup_failed(datetime.now(UTC) - timedelta(seconds=1))
+    await store.save(due_again)
+
+    assert await service.reap_due() == (lease.id,)
+    assert allocator.replaced == [lease.browser_id]
+    released = await store.get(lease.id)
+    assert released is not None
+    assert released.state is LeaseState.RELEASED
+
+
+@pytest.mark.asyncio
+async def test_a_worker_that_cannot_be_replaced_quarantines_its_lease() -> None:
+    allocator = FakeBrowserAllocator()
+    store = InMemoryLeaseStore()
+    service = _service(allocator, store, cleanup_max_attempts=1)
+    lease = _due_lease()
+    await store.save(lease)
+    allocator.recycle_error = RuntimeError("worker will not clean up")
+    allocator.replace_error = RuntimeError("worker will not come back")
+
+    assert await service.reap_due() == ()
+    quarantined = await store.get(lease.id)
+    assert quarantined is not None
+    assert quarantined.state is LeaseState.QUARANTINED
+
+    # Quarantine ends the retry loop instead of feeding it forever.
+    assert await service.reap_due() == ()
+    assert allocator.replaced == [lease.browser_id]

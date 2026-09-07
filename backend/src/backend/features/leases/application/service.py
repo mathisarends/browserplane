@@ -4,7 +4,11 @@ from uuid import UUID, uuid4
 
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.application.ports import BrowserAllocator, LeaseStore
-from backend.features.leases.domain.models import Lease, LeaseState
+from backend.features.leases.domain.models import (
+    CleanupRetryPolicy,
+    Lease,
+    LeaseState,
+)
 from backend.features.leases.settings import LeaseSettings
 
 logger = logging.getLogger(__name__)
@@ -24,7 +28,12 @@ class LeaseService:
         self._ttl = timedelta(seconds=settings.ttl_seconds)
         self._grace_period = timedelta(seconds=settings.grace_period_seconds)
         self._reaper_batch_size = settings.reaper_batch_size
-        self._cleanup_retry = timedelta(seconds=settings.cleanup_retry_seconds)
+        self._retry_policy = CleanupRetryPolicy(
+            base_delay=timedelta(seconds=settings.cleanup_retry_seconds),
+            max_delay=timedelta(seconds=settings.cleanup_retry_ceiling_seconds),
+            max_attempts=settings.cleanup_max_attempts,
+            max_duration=timedelta(seconds=settings.cleanup_max_duration_seconds),
+        )
 
     async def create(
         self,
@@ -134,8 +143,6 @@ class LeaseService:
         try:
             await self._allocator.recycle(lease.browser_id)
         except Exception as error:
-            failed = lease.cleanup_failed(datetime.now(UTC) + self._cleanup_retry)
-            await self._store.save(failed)
             logger.exception(
                 "Lease cleanup failed lease_id=%s browser_id=%s generation=%d "
                 "attempt=%d error_type=%s",
@@ -145,7 +152,7 @@ class LeaseService:
                 lease.cleanup_attempts,
                 type(error).__name__,
             )
-            return False
+            return await self._recover(lease)
         await self._store.save(lease.released(datetime.now(UTC)))
         logger.info(
             "Lease released lease_id=%s browser_id=%s generation=%d reason=%s",
@@ -153,5 +160,48 @@ class LeaseService:
             lease.browser_id,
             lease.generation,
             lease.release_reason,
+        )
+        return True
+
+    async def _recover(self, lease: Lease) -> bool:
+        """Back off while retries are left, then replace the worker itself."""
+        now = datetime.now(UTC)
+        if self._retry_policy.is_exhausted(lease, now=now):
+            return await self._replace_worker(lease)
+        retry_at = self._retry_policy.retry_at(lease, now=now)
+        await self._store.save(lease.cleanup_failed(retry_at))
+        logger.info(
+            "Lease cleanup retry scheduled lease_id=%s browser_id=%s attempt=%d "
+            "retry_at=%s",
+            lease.id,
+            lease.browser_id,
+            lease.cleanup_attempts,
+            retry_at.isoformat(),
+        )
+        return False
+
+    async def _replace_worker(self, lease: Lease) -> bool:
+        """Trade the worker for a fresh one; quarantine the slot if that fails."""
+        try:
+            await self._allocator.replace(lease.browser_id)
+        except Exception:
+            await self._store.save(lease.quarantined())
+            logger.exception(
+                "Lease quarantined lease_id=%s browser_id=%s generation=%d "
+                "attempts=%d",
+                lease.id,
+                lease.browser_id,
+                lease.generation,
+                lease.cleanup_attempts,
+            )
+            return False
+        await self._store.save(lease.released(datetime.now(UTC)))
+        logger.warning(
+            "Lease released after replacing its worker lease_id=%s browser_id=%s "
+            "generation=%d attempts=%d",
+            lease.id,
+            lease.browser_id,
+            lease.generation,
+            lease.cleanup_attempts,
         )
         return True
