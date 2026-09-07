@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from "@angular/core";
 import {
   downloadRecording,
   downloadSessionFile,
@@ -8,6 +8,9 @@ import {
   type DownloadResponse,
   type RecordingResponse,
 } from "@browsertunnel/backend-client";
+import { expectStatus } from "../../shared/api";
+import { errorMessage } from "../../shared/errors";
+import { saveBlob } from "../../shared/file-download";
 import { BrowserSession } from "../services/browser-session";
 
 type Operation = "starting" | "stopping" | "video" | "refreshing" | "download";
@@ -20,24 +23,11 @@ type Notice = { readonly tone: "success" | "error"; readonly text: string };
       <button
         class="record-button"
         type="button"
-        [class.recording]="recording()?.state === 'recording'"
+        [class.recording]="isRecording()"
         [disabled]="!session.browserId() || !!operation()"
-        (click)="recording()?.state === 'recording' ? stop() : recording() ? saveVideo() : start()"
+        (click)="toggleRecording()"
       >
-        <i aria-hidden="true"></i>
-        @if (operation() === "starting") {
-          Starting…
-        } @else if (operation() === "stopping") {
-          Finishing…
-        } @else if (operation() === "video") {
-          Downloading…
-        } @else if (recording()?.state === "recording") {
-          Stop & download video
-        } @else if (recording()?.state === "completed") {
-          Download video
-        } @else {
-          Start recording
-        }
+        <i aria-hidden="true"></i>{{ recordLabel() }}
       </button>
 
       <button
@@ -263,58 +253,26 @@ export class BrowserTransferToolbar {
   protected readonly operation = signal<Operation | undefined>(undefined);
   protected readonly notice = signal<Notice | undefined>(undefined);
 
-  protected async start(): Promise<void> {
-    const browserId = this.session.browserId();
-    if (!browserId) return;
-    this.operation.set("starting");
-    this.notice.set(undefined);
-    try {
-      const response = await startRecording(browserId);
-      if (response.status !== 201)
-        throw apiError("Recording could not be started", response.status);
-      this.recording.set(response.data);
-      this.notice.set({ tone: "success", text: "Recording started" });
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.operation.set(undefined);
+  protected readonly isRecording = computed(() => this.recording()?.state === "recording");
+  protected readonly recordLabel = computed(() => {
+    switch (this.operation()) {
+      case "starting":
+        return "Starting…";
+      case "stopping":
+        return "Finishing…";
+      case "video":
+        return "Downloading…";
+      default:
+        break;
     }
-  }
+    if (this.isRecording()) return "Stop & download video";
+    return this.recording() ? "Download video" : "Start recording";
+  });
 
-  protected async stop(): Promise<void> {
-    const browserId = this.session.browserId();
-    const current = this.recording();
-    if (!browserId || !current) return;
-    this.operation.set("stopping");
-    this.notice.set(undefined);
-    try {
-      const response = await stopRecording(browserId, current.id);
-      if (response.status !== 200)
-        throw apiError("Recording could not be stopped", response.status);
-      this.recording.set(response.data);
-      await this.fetchVideo(browserId, response.data.id);
-      this.notice.set({ tone: "success", text: "Video downloaded" });
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.operation.set(undefined);
-    }
-  }
-
-  protected async saveVideo(): Promise<void> {
-    const browserId = this.session.browserId();
-    const current = this.recording();
-    if (!browserId || !current) return;
-    this.operation.set("video");
-    this.notice.set(undefined);
-    try {
-      await this.fetchVideo(browserId, current.id);
-      this.notice.set({ tone: "success", text: "Video downloaded" });
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.operation.set(undefined);
-    }
+  protected toggleRecording(): void {
+    if (this.isRecording()) void this.stopAndSave();
+    else if (this.recording()) void this.saveVideo();
+    else void this.start();
   }
 
   protected toggleDownloads(): void {
@@ -322,39 +280,27 @@ export class BrowserTransferToolbar {
     if (this.expanded()) void this.refreshDownloads();
   }
 
-  protected async refreshDownloads(): Promise<void> {
+  protected refreshDownloads(): Promise<void> {
     const sessionId = this.session.sessionId();
-    if (!sessionId) return;
-    this.operation.set("refreshing");
-    this.notice.set(undefined);
-    try {
+    if (!sessionId) return Promise.resolve();
+    return this.run("refreshing", async () => {
       const response = await listSessionDownloads(sessionId);
-      if (response.status !== 200) throw apiError("Downloads could not be loaded", response.status);
+      expectStatus(response, 200, "Downloads could not be loaded");
       this.downloads.set(response.data);
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.operation.set(undefined);
-    }
+      return undefined;
+    });
   }
 
-  protected async saveDownload(download: DownloadResponse): Promise<void> {
+  protected saveDownload(download: DownloadResponse): Promise<void> {
     const sessionId = this.session.sessionId();
-    if (!sessionId) return;
-    this.operation.set("download");
-    this.notice.set(undefined);
-    try {
+    if (!sessionId) return Promise.resolve();
+    return this.run("download", async () => {
       const response = await downloadSessionFile(sessionId, download.id);
-      if (response.status !== 200 || !(response.data instanceof Blob)) {
-        throw apiError("File could not be downloaded", response.status);
-      }
+      expectStatus(response, 200, "File could not be downloaded");
+      if (!(response.data instanceof Blob)) throw new Error("File could not be downloaded");
       saveBlob(response.data, download.filename);
-      this.notice.set({ tone: "success", text: `${download.filename} downloaded` });
-    } catch (error) {
-      this.fail(error);
-    } finally {
-      this.operation.set(undefined);
-    }
+      return `${download.filename} downloaded`;
+    });
   }
 
   protected fileSize(bytes: number): string {
@@ -363,33 +309,60 @@ export class BrowserTransferToolbar {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  private async fetchVideo(browserId: string, recordingId: string): Promise<void> {
+  private start(): Promise<void> {
+    const browserId = this.session.browserId();
+    if (!browserId) return Promise.resolve();
+    return this.run("starting", async () => {
+      const response = await startRecording(browserId);
+      expectStatus(response, 201, "Recording could not be started");
+      this.recording.set(response.data);
+      return "Recording started";
+    });
+  }
+
+  private stopAndSave(): Promise<void> {
+    const browserId = this.session.browserId();
+    const current = this.recording();
+    if (!browserId || !current) return Promise.resolve();
+    return this.run("stopping", async () => {
+      const response = await stopRecording(browserId, current.id);
+      expectStatus(response, 200, "Recording could not be stopped");
+      this.recording.set(response.data);
+      await this.saveRecording(browserId, response.data.id);
+      return "Video downloaded";
+    });
+  }
+
+  private saveVideo(): Promise<void> {
+    const browserId = this.session.browserId();
+    const current = this.recording();
+    if (!browserId || !current) return Promise.resolve();
+    return this.run("video", async () => {
+      await this.saveRecording(browserId, current.id);
+      return "Video downloaded";
+    });
+  }
+
+  private async saveRecording(browserId: string, recordingId: string): Promise<void> {
     const response = await downloadRecording(browserId, recordingId);
-    if (response.status !== 200 || !(response.data instanceof Blob)) {
-      throw apiError("Video could not be downloaded", response.status);
-    }
+    expectStatus(response, 200, "Video could not be downloaded");
+    if (!(response.data instanceof Blob)) throw new Error("Video could not be downloaded");
     saveBlob(response.data, `recording-${recordingId}.mp4`);
   }
 
-  private fail(error: unknown): void {
-    this.notice.set({
-      tone: "error",
-      text: error instanceof Error ? error.message : "Transfer failed",
-    });
+  private async run(
+    operation: Operation,
+    action: () => Promise<string | undefined>,
+  ): Promise<void> {
+    this.operation.set(operation);
+    this.notice.set(undefined);
+    try {
+      const success = await action();
+      if (success) this.notice.set({ tone: "success", text: success });
+    } catch (error) {
+      this.notice.set({ tone: "error", text: errorMessage(error, "Transfer failed") });
+    } finally {
+      this.operation.set(undefined);
+    }
   }
-}
-
-function apiError(message: string, status: number): Error {
-  return new Error(`${message} (${status})`);
-}
-
-function saveBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
