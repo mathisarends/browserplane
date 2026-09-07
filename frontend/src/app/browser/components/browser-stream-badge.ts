@@ -1,13 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from "@angular/core";
 import { BrowserSession } from "../services/browser-session";
 
-/**
- * What the patch stream is doing.
- *
- * Absent while `?screencast=jpeg` streams whole frames, since it says the thing
- * only a patched canvas has to answer: whether what is on screen is actually
- * complete, and how much traffic it took to get there.
- */
 @Component({
   selector: "app-browser-stream-badge",
   template: `
@@ -66,7 +59,7 @@ import { BrowserSession } from "../services/browser-session";
 })
 export class BrowserStreamBadge {
   private readonly session = inject(BrowserSession);
-  protected readonly stream = this.session.dirtyRectangleStream;
+  protected readonly stream = this.session.stream.dirtyRectangles;
   protected readonly megabytes = computed(() =>
     ((this.stream()?.bytes ?? 0) / 1_048_576).toFixed(2),
   );

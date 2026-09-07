@@ -34,7 +34,7 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
     <section class="browser-panel" [attr.aria-label]="label() + ' preview'">
       <header class="browser-chrome">
         <app-browser-tab-strip
-          [tabs]="session.tabs()"
+          [tabs]="session.page.tabs()"
           (activate)="session.activateTab($event)"
           (close)="session.closeTab($event)"
           (create)="createTab()"
@@ -43,8 +43,8 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
           #navigationBar
           [panelId]="panelId()"
           [address]="address()"
-          [navigation]="session.navigation()"
-          [hasActiveTab]="!!session.activeTab()"
+          [navigation]="session.page.navigation()"
+          [hasActiveTab]="!!session.page.activeTab()"
           (addressChange)="address.set($event)"
           (navigate)="navigate()"
           (back)="session.back()"
@@ -52,7 +52,8 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
           (reloadOrStop)="session.reloadOrStop()"
         />
       </header>
-      @if (session.requestStatus() === "QUEUED" || session.requestStatus() === "PROVISIONING") {
+
+      @if (waiting()) {
         <div class="request-state" role="status" aria-live="polite">
           <span class="request-spinner" aria-hidden="true"></span>
           @if (session.requestStatus() === "QUEUED") {
@@ -65,9 +66,12 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
         </div>
       } @else {
         <app-browser-canvas />
+        @if (session.error(); as message) {
+          <p class="session-error" role="status">{{ message }}</p>
+        }
         <app-browser-stream-badge />
         <app-browser-transfer-toolbar />
-        <app-browser-state-toolbar [position]="position()" />
+        <app-browser-state-toolbar />
       }
     </section>
   `,
@@ -84,6 +88,14 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
     }
     .browser-chrome {
       background: linear-gradient(180deg, #1a202a, #171c24);
+    }
+    .session-error {
+      margin: 0;
+      padding: 7px 12px;
+      color: #f0c9c9;
+      font-size: 0.74rem;
+      background: rgb(58 26 26 / 62%);
+      border-top: 1px solid #6b3232;
     }
     .request-state {
       display: flex;
@@ -153,18 +165,22 @@ import { BrowserTransferToolbar } from "./browser-transfer-toolbar";
 })
 export class BrowserPanel implements OnInit, OnDestroy {
   readonly panelId = input.required<string>();
-  /** Set when the panel takes a session over instead of leasing a browser. */
   readonly sessionId = input<string>();
-  readonly position = input.required<number>();
   readonly capacityChange = output<number>();
   readonly sessionLost = output<string>();
+
   protected readonly session = inject(BrowserSession);
   protected readonly address = signal("");
   protected readonly label = computed(() => this.session.browserId() ?? "No session");
+  protected readonly waiting = computed(() => {
+    const status = this.session.requestStatus();
+    return status === "QUEUED" || status === "PROVISIONING";
+  });
+
   private readonly navigationBar = viewChild<BrowserNavigationBar>("navigationBar");
 
   constructor() {
-    effect(() => this.address.set(this.session.activeUrl()));
+    effect(() => this.address.set(this.session.page.activeUrl()));
   }
 
   ngOnInit(): void {
@@ -188,8 +204,6 @@ export class BrowserPanel implements OnInit, OnDestroy {
   private async connect(): Promise<void> {
     const sessionId = this.sessionId();
     if (sessionId) {
-      // Taking a session over leaves the pool as it was, so there is no
-      // capacity news to report.
       if (!(await this.session.attach(sessionId))) this.sessionLost.emit(this.panelId());
       return;
     }

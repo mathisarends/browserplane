@@ -7,7 +7,8 @@ import {
   output,
   viewChild,
 } from "@angular/core";
-import type { NavigationState } from "../services/browser-session";
+import { isAddress } from "../services/navigation-target";
+import type { NavigationState } from "../services/browser-page-state";
 
 @Component({
   selector: "app-browser-navigation-bar",
@@ -253,10 +254,7 @@ export class BrowserNavigationBar {
   readonly back = output<void>();
   readonly forward = output<void>();
   readonly reloadOrStop = output<void>();
-  protected readonly looksLikeUrl = computed(() => {
-    const value = this.address().trim();
-    return /^[a-z][\w+.-]*:\/\//i.test(value) || /^[^\s/]+\.[^\s/]{2,}/.test(value);
-  });
+  protected readonly looksLikeUrl = computed(() => isAddress(this.address()));
   private readonly addressInput = viewChild<ElementRef<HTMLInputElement>>("addressInput");
 
   focusAddress(): void {

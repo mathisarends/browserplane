@@ -12,11 +12,8 @@ import { BrowserCreateTile } from "../components/browser-create-tile";
 import { BrowserPanel } from "../components/browser-panel";
 import { ClientIdentity } from "../services/client-identity";
 
-/** One tile in the gallery: a session taken over, or a browser about to be leased. */
 interface GalleryPanel {
-  /** Stable across a restore, so Angular keeps the panel it already built. */
   readonly key: string;
-  /** Set when the panel picks a session this client already owns back up. */
   readonly sessionId?: string;
 }
 
@@ -48,7 +45,6 @@ interface GalleryPanel {
               [class.is-offstage]="focused() && focusIndex() !== index"
               [panelId]="panel.key"
               [sessionId]="panel.sessionId"
-              [position]="index + 1"
               (capacityChange)="handleCapacityChange($event)"
               (sessionLost)="handleSessionLost($event)"
             />
@@ -105,11 +101,6 @@ interface GalleryPanel {
       min-width: 0;
       animation: grid-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
     }
-    /*
-      One slide at a time, and the rest merely offstage: a hidden panel keeps
-      its session, its socket and its stream, so stepping through the carousel
-      costs nothing.
-    */
     .browser-grid.is-focused {
       grid-template-columns: minmax(0, 1fr);
       width: min(100%, 1680px);
@@ -205,7 +196,6 @@ interface GalleryPanel {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BrowserLayout implements OnInit {
-  /** Show a single slide with chevrons instead of the whole gallery. */
   readonly focused = input(false);
   private readonly identity = inject(ClientIdentity);
   protected readonly panels = signal<readonly GalleryPanel[]>([]);
@@ -213,13 +203,8 @@ export class BrowserLayout implements OnInit {
   private readonly restoring = signal(true);
   private readonly creating = signal(false);
   protected readonly canCreate = computed(() => !this.restoring() && !this.creating());
-  /** The create tile is the last slide, so a new browser stays one step away. */
   protected readonly slideCount = computed(() => this.panels().length + (this.canCreate() ? 1 : 0));
   private readonly requestedIndex = signal(0);
-  /**
-   * Clamped rather than stored: panels come and go while the carousel is open,
-   * and an index left pointing past the end would show an empty stage.
-   */
   protected readonly focusIndex = computed(() =>
     Math.min(this.requestedIndex(), Math.max(0, this.slideCount() - 1)),
   );
@@ -228,7 +213,6 @@ export class BrowserLayout implements OnInit {
     void this.restore();
   }
 
-  /** Wraps, so the chevrons never dead-end on the first or last browser. */
   protected step(direction: 1 | -1): void {
     const count = this.slideCount();
     if (count < 2) return;
@@ -239,8 +223,6 @@ export class BrowserLayout implements OnInit {
     if (!this.canCreate()) return;
     this.creating.set(true);
     this.panels.update((panels) => [...panels, { key: crypto.randomUUID() }]);
-    // Follow the browser that was just asked for, instead of staying on a
-    // create tile that has left the carousel.
     if (this.focused()) this.requestedIndex.set(this.panels().length - 1);
   }
 
@@ -253,13 +235,6 @@ export class BrowserLayout implements OnInit {
     this.creating.set(false);
   }
 
-  /**
-   * Rebuild the gallery from the sessions this client still owns.
-   *
-   * A lease outlives the page that opened it, so what is running is the
-   * backend's answer, not something the frontend could remember: reloading
-   * shows the browsers again instead of pretending there are none.
-   */
   private async restore(): Promise<void> {
     try {
       const response = await listOwnerSessions({ owner_id: this.identity.ownerId });
@@ -271,8 +246,6 @@ export class BrowserLayout implements OnInit {
         })),
       );
     } catch {
-      // Nothing was taken over, so the gallery stays empty — but silently
-      // empty is exactly what looks like "no browsers are running".
       this.restoreFailed.set(true);
     } finally {
       this.restoring.set(false);
@@ -280,7 +253,6 @@ export class BrowserLayout implements OnInit {
   }
 }
 
-/** Oldest first, so a panel keeps its place in the gallery across reloads. */
 function byAge(left: SessionResponse, right: SessionResponse): number {
   return left.created_at.localeCompare(right.created_at);
 }
