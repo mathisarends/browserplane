@@ -1,7 +1,7 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
 
-from backend.features.health.application.models import Health
+from backend.features.health.application.models import Health, HealthStatus
 from backend.features.health.application.service import HealthService
 
 health_router = APIRouter(tags=["health"], route_class=DishkaRoute)
@@ -13,5 +13,9 @@ async def health(service: FromDishka[HealthService]) -> Health:
 
 
 @health_router.get("/readiness", operation_id="readiness")
-async def readiness(service: FromDishka[HealthService]) -> Health:
-    return await service.readiness()
+async def readiness(service: FromDishka[HealthService], response: Response) -> Health:
+    result = await service.readiness()
+    # Probes read the status code, not the body.
+    if result.status is not HealthStatus.OK:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return result
