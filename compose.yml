@@ -1,11 +1,15 @@
 x-browser-worker-environment: &browser-worker-environment
   PORT: 8000
+  # Paired with the restart policy below: only a worker that something brings
+  # back may end itself when a release cannot clean up after itself.
+  BROWSER_WORKER_RESTART_SUPERVISED: "true"
 
 x-browser-worker: &browser-worker
   image: browser-provisioner-browser-worker:local
   # browser-worker-1 owns the build; the tag is local-only, so nothing here
   # may fall back to pulling it from a registry.
   pull_policy: never
+  restart: unless-stopped
   environment: *browser-worker-environment
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]

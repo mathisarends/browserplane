@@ -15,6 +15,7 @@ class ApiErrorCode(StrEnum):
     RECORDING_NOT_RUNNING = "recording_not_running"
     RECORDING_NOT_COMPLETED = "recording_not_completed"
     RECORDING_FAILED = "recording_failed"
+    WORKER_NOT_SUPERVISED = "worker_not_supervised"
 
 
 class ApiErrorResponse(BaseModel):

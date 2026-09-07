@@ -41,9 +41,11 @@ from .models import (
     RecordingResponse,
     RecordingState,
     ReleaseWorkerRequest,
+    RestartWorkerResponse,
     ScrollPosition,
     StorageItem,
     ValidationError,
+    WorkerNotSupervisedError,
 )
 
 __all__ = [
@@ -84,7 +86,9 @@ __all__ = [
     "RecordingResponse",
     "RecordingState",
     "ReleaseWorkerRequest",
+    "RestartWorkerResponse",
     "ScrollPosition",
     "StorageItem",
     "ValidationError",
+    "WorkerNotSupervisedError",
 ]

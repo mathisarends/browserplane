@@ -36,6 +36,8 @@ from generated.browser_worker.models import (
     RecordingNotRunningError,
     RecordingResponse,
     ReleaseWorkerRequest,
+    RestartWorkerResponse,
+    WorkerNotSupervisedError,
 )
 from generated.browser_worker.serialization import serialize_path, serialize_query
 
@@ -539,6 +541,31 @@ class GeneratedBrowserWorkerClient:
             return None
         if response.status_code == 422:
             parsed_body = HTTPValidationError.model_validate(response.json())
+            raise ApiError(response.status_code, response.text, parsed_body, response)
+
+        raise ApiError(response.status_code, response.text, response=response)
+
+    async def restart_worker(
+        self,
+        *,
+        timeout: float | None = None,
+    ) -> RestartWorkerResponse:
+        path = "/api/v1/restart"
+
+        headers = dict(self._headers)
+        headers.setdefault("Accept", "application/json")
+
+        response = await self._client.request(
+            method=HttpMethods.POST,
+            url=f"{self._base_url}{path}",
+            headers=headers,
+            timeout=self._timeout if timeout is None else timeout,
+        )
+
+        if response.status_code == 202:
+            return RestartWorkerResponse.model_validate(response.json())
+        if response.status_code == 409:
+            parsed_body = WorkerNotSupervisedError.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)

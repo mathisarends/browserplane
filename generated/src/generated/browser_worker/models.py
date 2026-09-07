@@ -289,5 +289,18 @@ class ReleaseWorkerRequest(BaseModel):
     generation: int
 
 
+class RestartWorkerResponse(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    instance_id: UUID
+
+
+class WorkerNotSupervisedError(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    code: Literal["worker_not_supervised"]
+    message: str
+
+
 class CaptureAuthenticationStateParams(BaseModel):
     origins: list[str] | None = None
