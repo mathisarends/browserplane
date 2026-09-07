@@ -24,18 +24,18 @@
     "check:clients": "npm run check --workspaces --if-present"
   },
   "dependencies": {
-    "@angular/common": "^20.3.0",
-    "@angular/core": "^20.3.0",
-    "@angular/platform-browser": "^20.3.0",
+    "@angular/common": "^22.1.5",
+    "@angular/core": "^22.1.5",
+    "@angular/platform-browser": "^22.1.5",
     "@browsertunnel/backend-client": "*",
     "@browsertunnel/browser-rpc-client": "*",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@angular/build": "^20.3.0",
-    "@angular/cli": "^20.3.0",
+    "@angular/build": "^22.1.7",
+    "@angular/cli": "^22.1.7",
     "orval": "^8.28.1",
     "prettier": "^3.9.6",
-    "typescript": "~5.9.2"
+    "typescript": "~6.0.3"
   }
 }
