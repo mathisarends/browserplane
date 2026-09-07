@@ -1,5 +1,14 @@
+from enum import StrEnum
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class RecordingBackend(StrEnum):
+    """Which recorder turns the browser into a video file."""
+
+    FFMPEG = "ffmpeg"
+    CDP = "cdp"
 
 
 class RecordingSettings(BaseSettings):
@@ -11,6 +20,7 @@ class RecordingSettings(BaseSettings):
         frozen=True,
     )
 
+    backend: RecordingBackend = RecordingBackend.FFMPEG
     frame_rate: int = Field(default=30, gt=0)
     audio: bool = False
     start_timeout: float = Field(default=10, gt=0)

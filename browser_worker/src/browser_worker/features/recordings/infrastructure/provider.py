@@ -8,10 +8,17 @@ from browser_worker.features.recordings.application.service import (
     RecorderFactory,
     RecordingService,
 )
+from browser_worker.features.recordings.infrastructure.cdp import (
+    CdpScreenRecorder,
+    CdpTabRecorder,
+)
 from browser_worker.features.recordings.infrastructure.ffmpeg import (
     FfmpegScreenRecorder,
 )
-from browser_worker.features.recordings.infrastructure.settings import RecordingSettings
+from browser_worker.features.recordings.infrastructure.settings import (
+    RecordingBackend,
+    RecordingSettings,
+)
 from browser_worker.features.screencast.application.service import ScreencastService
 from browser_worker.features.workspace.application.workspace import Workspace
 
@@ -32,6 +39,8 @@ class RecordingProvider(Provider):
         settings: RecordingSettings,
     ) -> RecorderFactory:
         def build(cdp_url: str) -> ScreenRecorder:
+            if settings.backend is RecordingBackend.CDP:
+                return CdpScreenRecorder(CdpTabRecorder(cdp_url, settings), settings)
             return FfmpegScreenRecorder(screencasts.for_browser(cdp_url), settings)
 
         return build
