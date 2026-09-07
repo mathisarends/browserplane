@@ -259,25 +259,27 @@ class SessionService:
         return ResolvedSession.inactive(suspended)
 
     async def close(self, session_id: UUID) -> None:
-        aggregate = await self._session(session_id)
-        if aggregate.status is SessionStatus.ACTIVE:
+        session = await self._session(session_id)
+        if session.status is SessionStatus.ACTIVE:
             await self._leases.release(session_id, reason="session_closed")
-        await self._sessions.save(aggregate.close())
+        closed = session.close()
+        await self._sessions.save(closed)
         logger.info(
             "Session closed session_id=%s owner_id=%s previous_status=%s",
             session_id,
-            aggregate.owner_id,
-            aggregate.status,
+            session.owner_id,
+            session.status,
         )
 
     async def renew(self, session_id: UUID) -> ResolvedSession:
-        aggregate = await self._session(session_id)
-        if aggregate.status is not SessionStatus.ACTIVE:
+        session = await self._session(session_id)
+        if session.status is not SessionStatus.ACTIVE:
             raise SessionNotActiveException()
         lease = await self._leases.renew(session_id)
-        aggregate = await self._sessions.save(aggregate.renew(lease.expires_at))
+        renewed = session.renew(lease.expires_at)
+        session = await self._sessions.save(renewed)
         return ResolvedSession.active(
-            session=aggregate,
+            session=session,
             lease=lease,
             browser=await self._browsers.get(lease.browser_id),
         )
@@ -287,7 +289,8 @@ class SessionService:
         for session_id in released:
             session = await self._sessions.get_by_id(session_id=session_id)
             if session is not None and session.status is SessionStatus.ACTIVE:
-                await self._sessions.save(session.close())
+                closed = session.close()
+                await self._sessions.save(closed)
                 logger.info(
                     "Session reaped session_id=%s owner_id=%s "
                     "reason=lease_expired expired_at=%s",
