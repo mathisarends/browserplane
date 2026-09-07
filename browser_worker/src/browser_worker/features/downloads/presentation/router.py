@@ -22,10 +22,7 @@ async def list_downloads(
     service: FromDishka[DownloadService],
 ) -> list[DownloadResponse]:
     response.headers["Cache-Control"] = "no-store"
-    return [
-        DownloadResponse.model_validate(download)
-        for download in service.list()
-    ]
+    return [DownloadResponse.model_validate(download) for download in service.list()]
 
 
 @download_router.delete(
@@ -45,10 +42,11 @@ async def clear_downloads(
     "/browser/downloads/{download_id}/file",
     operation_id="download_file",
     response_class=FileResponse,
-    responses={
-        **api_file_response("Downloaded file"),
-        **api_error_responses(BROWSER_NOT_FOUND, DOWNLOAD_NOT_FOUND),
-    },
+    responses=api_file_response(
+        "Downloaded file",
+        BROWSER_NOT_FOUND,
+        DOWNLOAD_NOT_FOUND,
+    ),
 )
 async def download_file(
     download_id: str,

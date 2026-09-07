@@ -113,7 +113,7 @@ class ImmediateSessionRequestRepository(InMemorySessionRequestRepository):
             await self._runtime.mount_browser(browser, checkpoint.browser_state)
 
         browser.state = BrowserState.LEASED
-        await self._browsers.save(browser=browser)
+        await self._browsers.save(browser)
         expires_at = now + self._ttl
         lease = Lease(
             id=request.resume_session_id or request.id,

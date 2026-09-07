@@ -6,7 +6,6 @@ from fakes.browser_provisioner import FakeBrowserProvisioner
 from fakes.browser_repository import InMemoryBrowserRepository
 
 from backend.features.browsers.application.exceptions import (
-    BrowserCapacityExhaustedException,
     BrowserNotFoundException,
     BrowserProvisioningException,
     BrowserUnavailableException,
@@ -25,7 +24,7 @@ async def test_start_registers_slots_and_preserves_existing_lifecycle() -> None:
     second = BrowserSlot(uuid4(), "http://worker-two")
     repository = InMemoryBrowserRepository()
     await repository.save(
-        browser=Browser(
+        Browser(
             slot=first,
             created_at=datetime.now(UTC) - timedelta(days=1),
             state=BrowserState.LEASED,
@@ -49,7 +48,7 @@ async def test_pool_operations_keep_availability_and_generations_consistent() ->
     slot = BrowserSlot(uuid4(), "http://worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
-    browser = await repository.save(browser=_browser(slot))
+    browser = await repository.save(_browser(slot))
     service = BrowserService(provisioner, repository)
 
     assert await service.remaining_capacity() == 1
@@ -58,9 +57,6 @@ async def test_pool_operations_keep_availability_and_generations_consistent() ->
 
     with pytest.raises(BrowserUnavailableException):
         await service.reserve(browser.id)
-    with pytest.raises(BrowserCapacityExhaustedException):
-        await service.create()
-
     released = await service.release(browser.id)
     assert released.state is BrowserState.STOPPED
     assert released.generation == 1
@@ -79,10 +75,8 @@ async def test_recycle_ignores_unassigned_slots_and_cleans_leased_ones() -> None
     leased_slot = BrowserSlot(uuid4(), "http://leased-worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
-    ready = await repository.save(browser=_browser(ready_slot))
-    leased = await repository.save(
-        browser=_browser(leased_slot, state=BrowserState.LEASED)
-    )
+    ready = await repository.save(_browser(ready_slot))
+    leased = await repository.save(_browser(leased_slot, state=BrowserState.LEASED))
     service = BrowserService(provisioner, repository)
 
     await service.recycle(ready.id)
@@ -100,9 +94,7 @@ async def test_worker_failures_are_translated_and_mark_recycling_failed() -> Non
     slot = BrowserSlot(uuid4(), "http://worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
-    browser = await repository.save(
-        browser=_browser(slot, state=BrowserState.LEASED)
-    )
+    browser = await repository.save(_browser(slot, state=BrowserState.LEASED))
     service = BrowserService(provisioner, repository)
     provisioner.release_error = RuntimeError("worker unavailable")
 

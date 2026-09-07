@@ -10,7 +10,7 @@ class InMemoryBrowserRepository(BrowserRepository):
     def __init__(self) -> None:
         self._browsers: dict[UUID, Browser] = {}
 
-    async def save(self, *, browser: Browser) -> Browser:
+    async def save(self, browser: Browser) -> Browser:
         self._browsers[browser.id] = browser
         return browser
 

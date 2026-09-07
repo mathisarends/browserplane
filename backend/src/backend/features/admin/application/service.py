@@ -41,7 +41,6 @@ class AdminService:
         return await self._sessions.list()
 
     async def release_browser(self, browser_id: UUID) -> Browser:
-        """Release the worker runtime and evict whoever was using it."""
         browser = await self._browsers.release(browser_id)
         await self._evict(browser_id, reason="browser_released")
         return browser

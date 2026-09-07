@@ -23,6 +23,10 @@ class RecordingFormat(StrEnum):
     def media_type(self) -> str:
         return f"video/{self.value}"
 
+    @classmethod
+    def media_types(cls) -> tuple[str, ...]:
+        return tuple(fmt.media_type for fmt in cls)
+
 
 @dataclass(frozen=True, slots=True)
 class RecordedVideo:

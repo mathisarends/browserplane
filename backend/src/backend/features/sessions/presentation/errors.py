@@ -3,7 +3,6 @@ from typing import Literal
 from fastapi import status
 
 from backend.features.browsers.application.exceptions import (
-    BrowserCapacityExhaustedException,
     BrowserUnavailableException,
 )
 from backend.features.leases.application.exceptions import LeaseNotFoundException
@@ -65,10 +64,7 @@ SESSION_NOT_FOUND = ApiErrorSpec(
 # capacity instead. What remains is losing the race for a browser that was
 # free a moment ago, which is the same situation to a client: try again later.
 NO_BROWSER_AVAILABLE = ApiErrorSpec(
-    exceptions=(
-        BrowserUnavailableException,
-        BrowserCapacityExhaustedException,
-    ),
+    exceptions=(BrowserUnavailableException,),
     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
     code=ApiErrorCode.NO_BROWSER_AVAILABLE,
     response_model=NoBrowserAvailableError,

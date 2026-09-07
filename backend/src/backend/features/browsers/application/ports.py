@@ -27,7 +27,14 @@ class BrowserRepository(ABC):
     """Persistence contract for the browser pool."""
 
     @abstractmethod
-    async def save(self, *, browser: Browser) -> Browser: ...
+    async def save(self, browser: Browser) -> Browser:
+        """
+        Write a slot, overwriting whatever an earlier boot left behind.
+
+        Provisioning hands out the same slot ids on every start, so seeding the
+        pool is an upsert: the fresh row also resets the state, which is what we
+        want, because the leases that referenced it are gone.
+        """
 
     @abstractmethod
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None: ...

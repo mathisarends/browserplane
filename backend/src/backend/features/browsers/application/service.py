@@ -6,7 +6,6 @@ from uuid import UUID
 
 from backend.exceptions import BackendException
 from backend.features.browsers.application.exceptions import (
-    BrowserCapacityExhaustedException,
     BrowserNotFoundException,
     BrowserProvisioningException,
     BrowserUnavailableException,
@@ -46,13 +45,7 @@ class BrowserService:
                     generation=existing.generation,
                 )
             )
-            await self._repository.save(browser=browser)
-
-    async def stop(self) -> None:
-        """Leave worker runtimes and persisted leases available for a new backend."""
-
-    async def create(self) -> Browser:
-        raise BrowserCapacityExhaustedException("No unassigned browser slots")
+            await self._repository.save(browser)
 
     async def get(self, browser_id: UUID) -> Browser:
         browser = await self._repository.get_by_id(browser_id=browser_id)
@@ -76,7 +69,7 @@ class BrowserService:
         browser.state = BrowserState.STOPPED
         browser.generation += 1
         logger.info("Browser released browser_id=%s", browser.id)
-        return await self._repository.save(browser=browser)
+        return await self._repository.save(browser)
 
     async def restart(self, browser_id: UUID) -> Browser:
         browser = await self.get(browser_id)
@@ -88,19 +81,19 @@ class BrowserService:
             await self._provisioner.start(browser.slot, browser.generation)
         browser.state = BrowserState.READY
         logger.info("Browser restarted browser_id=%s", browser.id)
-        return await self._repository.save(browser=browser)
+        return await self._repository.save(browser)
 
     async def reset(self, browser_id: UUID) -> Browser:
         browser = await self.get(browser_id)
         browser.state = BrowserState.READY
-        return await self._repository.save(browser=browser)
+        return await self._repository.save(browser)
 
     async def reserve(self, browser_id: UUID) -> int:
         browser = await self.get(browser_id)
         if not browser.is_available:
             raise BrowserUnavailableException("Browser is already leased")
         browser.state = BrowserState.LEASED
-        await self._repository.save(browser=browser)
+        await self._repository.save(browser)
         return browser.generation
 
     async def recycle(self, browser_id: UUID) -> None:
@@ -112,17 +105,17 @@ class BrowserService:
         ):
             return
         browser.state = BrowserState.RECYCLING
-        await self._repository.save(browser=browser)
+        await self._repository.save(browser)
         try:
             async with self._browser_worker(browser.slot):
                 await self._provisioner.release(browser.slot, browser.generation)
                 browser.generation += 1
         except Exception:
             browser.state = BrowserState.FAILED
-            await self._repository.save(browser=browser)
+            await self._repository.save(browser)
             raise
         browser.state = BrowserState.STOPPED
-        await self._repository.save(browser=browser)
+        await self._repository.save(browser)
 
     @asynccontextmanager
     async def _browser_worker(self, slot: BrowserSlot) -> AsyncGenerator[None]:

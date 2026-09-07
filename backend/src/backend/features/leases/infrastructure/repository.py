@@ -51,9 +51,6 @@ class SqlLeaseStore(SqlRepository[LeaseModel, Lease], LeaseStore):
             cleanup_retry_at=entity.cleanup_retry_at,
         )
 
-    async def save(self, lease: Lease) -> Lease:
-        return await super().save(lease)
-
     async def list_current(self) -> tuple[Lease, ...]:
         statement = (
             select(LeaseModel)

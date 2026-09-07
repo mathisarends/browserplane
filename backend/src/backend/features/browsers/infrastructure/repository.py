@@ -37,16 +37,6 @@ class SqlBrowserRepository(SqlRepository[BrowserModel, Browser], BrowserReposito
             generation=entity.generation,
         )
 
-    async def save(self, *, browser: Browser) -> Browser:
-        """
-        Write a slot, overwriting whatever an earlier boot left behind.
-
-        Provisioning hands out the same slot ids on every start, so seeding the
-        pool is an upsert: the fresh row also resets the state, which is what we
-        want, because the leases that referenced it are gone.
-        """
-        return await super().save(browser)
-
     async def get_by_id(self, *, browser_id: UUID) -> Browser | None:
         return await self.find_by_id(browser_id)
 

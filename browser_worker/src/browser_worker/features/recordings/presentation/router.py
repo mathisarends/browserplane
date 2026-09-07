@@ -72,22 +72,17 @@ async def inspect_recording(
     "/browser/recordings/{recording_id}/file",
     operation_id="download_recording",
     response_class=FileResponse,
-    responses={
-        **api_file_response(
-            "Recorded video",
-            *(fmt.media_type for fmt in RecordingFormat),
-        ),
-        **api_error_responses(
-            RECORDING_NOT_FOUND,
-            RECORDING_NOT_COMPLETED,
-        ),
-    },
+    responses=api_file_response(
+        "Recorded video",
+        RECORDING_NOT_FOUND,
+        RECORDING_NOT_COMPLETED,
+        media_types=RecordingFormat.media_types(),
+    ),
 )
 async def download_recording(
     recording_id: UUID,
     service: FromDishka[RecordingService],
 ) -> FileResponse:
-    """Download the completed recording as one video file."""
     video = service.file(recording_id)
     return FileResponse(
         video.path,
