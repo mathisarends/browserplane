@@ -1,7 +1,8 @@
 from typing import Annotated
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Query, Response, status
+from fastapi import Query, Response
+from fastapi_canon import CanonResponse, CanonRouter
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
 from browser_worker.features.state.application.service import (
@@ -17,17 +18,17 @@ from browser_worker.features.state.presentation.schemas import (
 )
 from browser_worker.presentation.error_registry import API_ERRORS
 
-browser_state_router = APIRouter(tags=["browser-state"], route_class=DishkaRoute)
+browser_state_router = CanonRouter(
+    tags=["browser-state"],
+    route_class=DishkaRoute,
+    error_registry=API_ERRORS,
+    raises=(BROWSER_NOT_FOUND, BROWSER_STATE_INVALID, BROWSER_STATE_FAILED),
+)
 
 
 @browser_state_router.get(
     "/browser/state",
     operation_id="capture_browser_state",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        BROWSER_STATE_INVALID,
-        BROWSER_STATE_FAILED,
-    ),
 )
 async def capture_browser_state(
     response: Response,
@@ -40,30 +41,19 @@ async def capture_browser_state(
 
 @browser_state_router.put(
     "/browser/state",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="mount_browser_state",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        BROWSER_STATE_INVALID,
-        BROWSER_STATE_FAILED,
-    ),
 )
 async def mount_browser_state(
     state: BrowserStateSchema,
     service: FromDishka[BrowserStateService],
-) -> Response:
+) -> None:
     await service.mount_browser(state)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @browser_state_router.get(
     "/browser/authentication-state",
     operation_id="capture_authentication_state",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        BROWSER_STATE_INVALID,
-        BROWSER_STATE_FAILED,
-    ),
 )
 async def capture_authentication_state(
     response: Response,
@@ -85,17 +75,11 @@ async def capture_authentication_state(
 
 @browser_state_router.put(
     "/browser/authentication-state",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="mount_authentication_state",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        BROWSER_STATE_INVALID,
-        BROWSER_STATE_FAILED,
-    ),
 )
 async def mount_authentication_state(
     state: AuthenticationStateSchema,
     service: FromDishka[BrowserStateService],
-) -> Response:
+) -> None:
     await service.mount_authentication(state)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -10,7 +10,6 @@ _BINARY_SCHEMA: Final = {"type": "string", "format": "binary"}
 
 def api_file_response(
     description: str,
-    error_responses: dict[int | str, dict[str, Any]],
     media_types: Iterable[str] = (OCTET_STREAM,),
 ) -> dict[int | str, dict[str, Any]]:
     """Build the OpenAPI ``responses`` entry for a binary file body."""
@@ -20,6 +19,5 @@ def api_file_response(
                 media_type: {"schema": _BINARY_SCHEMA} for media_type in media_types
             },
             "description": description,
-        },
-        **error_responses,
+        }
     }

@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Request, status
+from fastapi import Request, status
+from fastapi_canon import CanonRouter
 
 from backend.features.session_requests.application.acquisition import (
     OpenSessionCommand,
@@ -41,13 +42,26 @@ from backend.presentation.error_registry import API_ERRORS
 # Taking a browser is a request that waits; everything a session does
 # afterwards is immediate. The two live apart for that reason, not because
 # their URLs differ.
-acquisition_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
-session_request_router = APIRouter(route_class=DishkaRoute, tags=["session-requests"])
-
 ACQUIRE_ERRORS = (
     SESSION_REQUEST_CONFLICT,
     SESSION_REQUEST_TIMED_OUT,
     SESSION_REQUEST_CANCELLED,
+)
+acquisition_router = CanonRouter(
+    route_class=DishkaRoute,
+    tags=["sessions"],
+    error_registry=API_ERRORS,
+    raises=(
+        *ACQUIRE_ERRORS,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
+    ),
+)
+session_request_router = CanonRouter(
+    route_class=DishkaRoute,
+    tags=["session-requests"],
+    error_registry=API_ERRORS,
+    raises=(SESSION_REQUEST_NOT_FOUND,),
 )
 
 
@@ -56,11 +70,6 @@ ACQUIRE_ERRORS = (
     response_model=OpenSessionResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="open_session",
-    responses=API_ERRORS.responses(
-        *ACQUIRE_ERRORS,
-        AUTHENTICATION_PROFILE_NOT_FOUND,
-        BROWSER_CHECKPOINT_NOT_FOUND,
-    ),
 )
 async def open_session(
     request: OpenSessionRequest,
@@ -90,13 +99,10 @@ async def open_session(
     "/sessions/{session_id}/resume",
     response_model=SessionResponse,
     operation_id="resume_session",
-    responses=API_ERRORS.responses(
-        *ACQUIRE_ERRORS,
+    raises=(
         SESSION_NOT_FOUND,
         SESSION_NOT_SUSPENDED,
         SESSION_NOT_ACTIVE,
-        AUTHENTICATION_PROFILE_NOT_FOUND,
-        BROWSER_CHECKPOINT_NOT_FOUND,
     ),
 )
 async def resume_session(
@@ -122,7 +128,6 @@ async def resume_session(
 @session_request_router.get(
     "/session-requests/{request_id}",
     operation_id="get_session_request",
-    responses=API_ERRORS.responses(SESSION_REQUEST_NOT_FOUND),
 )
 async def get_session_request(
     request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]
@@ -136,7 +141,6 @@ async def get_session_request(
 @session_request_router.delete(
     "/session-requests/{request_id}",
     operation_id="cancel_session_request",
-    responses=API_ERRORS.responses(SESSION_REQUEST_NOT_FOUND),
 )
 async def cancel_session_request(
     request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]

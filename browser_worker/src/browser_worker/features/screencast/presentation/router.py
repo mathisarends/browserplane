@@ -2,7 +2,8 @@ from enum import StrEnum
 from typing import Annotated
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Query, WebSocket
+from fastapi import Query, WebSocket
+from fastapi_canon import CanonRouter
 
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.screencast.application.ports import FrameStream
@@ -19,7 +20,7 @@ from browser_worker.features.screencast.presentation.websocket import (
     stream_to_websocket,
 )
 
-screencast_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
+screencast_router = CanonRouter(tags=["browsers"], route_class=DishkaRoute)
 
 
 class ScreencastMode(StrEnum):

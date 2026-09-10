@@ -4,7 +4,8 @@ from urllib.parse import quote
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, Query, Response, WebSocket, status
+from fastapi import Query, Response, WebSocket, status
+from fastapi_canon import CanonResponse, CanonRouter
 
 from backend.features.browser_tunnel.presentation.session import BrowserTunnel
 from backend.features.browsers.application.exceptions import BrowserNotFoundException
@@ -49,7 +50,9 @@ from backend.features.sessions.presentation.schemas import (
 from backend.presentation.error_registry import API_ERRORS
 from generated.browser_worker import BrowserStateSchema, DownloadResponse
 
-session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
+session_router = CanonRouter(
+    route_class=DishkaRoute, tags=["sessions"], error_registry=API_ERRORS
+)
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +60,7 @@ logger = logging.getLogger(__name__)
     "/sessions",
     response_model=OwnerSessionsResponse,
     operation_id="list_owner_sessions",
-    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
+    raises=(BROWSER_NOT_FOUND,),
 )
 async def list_owner_sessions(
     owner_id: UUID, service: FromDishka[SessionService]
@@ -73,7 +76,7 @@ async def list_owner_sessions(
     "/sessions/{session_id}",
     response_model=SessionResponse,
     operation_id="get_session",
-    responses=API_ERRORS.responses(SESSION_NOT_FOUND, BROWSER_NOT_FOUND),
+    raises=(SESSION_NOT_FOUND, BROWSER_NOT_FOUND),
 )
 async def get_session(
     session_id: UUID, service: FromDishka[SessionService]
@@ -84,9 +87,9 @@ async def get_session(
 
 @session_router.put(
     "/sessions/{session_id}/authentication-profile",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="mount_session_authentication_profile",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -99,17 +102,16 @@ async def mount_session_authentication_profile(
     session_id: UUID,
     request: MountAuthenticationProfileRequest,
     service: FromDishka[SessionService],
-) -> Response:
+) -> None:
     await service.mount_authentication_profile(
         session_id, request.authentication_profile_id
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @session_router.get(
     "/sessions/{session_id}/browser-state",
     operation_id="capture_session_browser_state",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -130,9 +132,9 @@ async def capture_session_browser_state(
 
 @session_router.put(
     "/sessions/{session_id}/browser-state",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="mount_session_browser_state",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -143,17 +145,16 @@ async def mount_session_browser_state(
     session_id: UUID,
     state: BrowserStateSchema,
     service: FromDishka[SessionService],
-) -> Response:
+) -> None:
     await service.mount_browser(
         session_id, state.model_dump(mode="json", by_alias=True)
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @session_router.get(
     "/sessions/{session_id}/downloads",
     operation_id="list_session_downloads",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -172,23 +173,16 @@ async def list_session_downloads(
 @session_router.get(
     "/sessions/{session_id}/downloads/{download_id}/file",
     operation_id="download_session_file",
-    responses={
-        200: {
-            "content": {
-                "application/octet-stream": {
-                    "schema": {"type": "string", "format": "binary"}
-                }
-            },
-            "description": "Downloaded file",
-        },
-        **API_ERRORS.responses(
-            SESSION_NOT_FOUND,
-            BROWSER_NOT_FOUND,
-            SESSION_NOT_ACTIVE,
-            DOWNLOAD_NOT_FOUND,
-            BROWSER_STATE_TRANSFER_FAILED,
-        ),
-    },
+    response=CanonResponse.binary(
+        "application/octet-stream", description="Downloaded file"
+    ),
+    raises=(
+        SESSION_NOT_FOUND,
+        BROWSER_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        DOWNLOAD_NOT_FOUND,
+        BROWSER_STATE_TRANSFER_FAILED,
+    ),
 )
 async def download_session_file(
     session_id: UUID,
@@ -224,7 +218,7 @@ async def list_browser_checkpoints(
     response_model=BrowserCheckpointResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="create_browser_checkpoint",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -262,7 +256,7 @@ async def list_authentication_profiles(
     response_model=AuthenticationProfileResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="create_authentication_profile",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -285,7 +279,7 @@ async def create_authentication_profile(
     "/authentication-profiles/{profile_id}",
     response_model=AuthenticationProfileResponse,
     operation_id="get_authentication_profile",
-    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    raises=(AUTHENTICATION_PROFILE_NOT_FOUND,),
 )
 async def get_authentication_profile(
     profile_id: UUID,
@@ -302,7 +296,7 @@ async def get_authentication_profile(
     "/sessions/{session_id}/authentication-profiles/{profile_id}",
     response_model=AuthenticationProfileResponse,
     operation_id="update_authentication_profile",
-    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    raises=(AUTHENTICATION_PROFILE_NOT_FOUND,),
 )
 async def update_authentication_profile(
     session_id: UUID,
@@ -320,9 +314,9 @@ async def update_authentication_profile(
 
 @session_router.delete(
     "/authentication-profiles/{profile_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="delete_authentication_profile",
-    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    raises=(AUTHENTICATION_PROFILE_NOT_FOUND,),
 )
 async def delete_authentication_profile(
     profile_id: UUID, service: FromDishka[SessionService]
@@ -332,9 +326,9 @@ async def delete_authentication_profile(
 
 @session_router.put(
     "/sessions/{session_id}/browser-checkpoint",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="mount_session_browser_checkpoint",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -346,21 +340,20 @@ async def mount_session_browser_checkpoint(
     session_id: UUID,
     request: MountBrowserCheckpointRequest,
     service: FromDishka[SessionService],
-) -> Response:
+) -> None:
     checkpoint = await service.get_browser_checkpoint(request.browser_checkpoint_id)
     if checkpoint.authentication_profile_id is not None:
         await service.mount_authentication_profile(
             session_id, checkpoint.authentication_profile_id
         )
     await service.mount_browser(session_id, checkpoint.browser_state)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @session_router.post(
     "/sessions/{session_id}/suspend",
     response_model=SessionResponse,
     operation_id="suspend_session",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -379,7 +372,7 @@ async def suspend_session(
     "/sessions/{session_id}/lease/renew",
     response_model=SessionResponse,
     operation_id="renew_session_lease",
-    responses=API_ERRORS.responses(
+    raises=(
         SESSION_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_NOT_FOUND,
@@ -393,9 +386,9 @@ async def renew_session_lease(
 
 @session_router.delete(
     "/sessions/{session_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="close_session",
-    responses=API_ERRORS.responses(SESSION_NOT_FOUND),
+    raises=(SESSION_NOT_FOUND,),
 )
 async def close_session(session_id: UUID, service: FromDishka[SessionService]) -> None:
     await service.close(session_id)

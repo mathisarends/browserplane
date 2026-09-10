@@ -1,5 +1,5 @@
-from fastapi import APIRouter, FastAPI
-from fastapi_canon import Composition, ErrorOptions, Feature
+from fastapi import FastAPI
+from fastapi_canon import CanonRouter, Composition, ErrorOptions, Feature
 
 from browser_worker.features.browser.application.service import BrowserService
 from browser_worker.features.browser.feature import feature as browser_feature
@@ -36,7 +36,7 @@ def create_app(service: BrowserService | None = None) -> FastAPI:
         *FEATURES,
         Feature(name="overrides", providers=providers),
         errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
-        router_factory=lambda: APIRouter(prefix=API_PREFIX),
+        router_factory=lambda: CanonRouter(prefix=API_PREFIX),
     )
     composition.apply(app)
     return app

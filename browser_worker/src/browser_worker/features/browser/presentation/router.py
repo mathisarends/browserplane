@@ -1,5 +1,6 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-from fastapi import APIRouter, WebSocket, status
+from fastapi import WebSocket, status
+from fastapi_canon import CanonRouter
 
 from browser_worker.features.browser.application.exceptions import (
     BrowserNotFoundException,
@@ -19,14 +20,16 @@ from browser_worker.features.browser.presentation.schemas import (
 from browser_worker.features.downloads.application.service import DownloadService
 from browser_worker.presentation.error_registry import API_ERRORS
 
-browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
+browser_router = CanonRouter(
+    tags=["browsers"], route_class=DishkaRoute, error_registry=API_ERRORS
+)
 
 
 @browser_router.post(
     "/browser",
     status_code=status.HTTP_201_CREATED,
     operation_id="create_browser",
-    responses=API_ERRORS.responses(BROWSER_ALREADY_RUNNING, BROWSER_STARTUP_FAILED),
+    raises=(BROWSER_ALREADY_RUNNING, BROWSER_STARTUP_FAILED),
 )
 async def create_browser(
     request: CreateBrowserRequest,
@@ -44,7 +47,7 @@ async def create_browser(
 @browser_router.get(
     "/browser",
     operation_id="inspect_browser",
-    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
+    raises=(BROWSER_NOT_FOUND,),
 )
 async def inspect_browser(
     service: FromDishka[BrowserService],

@@ -1,21 +1,26 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Response, status
+from fastapi import Response
 from fastapi.responses import FileResponse
+from fastapi_canon import CanonResponse, CanonRouter
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
 from browser_worker.features.downloads.application.service import DownloadService
 from browser_worker.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
 from browser_worker.features.downloads.presentation.schemas import DownloadResponse
-from browser_worker.presentation.api_files import OCTET_STREAM, api_file_response
+from browser_worker.presentation.api_files import OCTET_STREAM
 from browser_worker.presentation.error_registry import API_ERRORS
 
-download_router = APIRouter(tags=["downloads"], route_class=DishkaRoute)
+download_router = CanonRouter(
+    tags=["downloads"],
+    route_class=DishkaRoute,
+    error_registry=API_ERRORS,
+    raises=(BROWSER_NOT_FOUND,),
+)
 
 
 @download_router.get(
     "/browser/downloads",
     operation_id="list_downloads",
-    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def list_downloads(
     response: Response,
@@ -27,25 +32,24 @@ async def list_downloads(
 
 @download_router.delete(
     "/browser/downloads",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="clear_downloads",
-    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def clear_downloads(
     service: FromDishka[DownloadService],
-) -> Response:
+) -> None:
     await service.clear()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @download_router.get(
     "/browser/downloads/{download_id}/file",
     operation_id="download_file",
     response_class=FileResponse,
-    responses=api_file_response(
-        "Downloaded file",
-        API_ERRORS.responses(BROWSER_NOT_FOUND, DOWNLOAD_NOT_FOUND),
+    response=CanonResponse.binary(
+        OCTET_STREAM,
+        description="Downloaded file",
     ),
+    raises=(DOWNLOAD_NOT_FOUND,),
 )
 async def download_file(
     download_id: str,

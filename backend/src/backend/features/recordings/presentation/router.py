@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Response, status
+from fastapi import Response, status
+from fastapi_canon import CanonResponse, CanonRouter
 
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
 from backend.features.recordings.application.service import RecordingService
@@ -15,18 +16,19 @@ from backend.features.recordings.presentation.mapper import to_recording_respons
 from backend.features.recordings.presentation.schemas import RecordingResponse
 from backend.presentation.error_registry import API_ERRORS
 
-recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
+recording_router = CanonRouter(
+    tags=["recordings"],
+    route_class=DishkaRoute,
+    error_registry=API_ERRORS,
+    raises=(BROWSER_NOT_FOUND, RECORDING_TRANSFER_FAILED),
+)
 
 
 @recording_router.post(
     "/browser/{browser_id}/recordings",
     status_code=status.HTTP_201_CREATED,
     operation_id="start_recording",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        RECORDING_ALREADY_EXISTS,
-        RECORDING_TRANSFER_FAILED,
-    ),
+    raises=(RECORDING_ALREADY_EXISTS,),
 )
 async def start_recording(
     browser_id: UUID,
@@ -39,12 +41,7 @@ async def start_recording(
 @recording_router.post(
     "/browser/{browser_id}/recordings/{recording_id}/stop",
     operation_id="stop_recording",
-    responses=API_ERRORS.responses(
-        BROWSER_NOT_FOUND,
-        RECORDING_NOT_FOUND,
-        RECORDING_NOT_RUNNING,
-        RECORDING_TRANSFER_FAILED,
-    ),
+    raises=(RECORDING_NOT_FOUND, RECORDING_NOT_RUNNING),
 )
 async def stop_recording(
     browser_id: UUID,
@@ -58,19 +55,8 @@ async def stop_recording(
 @recording_router.get(
     "/browser/{browser_id}/recordings/{recording_id}/file",
     operation_id="download_recording",
-    responses={
-        200: {
-            "content": {
-                "video/mp4": {"schema": {"type": "string", "format": "binary"}}
-            },
-            "description": "Completed MP4 recording",
-        },
-        **API_ERRORS.responses(
-            BROWSER_NOT_FOUND,
-            RECORDING_NOT_FOUND,
-            RECORDING_TRANSFER_FAILED,
-        ),
-    },
+    response=CanonResponse.binary("video/mp4", description="Completed MP4 recording"),
+    raises=(RECORDING_NOT_FOUND,),
 )
 async def download_recording(
     browser_id: UUID,

@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 
 from dishka import Provider
-from fastapi import APIRouter, FastAPI
-from fastapi_canon import Composition, ErrorOptions, Feature
+from fastapi import FastAPI
+from fastapi_canon import CanonRouter, Composition, ErrorOptions, Feature
 
 from backend.features.admin.feature import feature as admin_feature
 from backend.features.browser_tunnel.feature import feature as browser_tunnel_feature
@@ -42,7 +42,7 @@ def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
         *FEATURES,
         _overrides_feature(provider_overrides),
         errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
-        router_factory=lambda: APIRouter(prefix=API_PREFIX),
+        router_factory=lambda: CanonRouter(prefix=API_PREFIX),
     )
     composition.apply(app)
     return app

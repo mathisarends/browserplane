@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, Response, status
+from fastapi import status
+from fastapi_canon import CanonResponse, CanonRouter
 from pydantic import BaseModel
 
 from browser_worker.features.release.application.restart import WorkerRestartService
@@ -9,7 +10,9 @@ from browser_worker.features.release.application.service import WorkerReleaseSer
 from browser_worker.features.release.presentation.errors import WORKER_NOT_SUPERVISED
 from browser_worker.presentation.error_registry import API_ERRORS
 
-release_router = APIRouter(tags=["worker"], route_class=DishkaRoute)
+release_router = CanonRouter(
+    tags=["worker"], route_class=DishkaRoute, error_registry=API_ERRORS
+)
 
 
 class ReleaseWorkerRequest(BaseModel):
@@ -24,22 +27,21 @@ class RestartWorkerResponse(BaseModel):
 
 @release_router.post(
     "/release",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response=CanonResponse.empty(),
     operation_id="release_worker",
 )
 async def release_worker(
     request: ReleaseWorkerRequest,
     service: FromDishka[WorkerReleaseService],
-) -> Response:
+) -> None:
     await service.release(request.generation)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @release_router.post(
     "/restart",
     status_code=status.HTTP_202_ACCEPTED,
     operation_id="restart_worker",
-    responses=API_ERRORS.responses(WORKER_NOT_SUPERVISED),
+    raises=(WORKER_NOT_SUPERVISED,),
 )
 async def restart_worker(
     service: FromDishka[WorkerRestartService],

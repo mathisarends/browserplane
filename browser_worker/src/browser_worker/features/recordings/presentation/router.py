@@ -1,8 +1,9 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi import APIRouter, status
+from fastapi import status
 from fastapi.responses import FileResponse
+from fastapi_canon import CanonRouter
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
 from browser_worker.features.recordings.application.models import RecordingFormat
@@ -18,14 +19,16 @@ from browser_worker.features.recordings.presentation.schemas import RecordingRes
 from browser_worker.presentation.api_files import api_file_response
 from browser_worker.presentation.error_registry import API_ERRORS
 
-recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
+recording_router = CanonRouter(
+    tags=["recordings"], route_class=DishkaRoute, error_registry=API_ERRORS
+)
 
 
 @recording_router.post(
     "/browser/recordings",
     status_code=status.HTTP_201_CREATED,
     operation_id="start_recording",
-    responses=API_ERRORS.responses(
+    raises=(
         BROWSER_NOT_FOUND,
         RECORDING_ALREADY_EXISTS,
         RECORDING_FAILED,
@@ -41,7 +44,7 @@ async def start_recording(
 @recording_router.post(
     "/browser/recordings/{recording_id}/stop",
     operation_id="stop_recording",
-    responses=API_ERRORS.responses(
+    raises=(
         RECORDING_NOT_FOUND,
         RECORDING_NOT_RUNNING,
         RECORDING_FAILED,
@@ -61,9 +64,9 @@ async def stop_recording(
     response_class=FileResponse,
     responses=api_file_response(
         "Recorded video",
-        API_ERRORS.responses(RECORDING_NOT_FOUND, RECORDING_NOT_COMPLETED),
         media_types=RecordingFormat.media_types(),
     ),
+    raises=(RECORDING_NOT_FOUND, RECORDING_NOT_COMPLETED),
 )
 async def download_recording(
     recording_id: UUID,
