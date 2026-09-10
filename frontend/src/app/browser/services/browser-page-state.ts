@@ -1,5 +1,5 @@
 import { computed, signal } from "@angular/core";
-import type { BrowserEvent, TabResult } from "@browsertunnel/browser-rpc-client";
+import type { BrowserEvent, TabResult } from "@browsertunnel/browser-rpc-client/models";
 
 export interface NavigationState {
   readonly canGoBack: boolean;

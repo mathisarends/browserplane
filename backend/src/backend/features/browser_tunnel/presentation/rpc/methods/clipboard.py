@@ -1,32 +1,26 @@
-from enum import StrEnum
+from pyrpckit import Inject, RpcModule
 
-import pyrpckit as rpc
-
-from backend.features.browser_tunnel.application import BrowserClipboard
+from backend.features.browser_tunnel.application import Browser
 from backend.features.browser_tunnel.presentation.rpc.models import (
     ClipboardResult,
     TextParams,
 )
 
-
-class ClipboardMethod(StrEnum):
-    COPY = "browser.clipboard.copy"
-    READ = "browser.clipboard.read"
-    WRITE = "browser.clipboard.write"
+clipboard = RpcModule(namespace="browser.clipboard")
 
 
-class ClipboardMethods(rpc.RpcHandler):
-    def __init__(self, clipboard: BrowserClipboard) -> None:
-        self._clipboard = clipboard
+@clipboard.method()
+async def copy(browser: Inject[Browser]) -> ClipboardResult:
+    text = await browser.clipboard.copy()
+    return ClipboardResult(text=text)
 
-    @rpc.method(ClipboardMethod.COPY)
-    async def copy(self) -> ClipboardResult:
-        return ClipboardResult(text=await self._clipboard.copy())
 
-    @rpc.method(ClipboardMethod.READ)
-    async def read(self) -> ClipboardResult:
-        return ClipboardResult(text=await self._clipboard.read())
+@clipboard.method()
+async def read(browser: Inject[Browser]) -> ClipboardResult:
+    text = await browser.clipboard.read()
+    return ClipboardResult(text=text)
 
-    @rpc.method(ClipboardMethod.WRITE)
-    async def write(self, params: TextParams) -> None:
-        await self._clipboard.write(params.text)
+
+@clipboard.method()
+async def write(params: TextParams, browser: Inject[Browser]) -> None:
+    await browser.clipboard.write(params.text)

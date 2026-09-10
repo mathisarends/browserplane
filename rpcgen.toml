@@ -1,0 +1,8 @@
+version = 1
+
+[[clients]]
+schema = "schemas/openrpc.json"
+language = "typescript"
+output = "frontend/generated/src"
+client_name = "BackendBrowserClient"
+with_transport = "websocket"

@@ -1,27 +1,13 @@
-import pyrpckit as rpc
+from .clipboard import clipboard
+from .input import input_methods
+from .navigation import navigation
+from .tabs import tabs
 
-from backend.features.browser_tunnel.application import Browser
-
-from .clipboard import ClipboardMethods
-from .input import InputMethods
-from .navigation import NavigationMethods
-from .tabs import TabMethods
-
-BROWSER_RPC_METHODS = (
-    NavigationMethods,
-    InputMethods,
-    ClipboardMethods,
-    TabMethods,
+BROWSER_RPC_MODULES = (
+    navigation,
+    input_methods,
+    clipboard,
+    tabs,
 )
 
-
-def browser_rpc_methods(browser: Browser) -> tuple[rpc.RpcHandler, ...]:
-    return (
-        NavigationMethods(browser.navigation),
-        InputMethods(browser.input),
-        ClipboardMethods(browser.clipboard),
-        TabMethods(browser.tabs),
-    )
-
-
-__all__ = ["BROWSER_RPC_METHODS", "browser_rpc_methods"]
+__all__ = ["BROWSER_RPC_MODULES"]

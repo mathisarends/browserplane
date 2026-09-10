@@ -1,14 +1,18 @@
+from collections.abc import AsyncIterator
 from typing import assert_never
 
+from pyrpckit import Inject, RpcModule
+
 from backend.features.browser_tunnel.application import (
-    BrowserEvent as DomainEvent,
-)
-from backend.features.browser_tunnel.application import (
+    Browser,
     CursorChanged,
     NavigationChanged,
     TabsChanged,
     TargetCrashed,
     TargetDetached,
+)
+from backend.features.browser_tunnel.application import (
+    BrowserEvent as DomainEvent,
 )
 from backend.features.browser_tunnel.presentation.rpc.models import (
     BrowserCursorEvent,
@@ -20,10 +24,22 @@ from backend.features.browser_tunnel.presentation.rpc.models import (
     tabs_result,
 )
 
-BROWSER_EVENT_METHOD = "browser.event"
+browser_events = RpcModule(namespace="browser")
 
 
-def browser_event(event: DomainEvent) -> BrowserEvent:
+@browser_events.event(
+    "event",
+    payload=BrowserEvent,
+    summary="Stream browser state to the frontend.",
+)
+async def stream_browser_events(
+    browser: Inject[Browser],
+) -> AsyncIterator[BrowserEvent]:
+    async for event in browser.events():
+        yield _browser_event(event)
+
+
+def _browser_event(event: DomainEvent) -> BrowserEvent:
     """Translate a domain browser event into its wire representation."""
     match event:
         case TabsChanged(tabs=tabs):

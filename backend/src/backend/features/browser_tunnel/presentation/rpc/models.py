@@ -1,8 +1,8 @@
 from enum import StrEnum
 from typing import Literal
 
-import pyrpckit as rpc
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
+from pyrpckit import RpcModel
 
 from backend.features.browser_tunnel.application import (
     BrowserTab,
@@ -10,10 +10,6 @@ from backend.features.browser_tunnel.application import (
     KeyEventType,
     MouseEventType,
 )
-
-
-class RpcModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
 
 class BrowserEventType(StrEnum):
@@ -93,13 +89,11 @@ class ClipboardResult(RpcModel):
     text: str
 
 
-@rpc.event
 class BrowserTabsEvent(RpcModel):
     type: Literal[BrowserEventType.TABS] = BrowserEventType.TABS
     tabs: list[TabResult]
 
 
-@rpc.event
 class BrowserNavigationEvent(RpcModel):
     type: Literal[BrowserEventType.NAVIGATION] = BrowserEventType.NAVIGATION
     tab_id: str = Field(alias="tabId")
@@ -112,14 +106,12 @@ class BrowserNavigationEvent(RpcModel):
     error: str | None = None
 
 
-@rpc.event
 class BrowserCursorEvent(RpcModel):
     type: Literal[BrowserEventType.CURSOR] = BrowserEventType.CURSOR
     tab_id: str = Field(alias="tabId")
     cursor: CursorStyle
 
 
-@rpc.event
 class BrowserTargetCrashedEvent(RpcModel):
     type: Literal[BrowserEventType.TARGET_CRASHED] = BrowserEventType.TARGET_CRASHED
     tab_id: str = Field(alias="tabId")
@@ -127,7 +119,6 @@ class BrowserTargetCrashedEvent(RpcModel):
     error_code: int = Field(alias="errorCode")
 
 
-@rpc.event
 class BrowserTargetDetachedEvent(RpcModel):
     type: Literal[BrowserEventType.TARGET_DETACHED] = BrowserEventType.TARGET_DETACHED
     tab_id: str | None = Field(alias="tabId")

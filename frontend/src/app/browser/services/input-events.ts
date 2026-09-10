@@ -1,4 +1,4 @@
-import type { KeyParams, MouseParams } from "@browsertunnel/browser-rpc-client";
+import type { KeyParams, MouseParams } from "@browsertunnel/browser-rpc-client/models";
 
 export type MousePoint = Pick<MouseParams, "x" | "y">;
 

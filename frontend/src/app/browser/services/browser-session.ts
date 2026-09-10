@@ -7,13 +7,12 @@ import {
   type openSessionResponse,
   type SessionResponse,
 } from "@browsertunnel/backend-client";
-import {
-  BackendBrowserClient,
-  WebSocketRpcTransport,
-  type KeyParams,
-  type MouseParams,
-  type ScrollParams,
-} from "@browsertunnel/browser-rpc-client";
+import { BackendBrowserClient } from "@browsertunnel/browser-rpc-client";
+import type {
+  KeyParams,
+  MouseParams,
+  ScrollParams,
+} from "@browsertunnel/browser-rpc-client/models";
 import { expectStatus } from "../../shared/api";
 import { errorMessage } from "../../shared/errors";
 import { BrowserPageState, pageFailure, type BrowserTabState } from "./browser-page-state";
@@ -167,10 +166,16 @@ export class BrowserSession {
       throw new Error("The session does not contain a browser");
     }
     this.sessionState.set(session);
-    const transport = new WebSocketRpcTransport(socketUrl(session.tunnel_path));
-    const client = new BackendBrowserClient(transport);
+    const client = await BackendBrowserClient.connect({
+      endpoints: [
+        {
+          server: "backend-session",
+          url: socketUrl(session.tunnel_path).href,
+          subprotocols: [],
+        },
+      ],
+    });
     this.client = client;
-    await transport.connect();
     await this.stream.connect(session.screencast_path, this.screencastMode.mode());
     this.connectionState.set("connected");
     void this.listen(client);
@@ -215,10 +220,10 @@ export class BrowserSession {
 
   private async listen(client: BackendBrowserClient): Promise<void> {
     try {
-      for await (const { params } of client.notifications()) {
+      for await (const event of client.browser.event()) {
         if (client !== this.client) return;
-        this.page.apply(params);
-        const failure = pageFailure(params);
+        this.page.apply(event);
+        const failure = pageFailure(event);
         if (failure) this.errorState.set(failure);
       }
     } catch (error) {

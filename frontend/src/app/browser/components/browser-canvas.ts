@@ -8,7 +8,7 @@ import {
   OnDestroy,
   viewChild,
 } from "@angular/core";
-import type { MouseParams } from "@browsertunnel/browser-rpc-client";
+import type { MouseParams } from "@browsertunnel/browser-rpc-client/models";
 import { CanvasPainter } from "../services/canvas-painter";
 import {
   isClipboardShortcut,

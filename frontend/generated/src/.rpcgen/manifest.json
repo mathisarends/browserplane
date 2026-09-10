@@ -1,0 +1,20 @@
+{
+  "generator": "pyrpckit",
+  "generatorVersion": "0.4.0",
+  "layoutVersion": 7,
+  "language": "typescript",
+  "contractSha256": "b33c9bf38d2cb8998d4c98cf4ca90f4ea32ac893ec7d1b79895cc4b3b88bd558",
+  "files": [
+    ".rpcgen/manifest.json",
+    "client.ts",
+    "core.ts",
+    "endpoints.ts",
+    "errors.ts",
+    "index.ts",
+    "models.ts",
+    "namespaces/browser.ts",
+    "namespaces/index.ts",
+    "routes.ts",
+    "transport.ts"
+  ]
+}

@@ -1,12 +1,8 @@
-import pyrpckit as rpc
+from pyrpckit import RpcChannel, RpcContract, ServerVariable
 
-from .events import (
-    BROWSER_EVENT_METHOD,
-    browser_event,
-)
+from .events import browser_events
 from .methods import (
-    BROWSER_RPC_METHODS,
-    browser_rpc_methods,
+    BROWSER_RPC_MODULES,
 )
 from .models import (
     BrowserCursorEvent,
@@ -18,29 +14,27 @@ from .models import (
     tabs_result,
 )
 
-BROWSER_PROTOCOL = rpc.RpcProtocol(
-    rpc.feature(
-        "browser",
-        handlers=BROWSER_RPC_METHODS,
-        notifications=(
-            rpc.notification(
-                BROWSER_EVENT_METHOD,
-                BrowserEvent,
-                summary="Stream browser state to the frontend.",
-            ),
-        ),
-    ),
-    version=2,
+BROWSER_CHANNEL = RpcChannel(name="backend-session", version=2)
+for module in (*BROWSER_RPC_MODULES, browser_events):
+    BROWSER_CHANNEL.include(module)
+
+BROWSER_CONTRACT = RpcContract.from_channels(
+    channels=(BROWSER_CHANNEL,),
+    title="Browser Backend",
+    server_urls={
+        "backend-session": "/api/v1/sessions/{sessionId}/tunnel",
+    },
+    variables={
+        "sessionId": ServerVariable(default="{sessionId}"),
+    },
 )
 
 __all__ = [
-    "BROWSER_EVENT_METHOD",
-    "BROWSER_PROTOCOL",
-    "browser_event",
+    "BROWSER_CHANNEL",
+    "BROWSER_CONTRACT",
     "BrowserCursorEvent",
     "BrowserEvent",
     "BrowserNavigationEvent",
-    "browser_rpc_methods",
     "BrowserTabsEvent",
     "BrowserTargetCrashedEvent",
     "BrowserTargetDetachedEvent",
