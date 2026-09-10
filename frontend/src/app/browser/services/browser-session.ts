@@ -228,6 +228,8 @@ export class BrowserSession {
 }
 
 function openSessionFailure(response: openSessionResponse): string {
-  if (response.status === 408 || response.status === 409) return response.data.message;
+  if (response.status === 408 || response.status === 409) {
+    return response.data.detail ?? response.data.title;
+  }
   return `Session could not be opened (${response.status})`;
 }

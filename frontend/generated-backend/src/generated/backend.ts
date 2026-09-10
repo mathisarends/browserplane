@@ -5,21 +5,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import type {
-  AuthenticationProfileNotFoundError,
+  AuthenticationProfileNotFoundProblem,
   AuthenticationProfileResponse,
-  BrowserCheckpointNotFoundError,
+  BrowserCheckpointNotFoundProblem,
   BrowserCheckpointResponse,
-  BrowserNotFoundError,
-  BrowserProvisioningFailedError,
+  BrowserNotFoundProblem,
+  BrowserProvisioningFailedProblem,
   BrowserStateSchema,
-  BrowserStateTransferFailedError,
+  BrowserStateTransferFailedProblem,
   CancelSessionRequestParams,
   CreateAuthenticationProfileRequest,
   CreateBrowserCheckpointRequest,
-  DownloadNotFoundError,
+  DownloadNotFoundProblem,
   DownloadResponse,
   GetSessionRequestParams,
-  HTTPValidationError,
   Health,
   ListOwnerSessionsParams,
   MountAuthenticationProfileRequest,
@@ -28,20 +27,21 @@ import type {
   OpenSessionResponse,
   OwnerSessionsResponse,
   PooledBrowserResponse,
-  RecordingAlreadyExistsError,
-  RecordingNotFoundError,
-  RecordingNotRunningError,
+  RecordingAlreadyExistsProblem,
+  RecordingNotFoundProblem,
+  RecordingNotRunningProblem,
   RecordingResponse,
-  RecordingTransferFailedError,
+  RecordingTransferFailedProblem,
+  RequestValidationProblem,
   ResumeSessionRequest,
-  SessionNotActiveError,
-  SessionNotFoundError,
-  SessionNotSuspendedError,
-  SessionRequestCancelledError,
-  SessionRequestConflictError,
-  SessionRequestNotFoundError,
+  SessionNotActiveProblem,
+  SessionNotFoundProblem,
+  SessionNotSuspendedProblem,
+  SessionRequestCancelledProblem,
+  SessionRequestConflictProblem,
+  SessionRequestNotFoundProblem,
   SessionRequestResponse,
-  SessionRequestTimedOutError,
+  SessionRequestTimedOutProblem,
   SessionResponse,
   UpdateAuthenticationProfileRequest
 } from './models';
@@ -139,12 +139,12 @@ export type listOwnerSessionsResponse200 = {
 }
 
 export type listOwnerSessionsResponse404 = {
-  data: BrowserNotFoundError
+  data: BrowserNotFoundProblem
   status: 404
 }
 
 export type listOwnerSessionsResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -202,22 +202,22 @@ export type openSessionResponse201 = {
 }
 
 export type openSessionResponse404 = {
-  data: AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  data: AuthenticationProfileNotFoundProblem | BrowserCheckpointNotFoundProblem
   status: 404
 }
 
 export type openSessionResponse408 = {
-  data: SessionRequestTimedOutError
+  data: SessionRequestTimedOutProblem
   status: 408
 }
 
 export type openSessionResponse409 = {
-  data: SessionRequestConflictError | SessionRequestCancelledError
+  data: SessionRequestConflictProblem | SessionRequestCancelledProblem
   status: 409
 }
 
 export type openSessionResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -274,12 +274,12 @@ export type getSessionResponse200 = {
 }
 
 export type getSessionResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type getSessionResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -329,12 +329,12 @@ export type closeSessionResponse204 = {
 }
 
 export type closeSessionResponse404 = {
-  data: SessionNotFoundError
+  data: SessionNotFoundProblem
   status: 404
 }
 
 export type closeSessionResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -384,22 +384,22 @@ export type mountSessionAuthenticationProfileResponse204 = {
 }
 
 export type mountSessionAuthenticationProfileResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem | AuthenticationProfileNotFoundProblem | BrowserCheckpointNotFoundProblem
   status: 404
 }
 
 export type mountSessionAuthenticationProfileResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type mountSessionAuthenticationProfileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type mountSessionAuthenticationProfileResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -456,22 +456,22 @@ export type captureSessionBrowserStateResponse200 = {
 }
 
 export type captureSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem | AuthenticationProfileNotFoundProblem | BrowserCheckpointNotFoundProblem
   status: 404
 }
 
 export type captureSessionBrowserStateResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type captureSessionBrowserStateResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type captureSessionBrowserStateResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -521,22 +521,22 @@ export type mountSessionBrowserStateResponse204 = {
 }
 
 export type mountSessionBrowserStateResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type mountSessionBrowserStateResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type mountSessionBrowserStateResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type mountSessionBrowserStateResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -593,22 +593,22 @@ export type listSessionDownloadsResponse200 = {
 }
 
 export type listSessionDownloadsResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type listSessionDownloadsResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type listSessionDownloadsResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type listSessionDownloadsResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -652,37 +652,32 @@ export const listSessionDownloads = async (sessionId: string, options?: RequestI
 
 
 
-export type downloadSessionFileResponse200ApplicationJson = {
-  data: unknown
-  status: 200
-}
-
-export type downloadSessionFileResponse200ApplicationOctetStream = {
+export type downloadSessionFileResponse200 = {
   data: Blob
   status: 200
 }
 
 export type downloadSessionFileResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError | DownloadNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem | DownloadNotFoundProblem
   status: 404
 }
 
 export type downloadSessionFileResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type downloadSessionFileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type downloadSessionFileResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
-export type downloadSessionFileResponseSuccess = (downloadSessionFileResponse200ApplicationJson | downloadSessionFileResponse200ApplicationOctetStream) & {
+export type downloadSessionFileResponseSuccess = (downloadSessionFileResponse200) & {
   headers: Headers;
 };
 export type downloadSessionFileResponseError = (downloadSessionFileResponse404 | downloadSessionFileResponse409 | downloadSessionFileResponse422 | downloadSessionFileResponse503) & {
@@ -772,22 +767,22 @@ export type createBrowserCheckpointResponse201 = {
 }
 
 export type createBrowserCheckpointResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type createBrowserCheckpointResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type createBrowserCheckpointResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type createBrowserCheckpointResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -887,22 +882,22 @@ export type createAuthenticationProfileResponse201 = {
 }
 
 export type createAuthenticationProfileResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type createAuthenticationProfileResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type createAuthenticationProfileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type createAuthenticationProfileResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -959,12 +954,12 @@ export type getAuthenticationProfileResponse200 = {
 }
 
 export type getAuthenticationProfileResponse404 = {
-  data: AuthenticationProfileNotFoundError
+  data: AuthenticationProfileNotFoundProblem
   status: 404
 }
 
 export type getAuthenticationProfileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1014,12 +1009,12 @@ export type deleteAuthenticationProfileResponse204 = {
 }
 
 export type deleteAuthenticationProfileResponse404 = {
-  data: AuthenticationProfileNotFoundError
+  data: AuthenticationProfileNotFoundProblem
   status: 404
 }
 
 export type deleteAuthenticationProfileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1069,12 +1064,12 @@ export type updateAuthenticationProfileResponse200 = {
 }
 
 export type updateAuthenticationProfileResponse404 = {
-  data: AuthenticationProfileNotFoundError
+  data: AuthenticationProfileNotFoundProblem
   status: 404
 }
 
 export type updateAuthenticationProfileResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1133,22 +1128,22 @@ export type mountSessionBrowserCheckpointResponse204 = {
 }
 
 export type mountSessionBrowserCheckpointResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError | AuthenticationProfileNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem | AuthenticationProfileNotFoundProblem
   status: 404
 }
 
 export type mountSessionBrowserCheckpointResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type mountSessionBrowserCheckpointResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type mountSessionBrowserCheckpointResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -1205,22 +1200,22 @@ export type suspendSessionResponse200 = {
 }
 
 export type suspendSessionResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type suspendSessionResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type suspendSessionResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type suspendSessionResponse503 = {
-  data: BrowserStateTransferFailedError
+  data: BrowserStateTransferFailedProblem
   status: 503
 }
 
@@ -1271,17 +1266,17 @@ export type renewSessionLeaseResponse200 = {
 }
 
 export type renewSessionLeaseResponse404 = {
-  data: SessionNotFoundError | BrowserNotFoundError
+  data: SessionNotFoundProblem | BrowserNotFoundProblem
   status: 404
 }
 
 export type renewSessionLeaseResponse409 = {
-  data: SessionNotActiveError
+  data: SessionNotActiveProblem
   status: 409
 }
 
 export type renewSessionLeaseResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1331,22 +1326,22 @@ export type resumeSessionResponse200 = {
 }
 
 export type resumeSessionResponse404 = {
-  data: SessionNotFoundError | AuthenticationProfileNotFoundError | BrowserCheckpointNotFoundError
+  data: AuthenticationProfileNotFoundProblem | BrowserCheckpointNotFoundProblem | SessionNotFoundProblem
   status: 404
 }
 
 export type resumeSessionResponse408 = {
-  data: SessionRequestTimedOutError
+  data: SessionRequestTimedOutProblem
   status: 408
 }
 
 export type resumeSessionResponse409 = {
-  data: SessionRequestConflictError | SessionRequestCancelledError | SessionNotSuspendedError | SessionNotActiveError
+  data: SessionRequestConflictProblem | SessionRequestCancelledProblem | SessionNotSuspendedProblem | SessionNotActiveProblem
   status: 409
 }
 
 export type resumeSessionResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1404,12 +1399,12 @@ export type getSessionRequestResponse200 = {
 }
 
 export type getSessionRequestResponse404 = {
-  data: SessionRequestNotFoundError
+  data: SessionRequestNotFoundProblem
   status: 404
 }
 
 export type getSessionRequestResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1469,12 +1464,12 @@ export type cancelSessionRequestResponse200 = {
 }
 
 export type cancelSessionRequestResponse404 = {
-  data: SessionRequestNotFoundError
+  data: SessionRequestNotFoundProblem
   status: 404
 }
 
 export type cancelSessionRequestResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
@@ -1534,22 +1529,22 @@ export type startRecordingResponse201 = {
 }
 
 export type startRecordingResponse404 = {
-  data: BrowserNotFoundError
+  data: BrowserNotFoundProblem
   status: 404
 }
 
 export type startRecordingResponse409 = {
-  data: RecordingAlreadyExistsError
+  data: RecordingAlreadyExistsProblem
   status: 409
 }
 
 export type startRecordingResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type startRecordingResponse503 = {
-  data: RecordingTransferFailedError
+  data: RecordingTransferFailedProblem
   status: 503
 }
 
@@ -1599,22 +1594,22 @@ export type stopRecordingResponse200 = {
 }
 
 export type stopRecordingResponse404 = {
-  data: BrowserNotFoundError | RecordingNotFoundError
+  data: BrowserNotFoundProblem | RecordingNotFoundProblem
   status: 404
 }
 
 export type stopRecordingResponse409 = {
-  data: RecordingNotRunningError
+  data: RecordingNotRunningProblem
   status: 409
 }
 
 export type stopRecordingResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type stopRecordingResponse503 = {
-  data: RecordingTransferFailedError
+  data: RecordingTransferFailedProblem
   status: 503
 }
 
@@ -1660,32 +1655,27 @@ export const stopRecording = async (browserId: string,
 
 
 
-export type downloadRecordingResponse200ApplicationJson = {
-  data: unknown
-  status: 200
-}
-
-export type downloadRecordingResponse200VideoMp4 = {
+export type downloadRecordingResponse200 = {
   data: Blob
   status: 200
 }
 
 export type downloadRecordingResponse404 = {
-  data: BrowserNotFoundError | RecordingNotFoundError
+  data: BrowserNotFoundProblem | RecordingNotFoundProblem
   status: 404
 }
 
 export type downloadRecordingResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type downloadRecordingResponse503 = {
-  data: RecordingTransferFailedError
+  data: RecordingTransferFailedProblem
   status: 503
 }
 
-export type downloadRecordingResponseSuccess = (downloadRecordingResponse200ApplicationJson | downloadRecordingResponse200VideoMp4) & {
+export type downloadRecordingResponseSuccess = (downloadRecordingResponse200) & {
   headers: Headers;
 };
 export type downloadRecordingResponseError = (downloadRecordingResponse404 | downloadRecordingResponse422 | downloadRecordingResponse503) & {
@@ -1775,17 +1765,17 @@ export type releasePooledBrowserResponse200 = {
 }
 
 export type releasePooledBrowserResponse404 = {
-  data: BrowserNotFoundError
+  data: BrowserNotFoundProblem
   status: 404
 }
 
 export type releasePooledBrowserResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type releasePooledBrowserResponse503 = {
-  data: BrowserProvisioningFailedError
+  data: BrowserProvisioningFailedProblem
   status: 503
 }
 
@@ -1835,17 +1825,17 @@ export type restartPooledBrowserResponse200 = {
 }
 
 export type restartPooledBrowserResponse404 = {
-  data: BrowserNotFoundError
+  data: BrowserNotFoundProblem
   status: 404
 }
 
 export type restartPooledBrowserResponse422 = {
-  data: HTTPValidationError
+  data: RequestValidationProblem
   status: 422
 }
 
 export type restartPooledBrowserResponse503 = {
-  data: BrowserProvisioningFailedError
+  data: BrowserProvisioningFailedProblem
   status: 503
 }
 
@@ -1895,7 +1885,7 @@ export type listSessionsResponse200 = {
 }
 
 export type listSessionsResponse404 = {
-  data: BrowserNotFoundError
+  data: BrowserNotFoundProblem
   status: 404
 }
 
