@@ -49,6 +49,13 @@ async def test_released_generation_cannot_be_started_again() -> None:
 
 
 @pytest.mark.asyncio
+async def test_empty_new_worker_accepts_release_for_persisted_generation() -> None:
+    service = BrowserService(FakeBrowserProcess())
+
+    assert not await service.prepare_release(7)
+
+
+@pytest.mark.asyncio
 async def test_missing_browser_operations_fail_consistently() -> None:
     process = FakeBrowserProcess()
     service = BrowserService(process)

@@ -85,6 +85,10 @@ class BrowserService:
                 self._releasing_generation = generation
                 return True
 
+            if self._high_water_generation is None:
+                # A new worker owns no process yet. Releasing it is safe for
+                # every persisted generation and enables scheduler recovery.
+                return False
             if self._high_water_generation == generation:
                 return False
             raise BrowserAlreadyRunningException

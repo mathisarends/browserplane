@@ -137,8 +137,7 @@ services:
       - STORAGE_PREFIX=recordings
       # Only internal browser-worker addresses are configured. RPC and live-traffic
       # endpoints exposed to the frontend belong to the backend itself.
-      - BACKEND_BROWSER_WORKER_1_URL=http://browser-worker-1:8000
-      - BACKEND_BROWSER_WORKER_2_URL=http://browser-worker-2:8000
+      - BACKEND_BROWSER_POOL_WORKER_URLS=http://browser-worker-1:8000,http://browser-worker-2:8000
     depends_on:
       migrate:
         condition: service_completed_successfully
