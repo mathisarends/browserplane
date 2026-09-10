@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from browser_worker.features.release.application.restart import WorkerRestartService
 from browser_worker.features.release.application.service import WorkerReleaseService
 from browser_worker.features.release.presentation.errors import WORKER_NOT_SUPERVISED
-from browser_worker.presentation.api_errors import api_error_responses
+from browser_worker.presentation.error_registry import API_ERRORS
 
 release_router = APIRouter(tags=["worker"], route_class=DishkaRoute)
 
@@ -39,7 +39,7 @@ async def release_worker(
     "/restart",
     status_code=status.HTTP_202_ACCEPTED,
     operation_id="restart_worker",
-    responses=api_error_responses(WORKER_NOT_SUPERVISED),
+    responses=API_ERRORS.responses(WORKER_NOT_SUPERVISED),
 )
 async def restart_worker(
     service: FromDishka[WorkerRestartService],

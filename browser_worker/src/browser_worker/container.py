@@ -1,9 +1,9 @@
 from collections.abc import Sequence
 
 from dishka import AsyncContainer, Provider, make_async_container
+from fastapi_canon import Feature
 
 from browser_worker.features.workspace.infrastructure import WorkspaceProvider
-from browser_worker.shared.feature import Feature
 
 
 def create_container(

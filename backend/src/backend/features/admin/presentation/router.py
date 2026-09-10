@@ -15,7 +15,7 @@ from backend.features.browsers.presentation.errors import (
 )
 from backend.features.sessions.presentation.mapper import to_session_response
 from backend.features.sessions.presentation.schemas import SessionResponse
-from backend.presentation.api_errors import api_error_responses
+from backend.presentation.error_registry import API_ERRORS
 
 admin_router = APIRouter(prefix="/admin", route_class=DishkaRoute, tags=["admin"])
 
@@ -36,7 +36,7 @@ async def list_pooled_browsers(
     "/browsers/{browser_id}/release",
     response_model=PooledBrowserResponse,
     operation_id="release_pooled_browser",
-    responses=api_error_responses(BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED),
 )
 async def release_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
@@ -49,7 +49,7 @@ async def release_pooled_browser(
     "/browsers/{browser_id}/restart",
     response_model=PooledBrowserResponse,
     operation_id="restart_pooled_browser",
-    responses=api_error_responses(BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED),
 )
 async def restart_pooled_browser(
     browser_id: UUID, service: FromDishka[AdminService]
@@ -62,7 +62,7 @@ async def restart_pooled_browser(
     "/sessions",
     response_model=list[SessionResponse],
     operation_id="list_sessions",
-    responses=api_error_responses(BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def list_sessions(service: FromDishka[AdminService]) -> list[SessionResponse]:
     sessions = await service.list_sessions()

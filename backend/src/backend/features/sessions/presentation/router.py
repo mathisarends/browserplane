@@ -46,7 +46,7 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
     UpdateAuthenticationProfileRequest,
 )
-from backend.presentation.api_errors import api_error_responses
+from backend.presentation.error_registry import API_ERRORS
 from generated.browser_worker import BrowserStateSchema, DownloadResponse
 
 session_router = APIRouter(route_class=DishkaRoute, tags=["sessions"])
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
     "/sessions",
     response_model=OwnerSessionsResponse,
     operation_id="list_owner_sessions",
-    responses=api_error_responses(BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def list_owner_sessions(
     owner_id: UUID, service: FromDishka[SessionService]
@@ -73,7 +73,7 @@ async def list_owner_sessions(
     "/sessions/{session_id}",
     response_model=SessionResponse,
     operation_id="get_session",
-    responses=api_error_responses(SESSION_NOT_FOUND, BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(SESSION_NOT_FOUND, BROWSER_NOT_FOUND),
 )
 async def get_session(
     session_id: UUID, service: FromDishka[SessionService]
@@ -86,7 +86,7 @@ async def get_session(
     "/sessions/{session_id}/authentication-profile",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_session_authentication_profile",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -109,7 +109,7 @@ async def mount_session_authentication_profile(
 @session_router.get(
     "/sessions/{session_id}/browser-state",
     operation_id="capture_session_browser_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -132,7 +132,7 @@ async def capture_session_browser_state(
     "/sessions/{session_id}/browser-state",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_session_browser_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -153,7 +153,7 @@ async def mount_session_browser_state(
 @session_router.get(
     "/sessions/{session_id}/downloads",
     operation_id="list_session_downloads",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -181,7 +181,7 @@ async def list_session_downloads(
             },
             "description": "Downloaded file",
         },
-        **api_error_responses(
+        **API_ERRORS.responses(
             SESSION_NOT_FOUND,
             BROWSER_NOT_FOUND,
             SESSION_NOT_ACTIVE,
@@ -224,7 +224,7 @@ async def list_browser_checkpoints(
     response_model=BrowserCheckpointResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="create_browser_checkpoint",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -262,7 +262,7 @@ async def list_authentication_profiles(
     response_model=AuthenticationProfileResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="create_authentication_profile",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -285,7 +285,7 @@ async def create_authentication_profile(
     "/authentication-profiles/{profile_id}",
     response_model=AuthenticationProfileResponse,
     operation_id="get_authentication_profile",
-    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
 )
 async def get_authentication_profile(
     profile_id: UUID,
@@ -302,7 +302,7 @@ async def get_authentication_profile(
     "/sessions/{session_id}/authentication-profiles/{profile_id}",
     response_model=AuthenticationProfileResponse,
     operation_id="update_authentication_profile",
-    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
 )
 async def update_authentication_profile(
     session_id: UUID,
@@ -322,7 +322,7 @@ async def update_authentication_profile(
     "/authentication-profiles/{profile_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="delete_authentication_profile",
-    responses=api_error_responses(AUTHENTICATION_PROFILE_NOT_FOUND),
+    responses=API_ERRORS.responses(AUTHENTICATION_PROFILE_NOT_FOUND),
 )
 async def delete_authentication_profile(
     profile_id: UUID, service: FromDishka[SessionService]
@@ -334,7 +334,7 @@ async def delete_authentication_profile(
     "/sessions/{session_id}/browser-checkpoint",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_session_browser_checkpoint",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -360,7 +360,7 @@ async def mount_session_browser_checkpoint(
     "/sessions/{session_id}/suspend",
     response_model=SessionResponse,
     operation_id="suspend_session",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
@@ -379,7 +379,7 @@ async def suspend_session(
     "/sessions/{session_id}/lease/renew",
     response_model=SessionResponse,
     operation_id="renew_session_lease",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         SESSION_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_NOT_FOUND,
@@ -395,7 +395,7 @@ async def renew_session_lease(
     "/sessions/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="close_session",
-    responses=api_error_responses(SESSION_NOT_FOUND),
+    responses=API_ERRORS.responses(SESSION_NOT_FOUND),
 )
 async def close_session(session_id: UUID, service: FromDishka[SessionService]) -> None:
     await service.close(session_id)

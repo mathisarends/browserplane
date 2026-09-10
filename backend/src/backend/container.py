@@ -1,11 +1,11 @@
 from collections.abc import Sequence
 
 from dishka import AsyncContainer, Provider, make_async_container
+from fastapi_canon import Feature
 
 from backend.infrastructure.browser_worker import BrowserWorkerProvider
 from backend.infrastructure.database import DatabaseProvider
 from backend.infrastructure.storage.provider import StorageProvider
-from backend.shared.feature import Feature
 
 
 def create_container(

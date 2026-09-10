@@ -17,7 +17,7 @@ from browser_worker.features.browser.presentation.schemas import (
     CreateBrowserRequest,
 )
 from browser_worker.features.downloads.application.service import DownloadService
-from browser_worker.presentation.api_errors import api_error_responses
+from browser_worker.presentation.error_registry import API_ERRORS
 
 browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
 
@@ -26,7 +26,7 @@ browser_router = APIRouter(tags=["browsers"], route_class=DishkaRoute)
     "/browser",
     status_code=status.HTTP_201_CREATED,
     operation_id="create_browser",
-    responses=api_error_responses(BROWSER_ALREADY_RUNNING, BROWSER_STARTUP_FAILED),
+    responses=API_ERRORS.responses(BROWSER_ALREADY_RUNNING, BROWSER_STARTUP_FAILED),
 )
 async def create_browser(
     request: CreateBrowserRequest,
@@ -44,7 +44,7 @@ async def create_browser(
 @browser_router.get(
     "/browser",
     operation_id="inspect_browser",
-    responses=api_error_responses(BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def inspect_browser(
     service: FromDishka[BrowserService],

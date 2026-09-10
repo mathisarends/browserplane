@@ -15,29 +15,29 @@ from generated.browser_worker.http_methods import HttpMethods
 from generated.browser_worker.models import (
     AuthenticationState,
     AuthenticationStateSchema,
-    BrowserAlreadyRunningError,
-    BrowserNotFoundError,
+    BrowserAlreadyRunningProblem,
+    BrowserNotFoundProblem,
     BrowserResponse,
-    BrowserStartupFailedError,
+    BrowserStartupFailedProblem,
     BrowserState,
-    BrowserStateFailedError,
-    BrowserStateInvalidError,
+    BrowserStateFailedProblem,
+    BrowserStateInvalidProblem,
     BrowserStateSchema,
     CaptureAuthenticationStateParams,
     CreateBrowserRequest,
-    DownloadNotFoundError,
+    DownloadNotFoundProblem,
     DownloadResponse,
-    HTTPValidationError,
     HealthResponse,
-    RecordingAlreadyExistsError,
-    RecordingFailedError,
-    RecordingNotCompletedError,
-    RecordingNotFoundError,
-    RecordingNotRunningError,
+    RecordingAlreadyExistsProblem,
+    RecordingFailedProblem,
+    RecordingNotCompletedProblem,
+    RecordingNotFoundProblem,
+    RecordingNotRunningProblem,
     RecordingResponse,
     ReleaseWorkerRequest,
+    RequestValidationProblem,
     RestartWorkerResponse,
-    WorkerNotSupervisedError,
+    WorkerNotSupervisedProblem,
 )
 from generated.browser_worker.serialization import serialize_path, serialize_query
 
@@ -75,7 +75,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -87,7 +87,7 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return BrowserResponse.model_validate(response.json())
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -101,7 +101,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         json_body = TypeAdapter(CreateBrowserRequest).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
@@ -118,13 +118,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 201:
             return BrowserResponse.model_validate(response.json())
         if response.status_code == 409:
-            parsed_body = BrowserAlreadyRunningError.model_validate(response.json())
+            parsed_body = BrowserAlreadyRunningProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
+            parsed_body = RequestValidationProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = BrowserStartupFailedError.model_validate(response.json())
+            parsed_body = BrowserStartupFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -145,7 +145,7 @@ class GeneratedBrowserWorkerClient:
             query.extend(serialize_query("origins", params.origins))
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -158,13 +158,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return AuthenticationStateSchema.model_validate(response.json())
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = BrowserStateFailedError.model_validate(response.json())
+            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -178,7 +178,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/authentication-state"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/problem+json")
 
         json_body = TypeAdapter(AuthenticationState).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
@@ -195,13 +195,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 204:
             return None
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = BrowserStateFailedError.model_validate(response.json())
+            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -214,7 +214,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/downloads"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -226,7 +226,7 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return TypeAdapter(list[DownloadResponse]).validate_python(response.json())
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -239,7 +239,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/downloads"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.DELETE,
@@ -251,7 +251,7 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 204:
             return None
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -266,7 +266,9 @@ class GeneratedBrowserWorkerClient:
         path = path.replace("{download_id}", serialize_path("download_id", download_id))
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/octet-stream, application/json")
+        headers.setdefault(
+            "Accept", "application/octet-stream, application/problem+json"
+        )
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -278,10 +280,10 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return response.content
         if response.status_code == 404:
-            parsed_body = TypeAdapter(BrowserNotFoundError | DownloadNotFoundError).validate_python(response.json())
+            parsed_body = TypeAdapter(BrowserNotFoundProblem | DownloadNotFoundProblem).validate_python(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
+            parsed_body = RequestValidationProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -294,7 +296,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/recordings"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.POST,
@@ -306,13 +308,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 201:
             return RecordingResponse.model_validate(response.json())
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 409:
-            parsed_body = RecordingAlreadyExistsError.model_validate(response.json())
+            parsed_body = RecordingAlreadyExistsProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = RecordingFailedError.model_validate(response.json())
+            parsed_body = RecordingFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -329,7 +331,7 @@ class GeneratedBrowserWorkerClient:
         )
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "video/webm, video/mp4, application/json")
+        headers.setdefault("Accept", "video/webm, video/mp4, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -353,13 +355,13 @@ class GeneratedBrowserWorkerClient:
                 )
             return parsed_body
         if response.status_code == 404:
-            parsed_body = RecordingNotFoundError.model_validate(response.json())
+            parsed_body = RecordingNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 409:
-            parsed_body = RecordingNotCompletedError.model_validate(response.json())
+            parsed_body = RecordingNotCompletedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
+            parsed_body = RequestValidationProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -376,7 +378,7 @@ class GeneratedBrowserWorkerClient:
         )
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.POST,
@@ -388,16 +390,16 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return RecordingResponse.model_validate(response.json())
         if response.status_code == 404:
-            parsed_body = RecordingNotFoundError.model_validate(response.json())
+            parsed_body = RecordingNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 409:
-            parsed_body = RecordingNotRunningError.model_validate(response.json())
+            parsed_body = RecordingNotRunningProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
+            parsed_body = RequestValidationProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = RecordingFailedError.model_validate(response.json())
+            parsed_body = RecordingFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -410,7 +412,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/state"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.GET,
@@ -422,13 +424,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 200:
             return BrowserStateSchema.model_validate(response.json())
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = BrowserStateFailedError.model_validate(response.json())
+            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -442,7 +444,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/browser/state"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/problem+json")
 
         json_body = TypeAdapter(BrowserState).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
@@ -459,13 +461,13 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 204:
             return None
         if response.status_code == 404:
-            parsed_body = BrowserNotFoundError.model_validate(response.json())
+            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 422:
-            parsed_body = BrowserStateInvalidError.model_validate(response.json())
+            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
         if response.status_code == 503:
-            parsed_body = BrowserStateFailedError.model_validate(response.json())
+            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -523,7 +525,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/release"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/problem+json")
 
         json_body = TypeAdapter(ReleaseWorkerRequest).dump_python(
             body, mode="json", by_alias=True, exclude_none=True
@@ -540,7 +542,7 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 204:
             return None
         if response.status_code == 422:
-            parsed_body = HTTPValidationError.model_validate(response.json())
+            parsed_body = RequestValidationProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)
@@ -553,7 +555,7 @@ class GeneratedBrowserWorkerClient:
         path = "/api/v1/restart"
 
         headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+        headers.setdefault("Accept", "application/json, application/problem+json")
 
         response = await self._client.request(
             method=HttpMethods.POST,
@@ -565,7 +567,7 @@ class GeneratedBrowserWorkerClient:
         if response.status_code == 202:
             return RestartWorkerResponse.model_validate(response.json())
         if response.status_code == 409:
-            parsed_body = WorkerNotSupervisedError.model_validate(response.json())
+            parsed_body = WorkerNotSupervisedProblem.model_validate(response.json())
             raise ApiError(response.status_code, response.text, parsed_body, response)
 
         raise ApiError(response.status_code, response.text, response=response)

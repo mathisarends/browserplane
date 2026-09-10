@@ -6,8 +6,8 @@ from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUN
 from browser_worker.features.downloads.application.service import DownloadService
 from browser_worker.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
 from browser_worker.features.downloads.presentation.schemas import DownloadResponse
-from browser_worker.presentation.api_errors import api_error_responses
 from browser_worker.presentation.api_files import OCTET_STREAM, api_file_response
+from browser_worker.presentation.error_registry import API_ERRORS
 
 download_router = APIRouter(tags=["downloads"], route_class=DishkaRoute)
 
@@ -15,7 +15,7 @@ download_router = APIRouter(tags=["downloads"], route_class=DishkaRoute)
 @download_router.get(
     "/browser/downloads",
     operation_id="list_downloads",
-    responses=api_error_responses(BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def list_downloads(
     response: Response,
@@ -29,7 +29,7 @@ async def list_downloads(
     "/browser/downloads",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="clear_downloads",
-    responses=api_error_responses(BROWSER_NOT_FOUND),
+    responses=API_ERRORS.responses(BROWSER_NOT_FOUND),
 )
 async def clear_downloads(
     service: FromDishka[DownloadService],
@@ -44,8 +44,7 @@ async def clear_downloads(
     response_class=FileResponse,
     responses=api_file_response(
         "Downloaded file",
-        BROWSER_NOT_FOUND,
-        DOWNLOAD_NOT_FOUND,
+        API_ERRORS.responses(BROWSER_NOT_FOUND, DOWNLOAD_NOT_FOUND),
     ),
 )
 async def download_file(

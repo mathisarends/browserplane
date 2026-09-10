@@ -1,10 +1,9 @@
 from collections.abc import Sequence
 
 from dishka import Provider
-from dishka.integrations.fastapi import setup_dishka
 from fastapi import APIRouter, FastAPI
+from fastapi_canon import Composition, ErrorOptions, Feature
 
-from backend.container import create_container
 from backend.features.admin.feature import feature as admin_feature
 from backend.features.browser_tunnel.feature import feature as browser_tunnel_feature
 from backend.features.browsers.feature import feature as browsers_feature
@@ -15,12 +14,14 @@ from backend.features.session_requests.feature import (
     feature as session_requests_feature,
 )
 from backend.features.sessions.feature import feature as sessions_feature
+from backend.infrastructure.browser_worker import BrowserWorkerProvider
+from backend.infrastructure.database import DatabaseProvider
+from backend.infrastructure.storage.provider import StorageProvider
 from backend.lifespan import lifespan
-from backend.presentation.api_errors import register_api_error_handlers
 from backend.presentation.middleware import install_request_logging
-from backend.shared.feature import Feature
 
 API_PREFIX = "/api/v1"
+PROBLEM_TYPE_BASE = "https://browser-provisioner.local/problems"
 FEATURES = (
     health_feature,
     browser_tunnel_feature,
@@ -35,27 +36,27 @@ FEATURES = (
 
 def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
-    _configure_app(app, FEATURES)
-    container = create_container(FEATURES, provider_overrides)
-    setup_dishka(container, app)
-    _register_routes(app, FEATURES)
+    install_request_logging(app)
+    composition = Composition(
+        _core_feature(),
+        *FEATURES,
+        _overrides_feature(provider_overrides),
+        errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
+        router_factory=lambda: APIRouter(prefix=API_PREFIX),
+    )
+    composition.apply(app)
     return app
 
 
-def _configure_app(app: FastAPI, features: tuple[Feature, ...]) -> None:
-    install_request_logging(app)
-    register_api_error_handlers(
-        app,
-        tuple(error for feature in features for error in feature.api_errors),
+def _core_feature() -> Feature:
+    return Feature(
+        name="infrastructure",
+        providers=(StorageProvider, DatabaseProvider, BrowserWorkerProvider),
     )
 
 
-def _register_routes(app: FastAPI, features: tuple[Feature, ...]) -> None:
-    api_router = APIRouter(prefix=API_PREFIX)
-    for feature in features:
-        for router in feature.routers:
-            api_router.include_router(router)
-    app.include_router(api_router)
+def _overrides_feature(provider_overrides: Sequence[Provider]) -> Feature:
+    return Feature(name="overrides", providers=provider_overrides)
 
 
 app = create_app()

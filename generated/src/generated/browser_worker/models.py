@@ -111,18 +111,26 @@ class AuthenticationStateSchema(BaseModel):
     indexed_d_b: list[OriginIndexedDb] = Field([], alias="indexedDB")
 
 
-class BrowserAlreadyRunningError(BaseModel):
+class BrowserAlreadyRunningProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/browser_already_running"]
+    title: Literal["Worker already runs a browser"]
+    status: Literal[409]
     code: Literal["browser_already_running"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class BrowserNotFoundError(BaseModel):
+class BrowserNotFoundProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/browser_not_found"]
+    title: Literal["Browser not found"]
+    status: Literal[404]
     code: Literal["browser_not_found"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class BrowserResponse(BaseModel):
@@ -132,11 +140,15 @@ class BrowserResponse(BaseModel):
     cdp_url: str
 
 
-class BrowserStartupFailedError(BaseModel):
+class BrowserStartupFailedProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/browser_startup_failed"]
+    title: Literal["Browser failed to start"]
+    status: Literal[503]
     code: Literal["browser_startup_failed"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class ScrollPosition(BaseModel):
@@ -161,18 +173,26 @@ class BrowserState(BaseModel):
     active_tab_index: int = 0
 
 
-class BrowserStateFailedError(BaseModel):
+class BrowserStateFailedProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/browser_state_failed"]
+    title: Literal["Browser state operation failed"]
+    status: Literal[503]
     code: Literal["browser_state_failed"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class BrowserStateInvalidError(BaseModel):
+class BrowserStateInvalidProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/browser_state_invalid"]
+    title: Literal["Browser state cannot be mounted"]
+    status: Literal[422]
     code: Literal["browser_state_invalid"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class BrowserStateSchema(BaseModel):
@@ -188,11 +208,15 @@ class CreateBrowserRequest(BaseModel):
     generation: int
 
 
-class DownloadNotFoundError(BaseModel):
+class DownloadNotFoundProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/download_not_found"]
+    title: Literal["Download not found"]
+    status: Literal[404]
     code: Literal["download_not_found"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class DownloadResponse(BaseModel):
@@ -232,39 +256,70 @@ class HealthResponse(BaseModel):
     instance_id: UUID
 
 
-class RecordingAlreadyExistsError(BaseModel):
+class Problem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: str
+    title: str
+    status: int = Field(ge=100, le=599)
+    code: str = Field(pattern='^[a-z][a-z0-9_]{2,}$')
+    detail: str | None = None
+    instance: str | None = None
+
+
+class RecordingAlreadyExistsProblem(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    type: Literal["https://browser-provisioner.local/problems/recording_already_exists"]
+    title: Literal["Browser session already has a recording"]
+    status: Literal[409]
     code: Literal["recording_already_exists"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class RecordingFailedError(BaseModel):
+class RecordingFailedProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/recording_failed"]
+    title: Literal["Screen recording failed"]
+    status: Literal[503]
     code: Literal["recording_failed"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class RecordingNotCompletedError(BaseModel):
+class RecordingNotCompletedProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/recording_not_completed"]
+    title: Literal["Recording has no video available"]
+    status: Literal[409]
     code: Literal["recording_not_completed"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class RecordingNotFoundError(BaseModel):
+class RecordingNotFoundProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/recording_not_found"]
+    title: Literal["Recording not found"]
+    status: Literal[404]
     code: Literal["recording_not_found"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
-class RecordingNotRunningError(BaseModel):
+class RecordingNotRunningProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/recording_not_running"]
+    title: Literal["Recording has already been stopped"]
+    status: Literal[409]
     code: Literal["recording_not_running"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class RecordingState(StrEnum):
@@ -289,17 +344,43 @@ class ReleaseWorkerRequest(BaseModel):
     generation: int
 
 
+class RequestValidationProblemErrorsItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    code: str
+    detail: str
+    pointer: str = None
+    parameter: str = None
+    in_: Literal["path", "query", "header", "cookie"] = Field(None, alias="in")
+
+
+class RequestValidationProblem(BaseModel):
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    type: Literal["https://browser-provisioner.local/problems/request_validation_error"]
+    title: Literal["Request validation failed"]
+    status: Literal[422]
+    code: Literal["request_validation_error"]
+    detail: str | None = None
+    instance: str | None = None
+    errors: list[RequestValidationProblemErrorsItem]
+
+
 class RestartWorkerResponse(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     instance_id: UUID
 
 
-class WorkerNotSupervisedError(BaseModel):
+class WorkerNotSupervisedProblem(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    type: Literal["https://browser-provisioner.local/problems/worker_not_supervised"]
+    title: Literal["Worker has no restart policy"]
+    status: Literal[409]
     code: Literal["worker_not_supervised"]
-    message: str
+    detail: str | None = None
+    instance: str | None = None
 
 
 class CaptureAuthenticationStateParams(BaseModel):

@@ -1,11 +1,7 @@
-from typing import Literal
-
 from fastapi import status
+from fastapi_canon import Error, ErrorRegistry
 
-from backend.features.browsers.application.exceptions import (
-    BrowserUnavailableException,
-)
-from backend.features.leases.application.exceptions import LeaseNotFoundException
+from backend.features.browsers.application.exceptions import BrowserUnavailableException
 from backend.features.sessions.application.exceptions import (
     AuthenticationProfileNotFoundException,
     BrowserCheckpointNotFoundException,
@@ -15,105 +11,62 @@ from backend.features.sessions.application.exceptions import (
     SessionNotFoundException,
     SessionNotSuspendedException,
 )
-from backend.presentation.api_errors import ApiErrorSpec
-from backend.presentation.errors import ApiErrorCode, ApiErrorResponse
 
-
-class SessionNotFoundError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.SESSION_NOT_FOUND]
-
-
-class NoBrowserAvailableError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.NO_BROWSER_AVAILABLE]
-
-
-class SessionNotActiveError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.SESSION_NOT_ACTIVE]
-
-
-class SessionNotSuspendedError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.SESSION_NOT_SUSPENDED]
-
-
-class BrowserStateTransferFailedError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED]
-
-
-class DownloadNotFoundError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.DOWNLOAD_NOT_FOUND]
-
-
-class AuthenticationProfileNotFoundError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.AUTHENTICATION_PROFILE_NOT_FOUND]
-
-
-class BrowserCheckpointNotFoundError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_CHECKPOINT_NOT_FOUND]
-
-
-# A lease that expired or crossed its reclaim fence reaches the edge as "not found".
-# A lease whose browser vanished answers with the pool's own BROWSER_NOT_FOUND.
-SESSION_NOT_FOUND = ApiErrorSpec(
-    exceptions=(LeaseNotFoundException, SessionNotFoundException),
-    status_code=status.HTTP_404_NOT_FOUND,
-    code=ApiErrorCode.SESSION_NOT_FOUND,
-    response_model=SessionNotFoundError,
-    description="Session not found",
+SESSION_NOT_FOUND = Error(
+    SessionNotFoundException,
+    status=status.HTTP_404_NOT_FOUND,
+    code="session_not_found",
+    title="Session not found",
+    detail=str,
 )
-# An empty pool no longer reaches a caller as a failure: they queue for
-# capacity instead. What remains is losing the race for a browser that was
-# free a moment ago, which is the same situation to a client: try again later.
-NO_BROWSER_AVAILABLE = ApiErrorSpec(
-    exceptions=(BrowserUnavailableException,),
-    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-    code=ApiErrorCode.NO_BROWSER_AVAILABLE,
-    response_model=NoBrowserAvailableError,
-    description="No browser is currently available",
+NO_BROWSER_AVAILABLE = Error(
+    BrowserUnavailableException,
+    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    code="no_browser_available",
+    title="No browser is currently available",
+    detail=str,
 )
-
-SESSION_NOT_ACTIVE = ApiErrorSpec(
-    exceptions=(SessionNotActiveException,),
-    status_code=status.HTTP_409_CONFLICT,
-    code=ApiErrorCode.SESSION_NOT_ACTIVE,
-    response_model=SessionNotActiveError,
-    description="Session is suspended and holds no browser",
+SESSION_NOT_ACTIVE = Error(
+    SessionNotActiveException,
+    status=status.HTTP_409_CONFLICT,
+    code="session_not_active",
+    title="Session is suspended and holds no browser",
+    detail=str,
 )
-SESSION_NOT_SUSPENDED = ApiErrorSpec(
-    exceptions=(SessionNotSuspendedException,),
-    status_code=status.HTTP_409_CONFLICT,
-    code=ApiErrorCode.SESSION_NOT_SUSPENDED,
-    response_model=SessionNotSuspendedError,
-    description="Session is not suspended",
+SESSION_NOT_SUSPENDED = Error(
+    SessionNotSuspendedException,
+    status=status.HTTP_409_CONFLICT,
+    code="session_not_suspended",
+    title="Session is not suspended",
+    detail=str,
 )
-# Suspending without a readable state would hand back a browser we can never
-# reconstruct, so the caller has to know it did not happen.
-BROWSER_STATE_TRANSFER_FAILED = ApiErrorSpec(
-    exceptions=(BrowserStateTransferException,),
-    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-    code=ApiErrorCode.BROWSER_STATE_TRANSFER_FAILED,
-    response_model=BrowserStateTransferFailedError,
-    description="Could not transfer the browser state",
+BROWSER_STATE_TRANSFER_FAILED = Error(
+    BrowserStateTransferException,
+    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    code="browser_state_transfer_failed",
+    title="Could not transfer the browser state",
+    detail=str,
 )
-DOWNLOAD_NOT_FOUND = ApiErrorSpec(
-    exceptions=(DownloadNotFoundException,),
-    status_code=status.HTTP_404_NOT_FOUND,
-    code=ApiErrorCode.DOWNLOAD_NOT_FOUND,
-    response_model=DownloadNotFoundError,
-    description="Download not found",
+DOWNLOAD_NOT_FOUND = Error(
+    DownloadNotFoundException,
+    status=status.HTTP_404_NOT_FOUND,
+    code="download_not_found",
+    title="Download not found",
+    detail=str,
 )
-AUTHENTICATION_PROFILE_NOT_FOUND = ApiErrorSpec(
-    exceptions=(AuthenticationProfileNotFoundException,),
-    status_code=status.HTTP_404_NOT_FOUND,
-    code=ApiErrorCode.AUTHENTICATION_PROFILE_NOT_FOUND,
-    response_model=AuthenticationProfileNotFoundError,
-    description="Authentication profile not found",
+AUTHENTICATION_PROFILE_NOT_FOUND = Error(
+    AuthenticationProfileNotFoundException,
+    status=status.HTTP_404_NOT_FOUND,
+    code="authentication_profile_not_found",
+    title="Authentication profile not found",
+    detail=str,
 )
-BROWSER_CHECKPOINT_NOT_FOUND = ApiErrorSpec(
-    exceptions=(BrowserCheckpointNotFoundException,),
-    status_code=status.HTTP_404_NOT_FOUND,
-    code=ApiErrorCode.BROWSER_CHECKPOINT_NOT_FOUND,
-    response_model=BrowserCheckpointNotFoundError,
-    description="Browser checkpoint not found",
+BROWSER_CHECKPOINT_NOT_FOUND = Error(
+    BrowserCheckpointNotFoundException,
+    status=status.HTTP_404_NOT_FOUND,
+    code="browser_checkpoint_not_found",
+    title="Browser checkpoint not found",
+    detail=str,
 )
 
 API_ERRORS = (
@@ -126,3 +79,4 @@ API_ERRORS = (
     AUTHENTICATION_PROFILE_NOT_FOUND,
     BROWSER_CHECKPOINT_NOT_FOUND,
 )
+ERRORS = ErrorRegistry(name="sessions", errors=API_ERRORS)

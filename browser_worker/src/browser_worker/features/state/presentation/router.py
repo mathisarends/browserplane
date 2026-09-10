@@ -15,7 +15,7 @@ from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )
-from browser_worker.presentation.api_errors import api_error_responses
+from browser_worker.presentation.error_registry import API_ERRORS
 
 browser_state_router = APIRouter(tags=["browser-state"], route_class=DishkaRoute)
 
@@ -23,7 +23,7 @@ browser_state_router = APIRouter(tags=["browser-state"], route_class=DishkaRoute
 @browser_state_router.get(
     "/browser/state",
     operation_id="capture_browser_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         BROWSER_STATE_INVALID,
         BROWSER_STATE_FAILED,
@@ -42,7 +42,7 @@ async def capture_browser_state(
     "/browser/state",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_browser_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         BROWSER_STATE_INVALID,
         BROWSER_STATE_FAILED,
@@ -59,7 +59,7 @@ async def mount_browser_state(
 @browser_state_router.get(
     "/browser/authentication-state",
     operation_id="capture_authentication_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         BROWSER_STATE_INVALID,
         BROWSER_STATE_FAILED,
@@ -87,7 +87,7 @@ async def capture_authentication_state(
     "/browser/authentication-state",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="mount_authentication_state",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         BROWSER_STATE_INVALID,
         BROWSER_STATE_FAILED,

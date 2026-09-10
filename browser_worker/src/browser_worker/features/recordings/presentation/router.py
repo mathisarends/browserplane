@@ -15,8 +15,8 @@ from browser_worker.features.recordings.presentation.errors import (
     RECORDING_NOT_RUNNING,
 )
 from browser_worker.features.recordings.presentation.schemas import RecordingResponse
-from browser_worker.presentation.api_errors import api_error_responses
 from browser_worker.presentation.api_files import api_file_response
+from browser_worker.presentation.error_registry import API_ERRORS
 
 recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 
@@ -25,7 +25,7 @@ recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
     "/browser/recordings",
     status_code=status.HTTP_201_CREATED,
     operation_id="start_recording",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         RECORDING_ALREADY_EXISTS,
         RECORDING_FAILED,
@@ -41,7 +41,7 @@ async def start_recording(
 @recording_router.post(
     "/browser/recordings/{recording_id}/stop",
     operation_id="stop_recording",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         RECORDING_NOT_FOUND,
         RECORDING_NOT_RUNNING,
         RECORDING_FAILED,
@@ -61,8 +61,7 @@ async def stop_recording(
     response_class=FileResponse,
     responses=api_file_response(
         "Recorded video",
-        RECORDING_NOT_FOUND,
-        RECORDING_NOT_COMPLETED,
+        API_ERRORS.responses(RECORDING_NOT_FOUND, RECORDING_NOT_COMPLETED),
         media_types=RecordingFormat.media_types(),
     ),
 )

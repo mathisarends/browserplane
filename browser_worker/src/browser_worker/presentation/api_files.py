@@ -3,8 +3,6 @@ from typing import Any, Final
 
 from fastapi import status
 
-from browser_worker.presentation.api_errors import ApiErrorSpec, api_error_responses
-
 OCTET_STREAM: Final = "application/octet-stream"
 
 _BINARY_SCHEMA: Final = {"type": "string", "format": "binary"}
@@ -12,7 +10,7 @@ _BINARY_SCHEMA: Final = {"type": "string", "format": "binary"}
 
 def api_file_response(
     description: str,
-    *errors: ApiErrorSpec,
+    error_responses: dict[int | str, dict[str, Any]],
     media_types: Iterable[str] = (OCTET_STREAM,),
 ) -> dict[int | str, dict[str, Any]]:
     """Build the OpenAPI ``responses`` entry for a binary file body."""
@@ -23,5 +21,5 @@ def api_file_response(
             },
             "description": description,
         },
-        **api_error_responses(*errors),
+        **error_responses,
     }

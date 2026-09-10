@@ -35,8 +35,8 @@ from backend.features.sessions.presentation.schemas import (
     ResumeSessionRequest,
     SessionResponse,
 )
-from backend.presentation.api_errors import api_error_responses
 from backend.presentation.disconnect import while_connected
+from backend.presentation.error_registry import API_ERRORS
 
 # Taking a browser is a request that waits; everything a session does
 # afterwards is immediate. The two live apart for that reason, not because
@@ -56,7 +56,7 @@ ACQUIRE_ERRORS = (
     response_model=OpenSessionResponse,
     status_code=status.HTTP_201_CREATED,
     operation_id="open_session",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         *ACQUIRE_ERRORS,
         AUTHENTICATION_PROFILE_NOT_FOUND,
         BROWSER_CHECKPOINT_NOT_FOUND,
@@ -90,7 +90,7 @@ async def open_session(
     "/sessions/{session_id}/resume",
     response_model=SessionResponse,
     operation_id="resume_session",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         *ACQUIRE_ERRORS,
         SESSION_NOT_FOUND,
         SESSION_NOT_SUSPENDED,
@@ -122,7 +122,7 @@ async def resume_session(
 @session_request_router.get(
     "/session-requests/{request_id}",
     operation_id="get_session_request",
-    responses=api_error_responses(SESSION_REQUEST_NOT_FOUND),
+    responses=API_ERRORS.responses(SESSION_REQUEST_NOT_FOUND),
 )
 async def get_session_request(
     request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]
@@ -136,7 +136,7 @@ async def get_session_request(
 @session_request_router.delete(
     "/session-requests/{request_id}",
     operation_id="cancel_session_request",
-    responses=api_error_responses(SESSION_REQUEST_NOT_FOUND),
+    responses=API_ERRORS.responses(SESSION_REQUEST_NOT_FOUND),
 )
 async def cancel_session_request(
     request_id: UUID, owner_id: UUID, control: FromDishka[ControlPlane]

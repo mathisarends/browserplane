@@ -1,48 +1,32 @@
-from typing import Literal
-
 from fastapi import status
+from fastapi_canon import Error, ErrorRegistry
 
 from browser_worker.features.browser.application.exceptions import (
     BrowserAlreadyRunningException,
     BrowserNotFoundException,
     BrowserStartupException,
 )
-from browser_worker.presentation.api_errors import ApiErrorSpec
-from browser_worker.presentation.errors import ApiErrorCode, ApiErrorResponse
 
-
-class BrowserNotFoundError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_NOT_FOUND]
-
-
-class BrowserAlreadyRunningError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_ALREADY_RUNNING]
-
-
-class BrowserStartupFailedError(ApiErrorResponse):
-    code: Literal[ApiErrorCode.BROWSER_STARTUP_FAILED]
-
-
-BROWSER_NOT_FOUND = ApiErrorSpec(
-    exceptions=(BrowserNotFoundException,),
-    status_code=status.HTTP_404_NOT_FOUND,
-    code=ApiErrorCode.BROWSER_NOT_FOUND,
-    response_model=BrowserNotFoundError,
-    description="Browser not found",
+BROWSER_NOT_FOUND = Error(
+    BrowserNotFoundException,
+    status=status.HTTP_404_NOT_FOUND,
+    code="browser_not_found",
+    title="Browser not found",
+    detail=str,
 )
-BROWSER_ALREADY_RUNNING = ApiErrorSpec(
-    exceptions=(BrowserAlreadyRunningException,),
-    status_code=status.HTTP_409_CONFLICT,
-    code=ApiErrorCode.BROWSER_ALREADY_RUNNING,
-    response_model=BrowserAlreadyRunningError,
-    description="Worker already runs a browser",
+BROWSER_ALREADY_RUNNING = Error(
+    BrowserAlreadyRunningException,
+    status=status.HTTP_409_CONFLICT,
+    code="browser_already_running",
+    title="Worker already runs a browser",
+    detail=str,
 )
-BROWSER_STARTUP_FAILED = ApiErrorSpec(
-    exceptions=(BrowserStartupException,),
-    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-    code=ApiErrorCode.BROWSER_STARTUP_FAILED,
-    response_model=BrowserStartupFailedError,
-    description="Browser failed to start",
+BROWSER_STARTUP_FAILED = Error(
+    BrowserStartupException,
+    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    code="browser_startup_failed",
+    title="Browser failed to start",
+    detail=str,
 )
 
 API_ERRORS = (
@@ -50,3 +34,4 @@ API_ERRORS = (
     BROWSER_ALREADY_RUNNING,
     BROWSER_STARTUP_FAILED,
 )
+ERRORS = ErrorRegistry(name="browser", errors=API_ERRORS)

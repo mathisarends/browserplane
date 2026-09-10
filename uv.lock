@@ -89,6 +89,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "dishka" },
     { name = "fastapi" },
+    { name = "fastapi-canon" },
     { name = "generated-clients" },
     { name = "httpx2" },
     { name = "obstore" },
@@ -108,6 +109,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=46.0.0" },
     { name = "dishka", specifier = ">=1.10.1" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "fastapi-canon", specifier = ">=0.4.0" },
     { name = "generated-clients", editable = "generated" },
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "obstore", specifier = ">=0.11.1" },
@@ -127,6 +129,7 @@ dependencies = [
     { name = "cdpify", extra = ["websocket"] },
     { name = "dishka" },
     { name = "fastapi" },
+    { name = "fastapi-canon" },
     { name = "imageio-ffmpeg" },
     { name = "numpy" },
     { name = "pillow" },
@@ -141,6 +144,7 @@ requires-dist = [
     { name = "cdpify", extras = ["websocket"], specifier = ">=0.3.0" },
     { name = "dishka", specifier = ">=1.10.1" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "fastapi-canon", specifier = ">=0.4.0" },
     { name = "imageio-ffmpeg", specifier = ">=0.6.0" },
     { name = "numpy", specifier = ">=2.3.0" },
     { name = "pillow", specifier = ">=11.3.0" },
@@ -454,6 +458,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8a/02/91e3416a8fdd715abb903a952a6bec7cdd8d14eed55d415fc8595524c319/fastapi-0.141.1.tar.gz", hash = "sha256:e8822fc40db1e1858054d7a949a888695bc9bdce70139178e33bd2871a453ca1", size = 425799, upload-time = "2026-07-29T17:18:05.568Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/03/10388a42375ee7e4ac9b94eb2c5c569c8b5795e377e701c9ac3ad63de890/fastapi-0.141.1-py3-none-any.whl", hash = "sha256:bfb91aa2d334c61cb35ba9a116fc123b3d3df31640b801cf57a7a78ec3f603b3", size = 131954, upload-time = "2026-07-29T17:18:04.364Z" },
+]
+
+[[package]]
+name = "fastapi-canon"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dishka" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1b/d9/e8ee3ed9e8de335a0f766a28c163c81a74d15fd7d4043f48e39e1138aa84/fastapi_canon-0.4.0.tar.gz", hash = "sha256:240708de31b34c6b96c1bd8b3371b14709627768271d55a156fb2ed36d2261da", size = 102058, upload-time = "2026-09-10T14:59:11.634Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/72/b7/c3686fd57565019d91be63d41bb84b258f77f97e76a9550a3b8c63195b60/fastapi_canon-0.4.0-py3-none-any.whl", hash = "sha256:db4594fed57df2f75b7e3076177fc8fcb61987691d958ffddc7ded708a78daa8", size = 36475, upload-time = "2026-09-10T14:59:10.423Z" },
 ]
 
 [[package]]

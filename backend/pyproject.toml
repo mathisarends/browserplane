@@ -19,6 +19,7 @@ dependencies = [
     "websockets>=15.0.0",
     "cryptography>=46.0.0",
     "obstore>=0.11.1",
+    "fastapi-canon>=0.4.0",
 ]
 
 [build-system]

@@ -13,7 +13,7 @@ from backend.features.recordings.presentation.errors import (
 )
 from backend.features.recordings.presentation.mapper import to_recording_response
 from backend.features.recordings.presentation.schemas import RecordingResponse
-from backend.presentation.api_errors import api_error_responses
+from backend.presentation.error_registry import API_ERRORS
 
 recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
 
@@ -22,7 +22,7 @@ recording_router = APIRouter(tags=["recordings"], route_class=DishkaRoute)
     "/browser/{browser_id}/recordings",
     status_code=status.HTTP_201_CREATED,
     operation_id="start_recording",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         RECORDING_ALREADY_EXISTS,
         RECORDING_TRANSFER_FAILED,
@@ -39,7 +39,7 @@ async def start_recording(
 @recording_router.post(
     "/browser/{browser_id}/recordings/{recording_id}/stop",
     operation_id="stop_recording",
-    responses=api_error_responses(
+    responses=API_ERRORS.responses(
         BROWSER_NOT_FOUND,
         RECORDING_NOT_FOUND,
         RECORDING_NOT_RUNNING,
@@ -65,7 +65,7 @@ async def stop_recording(
             },
             "description": "Completed MP4 recording",
         },
-        **api_error_responses(
+        **API_ERRORS.responses(
             BROWSER_NOT_FOUND,
             RECORDING_NOT_FOUND,
             RECORDING_TRANSFER_FAILED,
