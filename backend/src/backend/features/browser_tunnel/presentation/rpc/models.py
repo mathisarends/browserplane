@@ -1,8 +1,8 @@
 from enum import StrEnum
 from typing import Literal
 
+from fastapi_rpckit import RpcModel
 from pydantic import Field
-from pyrpckit import RpcModel
 
 from backend.features.browser_tunnel.application import (
     BrowserTab,

@@ -2,14 +2,14 @@ import logging
 from contextlib import suppress
 
 from fastapi import WebSocket, WebSocketDisconnect
-from pyrpckit.fastapi import serve
+from fastapi_rpckit import serve_websocket
 from starlette.websockets import WebSocketState
 
 from backend.features.browser_tunnel.application import Browser
 from backend.features.browser_tunnel.infrastructure.cdp_browser import CdpBrowser
 from backend.features.browser_tunnel.infrastructure.settings import BrowserSettings
 from backend.features.browser_tunnel.presentation.rpc import (
-    BROWSER_CHANNEL,
+    BROWSER_ENDPOINT,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,8 +34,8 @@ class BrowserTunnel:
         try:
             await browser.start()
             with suppress(WebSocketDisconnect):
-                await serve(
-                    BROWSER_CHANNEL,
+                await serve_websocket(
+                    BROWSER_ENDPOINT,
                     websocket,
                     context={Browser: browser},
                 )

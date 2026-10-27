@@ -167,13 +167,7 @@ export class BrowserSession {
     }
     this.sessionState.set(session);
     const client = await BackendBrowserClient.connect({
-      endpoints: [
-        {
-          server: "backend-session",
-          url: socketUrl(session.tunnel_path).href,
-          subprotocols: [],
-        },
-      ],
+      url: socketUrl(session.tunnel_path).href,
     });
     this.client = client;
     await this.stream.connect(session.screencast_path, this.screencastMode.mode());

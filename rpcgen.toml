@@ -1,7 +1,10 @@
 version = 1
 
+[contract]
+source = "backend.features.browser_tunnel.presentation.rpc:BROWSER_CONTRACT"
+output = "schemas/openrpc.json"
+
 [[clients]]
-schema = "schemas/openrpc.json"
 language = "typescript"
 output = "frontend/generated/src"
 client_name = "BackendBrowserClient"

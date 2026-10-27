@@ -1,9 +1,9 @@
 {
-  "generator": "pyrpckit",
-  "generatorVersion": "0.4.0",
-  "layoutVersion": 7,
+  "generator": "fastapi_rpckit",
+  "generatorVersion": "0.4.1",
+  "layoutVersion": 10,
   "language": "typescript",
-  "contractSha256": "b33c9bf38d2cb8998d4c98cf4ca90f4ea32ac893ec7d1b79895cc4b3b88bd558",
+  "contractSha256": "2424493b0ada99c61992e71715a96510ea11856ff5988e8443812a8ab6ffd6a9",
   "files": [
     ".rpcgen/manifest.json",
     "client.ts",

@@ -7,7 +7,13 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "strict": true
+    "strict": true,
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable",
+      "ESNext.Disposable"
+    ]
   },
   "angularCompilerOptions": {
     "strictInjectionParameters": true,

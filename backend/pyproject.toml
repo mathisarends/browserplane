@@ -11,7 +11,7 @@ dependencies = [
     "httpx2>=2.12.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.15.0",
-    "pyrpckit[fastapi]>=0.4.0",
+    "fastapi-rpckit==0.4.1",
     "sqlmodel>=0.0.22",
     "asyncpg>=0.30.0",
     "alembic>=1.14.0",
@@ -19,7 +19,7 @@ dependencies = [
     "websockets>=15.0.0",
     "cryptography>=46.0.0",
     "obstore>=0.11.1",
-    "fastapi-canon>=0.4.0",
+    "fastapi-canon==0.8.1",
 ]
 
 [build-system]

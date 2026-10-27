@@ -1,7 +1,6 @@
 from collections.abc import AsyncIterator
 
 import pytest
-from pyrpckit.schema import render_openrpc
 
 from backend.features.browser_tunnel.application import (
     Browser,
@@ -10,6 +9,7 @@ from backend.features.browser_tunnel.application import (
 )
 from backend.features.browser_tunnel.presentation.rpc import (
     BROWSER_CHANNEL,
+    BROWSER_CONTRACT,
 )
 
 
@@ -117,7 +117,7 @@ class BrowserResolver:
 
 
 def browser_server(browser: FakeBrowser):
-    return BROWSER_CHANNEL.server(resolver=BrowserResolver(browser))
+    return BROWSER_CHANNEL.create_server(resolver=BrowserResolver(browser))
 
 
 @pytest.mark.asyncio
@@ -337,7 +337,7 @@ async def test_json_rpc_dispatches_complete_special_key_data() -> None:
 
 
 def test_protocol_contract_contains_methods_and_events() -> None:
-    openrpc = render_openrpc(BROWSER_CHANNEL.protocol, title="BrowserTunnel")
+    openrpc = BROWSER_CONTRACT.to_openrpc()
     methods = {method["name"] for method in openrpc["methods"]}
 
     assert methods == {

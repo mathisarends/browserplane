@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from typing import assert_never
 
-from pyrpckit import Inject, RpcModule
+from fastapi_rpckit import Inject
 
 from backend.features.browser_tunnel.application import (
     Browser,
@@ -24,11 +24,11 @@ from backend.features.browser_tunnel.presentation.rpc.models import (
     tabs_result,
 )
 
-browser_events = RpcModule(namespace="browser")
+from .channel import channel
 
 
-@browser_events.event(
-    "event",
+@channel.event(
+    "browser.event",
     payload=BrowserEvent,
     summary="Stream browser state to the frontend.",
 )

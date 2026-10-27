@@ -1,6 +1,7 @@
-from pyrpckit import Inject, RpcModule
+from fastapi_rpckit import Inject
 
 from backend.features.browser_tunnel.application import Browser
+from backend.features.browser_tunnel.presentation.rpc.channel import channel
 from backend.features.browser_tunnel.presentation.rpc.models import (
     KeyParams,
     MouseParams,
@@ -8,10 +9,8 @@ from backend.features.browser_tunnel.presentation.rpc.models import (
     TextParams,
 )
 
-input_methods = RpcModule(namespace="browser.input")
 
-
-@input_methods.method()
+@channel.method("browser.input.mouse")
 async def mouse(params: MouseParams, browser: Inject[Browser]) -> None:
     await browser.input.mouse(
         event_type=params.type,
@@ -24,7 +23,7 @@ async def mouse(params: MouseParams, browser: Inject[Browser]) -> None:
     )
 
 
-@input_methods.method()
+@channel.method("browser.input.scroll")
 async def scroll(params: ScrollParams, browser: Inject[Browser]) -> None:
     await browser.input.scroll(
         x=params.x,
@@ -34,7 +33,7 @@ async def scroll(params: ScrollParams, browser: Inject[Browser]) -> None:
     )
 
 
-@input_methods.method()
+@channel.method("browser.input.key")
 async def key(params: KeyParams, browser: Inject[Browser]) -> None:
     await browser.input.key(
         event_type=params.type,
@@ -52,11 +51,11 @@ async def key(params: KeyParams, browser: Inject[Browser]) -> None:
     )
 
 
-@input_methods.method("text.insert")
+@channel.method("browser.input.text.insert")
 async def insert_text(params: TextParams, browser: Inject[Browser]) -> None:
     await browser.input.insert_text(params.text)
 
 
-@input_methods.method()
+@channel.method("browser.input.paste")
 async def paste(params: TextParams, browser: Inject[Browser]) -> None:
     await browser.input.paste(params.text)
