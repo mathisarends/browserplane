@@ -6,7 +6,7 @@ from cdpify import CDPSession
 from cdpify.domains.runtime.events import BindingCalledEvent, RuntimeEvent
 from cdpify.exceptions import CDPCommandException
 
-from backend.features.browser_tunnel.application import CursorChanged, CursorStyle
+from backend.features.browser_tunnel.domain import CursorChanged, CursorStyle
 from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
 
 logger = logging.getLogger(__name__)

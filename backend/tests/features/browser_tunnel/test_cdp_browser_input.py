@@ -4,7 +4,7 @@ from typing import cast
 import pytest
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import KeyEventType, MouseEventType
+from backend.features.browser_tunnel.domain import KeyEventType, MouseEventType
 from backend.features.browser_tunnel.infrastructure.cdp_browser import (
     CdpClipboard,
     CdpInput,

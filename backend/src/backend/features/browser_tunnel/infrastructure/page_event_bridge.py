@@ -14,7 +14,7 @@ from cdpify.domains.page.events import (
 )
 from cdpify.exceptions import CDPCommandException
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserPageMetadata,
     BrowserTab,
     NavigationChanged,

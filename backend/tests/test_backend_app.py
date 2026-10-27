@@ -14,27 +14,27 @@ from fakes.worker_recovery import FakeWorkerRecovery
 from fastapi.testclient import TestClient
 
 from backend.app import create_app
-from backend.features.browsers.application.ports import (
+from backend.features.browsers.application.service import BrowserService
+from backend.features.browsers.domain.models import Browser, BrowserSlot
+from backend.features.browsers.domain.ports import (
     BrowserProvisioner,
     BrowserRepository,
     WorkerRecovery,
 )
-from backend.features.browsers.application.service import BrowserService
-from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.leases.application.ports import LeaseStore
-from backend.features.session_requests.application.ports import (
+from backend.features.leases.domain.ports import LeaseStore
+from backend.features.session_requests.domain.ports import (
     SessionRequestRepository,
-)
-from backend.features.sessions.application.ports import (
-    AuthenticationProfileRepository,
-    BrowserCheckpointRepository,
-    BrowserRuntime,
-    SessionRepository,
 )
 from backend.features.sessions.domain.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
+)
+from backend.features.sessions.domain.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    BrowserRuntime,
+    SessionRepository,
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
 

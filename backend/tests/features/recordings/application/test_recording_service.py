@@ -4,9 +4,9 @@ from uuid import UUID, uuid4
 import pytest
 
 from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.recordings.application.models import Recording, RecordingState
-from backend.features.recordings.application.ports import Recorder
 from backend.features.recordings.application.service import RecordingService
+from backend.features.recordings.domain.models import Recording, RecordingState
+from backend.features.recordings.domain.ports import Recorder
 
 
 class FakeBrowsers:

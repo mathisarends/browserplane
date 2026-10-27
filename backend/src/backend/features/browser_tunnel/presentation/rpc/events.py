@@ -3,7 +3,7 @@ from typing import assert_never
 
 from fastapi_rpckit import Inject
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     Browser,
     CursorChanged,
     NavigationChanged,
@@ -11,7 +11,7 @@ from backend.features.browser_tunnel.application import (
     TargetCrashed,
     TargetDetached,
 )
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserEvent as DomainEvent,
 )
 from backend.features.browser_tunnel.presentation.rpc.models import (

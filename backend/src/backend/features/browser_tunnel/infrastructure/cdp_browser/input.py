@@ -2,7 +2,7 @@ import logging
 
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserInput,
     KeyEventType,
     MouseEventType,

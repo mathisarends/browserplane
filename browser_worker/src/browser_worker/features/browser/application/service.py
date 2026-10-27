@@ -5,7 +5,7 @@ from browser_worker.features.browser.application.exceptions import (
     BrowserAlreadyRunningException,
     BrowserNotFoundException,
 )
-from browser_worker.features.browser.application.ports import BrowserProcess
+from browser_worker.features.browser.domain.ports import BrowserProcess
 
 
 @dataclass(frozen=True, slots=True)

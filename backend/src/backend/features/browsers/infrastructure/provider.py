@@ -2,13 +2,13 @@ from dishka import Provider, Scope, provide
 from httpx2 import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.features.browsers.application.ports import (
+from backend.features.browsers.application.service import BrowserService
+from backend.features.browsers.domain.ports import (
     BrowserProvisioner,
     BrowserRepository,
     BrowserWorkerDirectory,
     WorkerRecovery,
 )
-from backend.features.browsers.application.service import BrowserService
 from backend.features.browsers.infrastructure.browser_worker_provisioner import (
     BrowserWorkerProvisioner,
 )

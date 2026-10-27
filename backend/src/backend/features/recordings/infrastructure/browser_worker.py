@@ -14,11 +14,11 @@ from backend.features.recordings.application.exceptions import (
     RecordingNotRunningException,
     RecordingTransferException,
 )
-from backend.features.recordings.application.models import (
+from backend.features.recordings.domain.models import (
     Recording,
     RecordingState,
 )
-from backend.features.recordings.application.ports import Recorder
+from backend.features.recordings.domain.ports import Recorder
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.storage import ObjectStorage, StoredObject
 from generated.browser_worker import (

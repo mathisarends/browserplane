@@ -1,4 +1,4 @@
-from backend.features.recordings.application.models import Recording
+from backend.features.recordings.domain.models import Recording
 from backend.features.recordings.presentation.schemas import RecordingResponse
 
 

@@ -1,6 +1,6 @@
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import BrowserNavigation
+from backend.features.browser_tunnel.domain import BrowserNavigation
 
 
 class CdpNavigation(BrowserNavigation):

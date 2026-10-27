@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi_rpckit import RpcModel
 from pydantic import Field
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserTab,
     CursorStyle,
     KeyEventType,

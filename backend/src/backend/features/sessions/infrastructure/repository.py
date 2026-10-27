@@ -3,16 +3,16 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from backend.features.sessions.application.ports import (
-    AuthenticationProfileRepository,
-    BrowserCheckpointRepository,
-    SessionRepository,
-)
 from backend.features.sessions.domain.models import (
     AuthenticationProfile,
     BrowserCheckpoint,
     Session,
     SessionStatus,
+)
+from backend.features.sessions.domain.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    SessionRepository,
 )
 from backend.features.sessions.infrastructure.encryption import (
     AuthenticationStateCipher,

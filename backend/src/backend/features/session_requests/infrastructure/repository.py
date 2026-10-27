@@ -9,13 +9,13 @@ from sqlmodel import select
 
 from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserState
 from backend.features.leases.settings import LeaseSettings
-from backend.features.session_requests.application.ports import SessionRequestRepository
 from backend.features.session_requests.domain import (
     RequestStatus,
     SessionRequest,
     SessionRequestConflictException,
     SessionRequestNotFoundException,
 )
+from backend.features.session_requests.domain.ports import SessionRequestRepository
 from backend.infrastructure.database.models import (
     BrowserModel,
     LeaseModel,

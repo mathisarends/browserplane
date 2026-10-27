@@ -5,7 +5,7 @@ from typing import cast
 import pytest
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserEvent,
     CursorChanged,
     CursorStyle,

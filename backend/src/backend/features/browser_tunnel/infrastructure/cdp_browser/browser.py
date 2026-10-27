@@ -6,7 +6,7 @@ from cdpify import Client
 from cdpify.domains.browser.types import PermissionDescriptor
 from cdpify.exceptions import CDPCommandException
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     Browser,
     BrowserEvent,
     BrowserTabNotFoundError,

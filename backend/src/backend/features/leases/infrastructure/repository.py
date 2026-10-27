@@ -5,8 +5,8 @@ from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
-from backend.features.leases.application.ports import LeaseStore
 from backend.features.leases.domain.models import Lease, LeaseState
+from backend.features.leases.domain.ports import LeaseStore
 from backend.infrastructure.database.models import LeaseModel
 from backend.infrastructure.database.repository import SqlRepository
 

@@ -2,7 +2,7 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     Browser,
     BrowserEvent,
     BrowserTab,

@@ -1,7 +1,7 @@
+from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol
 
 
 class MouseEventType(StrEnum):
@@ -117,31 +117,38 @@ class BrowserTabNotFoundError(LookupError):
     pass
 
 
-class BrowserNavigation(Protocol):
+class BrowserNavigation(ABC):
     """Move the mirrored tab through the web."""
 
+    @abstractmethod
     async def navigate(self, url: str) -> None: ...
 
+    @abstractmethod
     async def back(self) -> None: ...
 
+    @abstractmethod
     async def forward(self) -> None: ...
 
+    @abstractmethod
     async def reload(self, *, ignore_cache: bool = False) -> None: ...
 
+    @abstractmethod
     async def stop(self) -> None: ...
 
 
-class BrowserPageMetadata(Protocol):
+class BrowserPageMetadata(ABC):
     """Read presentation-neutral metadata from the active browser page."""
 
+    @abstractmethod
     async def favicon_url(self) -> str | None:
         """Return an absolute, publicly addressable favicon URL when available."""
         ...
 
 
-class BrowserInput(Protocol):
+class BrowserInput(ABC):
     """Replay viewer input on the mirrored tab."""
 
+    @abstractmethod
     async def mouse(
         self,
         *,
@@ -154,10 +161,12 @@ class BrowserInput(Protocol):
         click_count: int,
     ) -> None: ...
 
+    @abstractmethod
     async def scroll(
         self, *, x: float, y: float, delta_x: float, delta_y: float
     ) -> None: ...
 
+    @abstractmethod
     async def key(
         self,
         *,
@@ -175,38 +184,47 @@ class BrowserInput(Protocol):
         is_system_key: bool,
     ) -> None: ...
 
+    @abstractmethod
     async def insert_text(self, text: str) -> None: ...
 
+    @abstractmethod
     async def paste(self, text: str) -> None: ...
 
 
-class BrowserClipboard(Protocol):
+class BrowserClipboard(ABC):
     """Exchange text between the viewer and the mirrored tab."""
 
+    @abstractmethod
     async def copy(self) -> str: ...
 
+    @abstractmethod
     async def read(self) -> str: ...
 
+    @abstractmethod
     async def write(self, text: str) -> None: ...
 
 
-class BrowserTabs(Protocol):
+class BrowserTabs(ABC):
     """Inspect and switch the tabs the tunnel can mirror.
 
     Every command answers with the full tab list, so a viewer never has to
     re-query to learn which tab the tunnel ended up on.
     """
 
+    @abstractmethod
     async def list(self) -> list[BrowserTab]: ...
 
+    @abstractmethod
     async def create(self, url: str) -> list[BrowserTab]: ...
 
+    @abstractmethod
     async def activate(self, tab_id: str) -> list[BrowserTab]: ...
 
+    @abstractmethod
     async def close(self, tab_id: str) -> list[BrowserTab]: ...
 
 
-class Browser(Protocol):
+class Browser(ABC):
     """Application-owned port for a controllable browser.
 
     Commands are grouped by what they act on, so a caller depends on the one
@@ -214,19 +232,26 @@ class Browser(Protocol):
     """
 
     @property
+    @abstractmethod
     def navigation(self) -> BrowserNavigation: ...
 
     @property
+    @abstractmethod
     def input(self) -> BrowserInput: ...
 
     @property
+    @abstractmethod
     def clipboard(self) -> BrowserClipboard: ...
 
     @property
+    @abstractmethod
     def tabs(self) -> BrowserTabs: ...
 
+    @abstractmethod
     async def start(self) -> None: ...
 
+    @abstractmethod
     async def stop(self) -> None: ...
 
+    @abstractmethod
     def events(self) -> AsyncIterator[BrowserEvent]: ...

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from backend.features.browsers.application.service import BrowserService
-from backend.features.leases.application.ports import BrowserAllocator
+from backend.features.leases.domain.ports import BrowserAllocator
 
 
 class BrowserServiceAllocator(BrowserAllocator):

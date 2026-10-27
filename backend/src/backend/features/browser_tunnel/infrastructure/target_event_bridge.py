@@ -11,7 +11,7 @@ from cdpify.domains.target.events import (
     TargetInfoChangedEvent,
 )
 
-from backend.features.browser_tunnel.application import TargetCrashed
+from backend.features.browser_tunnel.domain import TargetCrashed
 from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
 
 

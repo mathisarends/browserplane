@@ -3,7 +3,7 @@ import contextlib
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator
 
-from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.features.screencast.domain.ports import FrameStream
 from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)

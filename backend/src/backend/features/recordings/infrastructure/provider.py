@@ -3,8 +3,8 @@ from httpx2 import AsyncClient
 
 from backend.features.browsers.application.service import BrowserService
 from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
-from backend.features.recordings.application.ports import Recorder
 from backend.features.recordings.application.service import RecordingService
+from backend.features.recordings.domain.ports import Recorder
 from backend.features.recordings.infrastructure.browser_worker import (
     BrowserWorkerRecorder,
 )

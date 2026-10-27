@@ -3,12 +3,12 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, delete, select
 
-from backend.features.browsers.application.ports import BrowserRepository
 from backend.features.browsers.domain.models import (
     Browser,
     BrowserSlot,
     BrowserState,
 )
+from backend.features.browsers.domain.ports import BrowserRepository
 from backend.infrastructure.database.models import BrowserModel
 from backend.infrastructure.database.repository import SqlRepository
 

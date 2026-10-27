@@ -1,14 +1,14 @@
 from uuid import UUID
 
-from backend.features.sessions.application.ports import (
-    AuthenticationProfileRepository,
-    BrowserCheckpointRepository,
-    SessionRepository,
-)
 from backend.features.sessions.domain.models import (
     AuthenticationProfile,
     BrowserCheckpoint,
     Session,
+)
+from backend.features.sessions.domain.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    SessionRepository,
 )
 
 

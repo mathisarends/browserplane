@@ -1,7 +1,7 @@
 from tests.fakes import FakeFrameStream
 
-from browser_worker.features.screencast.application.ports import FrameStream
 from browser_worker.features.screencast.application.service import ScreencastService
+from browser_worker.features.screencast.domain.ports import FrameStream
 
 
 def test_service_reuses_only_the_stream_for_the_same_browser() -> None:

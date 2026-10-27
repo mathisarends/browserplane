@@ -3,7 +3,7 @@ import logging
 
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import BrowserClipboard
+from backend.features.browser_tunnel.domain import BrowserClipboard
 
 logger = logging.getLogger(__name__)
 

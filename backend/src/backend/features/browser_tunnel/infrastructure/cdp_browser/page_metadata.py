@@ -1,7 +1,7 @@
 from cdpify import CDPSession
 from cdpify.exceptions import CDPCommandException
 
-from backend.features.browser_tunnel.application import BrowserPageMetadata
+from backend.features.browser_tunnel.domain import BrowserPageMetadata
 
 
 class CdpPageMetadata(BrowserPageMetadata):

@@ -14,12 +14,6 @@ from backend.features.sessions.application.exceptions import (
     SessionNotFoundException,
     SessionNotSuspendedException,
 )
-from backend.features.sessions.application.ports import (
-    AuthenticationProfileRepository,
-    BrowserCheckpointRepository,
-    BrowserRuntime,
-    SessionRepository,
-)
 from backend.features.sessions.domain.models import (
     AuthenticationProfile,
     BrowserCheckpoint,
@@ -28,6 +22,12 @@ from backend.features.sessions.domain.models import (
     ResolvedSession,
     Session,
     SessionStatus,
+)
+from backend.features.sessions.domain.ports import (
+    AuthenticationProfileRepository,
+    BrowserCheckpointRepository,
+    BrowserRuntime,
+    SessionRepository,
 )
 
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 from fastapi_rpckit import Inject, RpcError
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     Browser,
     BrowserTabNotFoundError,
 )
@@ -19,7 +19,7 @@ class BrowserTabNotFound(RpcError):
     message = "Browser tab not found"
 
 
-@channel.method("browser.tab.list")
+@channel.method("browser.tab.list", idempotent=True)
 async def list_tabs(browser: Inject[Browser]) -> TabsResult:
     result = await browser.tabs.list()
     return tabs_result(result)

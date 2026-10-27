@@ -1,18 +1,18 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.features.browsers.application.ports import (
+from backend.features.browsers.domain.ports import (
     BrowserProvisioner,
     BrowserWorkerDirectory,
 )
 from backend.features.leases.settings import LeaseSettings
 from backend.features.session_requests.application.acquisition import SessionAcquisition
 from backend.features.session_requests.application.control_plane import ControlPlane
-from backend.features.session_requests.application.ports import (
+from backend.features.session_requests.application.wakeups import Wakeups
+from backend.features.session_requests.domain.ports import (
     Notifier,
     SessionRequestRepository,
 )
-from backend.features.session_requests.application.wakeups import Wakeups
 from backend.features.session_requests.infrastructure.dispatcher import Dispatcher
 from backend.features.session_requests.infrastructure.notifications import (
     PostgresListener,
@@ -21,8 +21,8 @@ from backend.features.session_requests.infrastructure.notifications import (
 from backend.features.session_requests.infrastructure.repository import (
     SqlSessionRequestRepository,
 )
-from backend.features.sessions.application.ports import BrowserRuntime
 from backend.features.sessions.application.service import SessionService
+from backend.features.sessions.domain.ports import BrowserRuntime
 from backend.infrastructure.database.settings import DatabaseSettings
 from backend.shared.unit_of_work import UnitOfWork
 

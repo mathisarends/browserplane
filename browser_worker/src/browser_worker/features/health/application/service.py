@@ -1,6 +1,6 @@
 from uuid import UUID, uuid4
 
-from browser_worker.features.browser.application.ports import BrowserProcess
+from browser_worker.features.browser.domain.ports import BrowserProcess
 from browser_worker.features.health.application.models import HealthStatus
 from browser_worker.features.workspace.application.workspace import Workspace
 

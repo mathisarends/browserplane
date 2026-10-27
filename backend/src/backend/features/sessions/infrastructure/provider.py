@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.features.browsers.application.service import BrowserService
 from backend.features.leases.application.service import LeaseService
 from backend.features.leases.settings import LeaseSettings
-from backend.features.sessions.application.ports import (
+from backend.features.sessions.application.service import SessionService
+from backend.features.sessions.domain.ports import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
     BrowserRuntime,
     SessionRepository,
 )
-from backend.features.sessions.application.service import SessionService
 from backend.features.sessions.infrastructure.browser_worker import (
     BrowserWorkerRuntime,
 )

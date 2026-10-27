@@ -10,15 +10,15 @@ from backend.features.browsers.application.exceptions import (
     BrowserProvisioningException,
     BrowserUnavailableException,
 )
-from backend.features.browsers.application.ports import (
-    BrowserProvisioner,
-    BrowserRepository,
-    WorkerRecovery,
-)
 from backend.features.browsers.domain.models import (
     Browser,
     BrowserSlot,
     BrowserState,
+)
+from backend.features.browsers.domain.ports import (
+    BrowserProvisioner,
+    BrowserRepository,
+    WorkerRecovery,
 )
 
 logger = logging.getLogger(__name__)

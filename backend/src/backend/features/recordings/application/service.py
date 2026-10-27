@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from backend.features.browsers.application.service import BrowserService
-from backend.features.recordings.application.models import Recording
-from backend.features.recordings.application.ports import Recorder
+from backend.features.recordings.domain.models import Recording
+from backend.features.recordings.domain.ports import Recorder
 
 
 class RecordingService:

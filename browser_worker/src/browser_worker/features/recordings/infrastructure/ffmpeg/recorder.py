@@ -16,7 +16,7 @@ from browser_worker.features.recordings.infrastructure.ffmpeg.encoder import (
     VideoRecorder,
 )
 from browser_worker.features.recordings.infrastructure.settings import RecordingSettings
-from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.features.screencast.domain.ports import FrameStream
 from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)

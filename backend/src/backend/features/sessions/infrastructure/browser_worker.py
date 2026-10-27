@@ -9,12 +9,12 @@ from backend.features.sessions.application.exceptions import (
     BrowserStateTransferException,
     DownloadNotFoundException,
 )
-from backend.features.sessions.application.ports import BrowserRuntime
 from backend.features.sessions.domain.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
 )
+from backend.features.sessions.domain.ports import BrowserRuntime
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     ApiError,

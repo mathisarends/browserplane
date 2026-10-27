@@ -2,7 +2,7 @@ from collections.abc import Awaitable, Callable
 
 from cdpify import CDPSession
 
-from backend.features.browser_tunnel.application import BrowserTab
+from backend.features.browser_tunnel.domain import BrowserTab
 from backend.features.browser_tunnel.infrastructure.cdp_browser.clipboard import (
     CdpClipboard,
 )

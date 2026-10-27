@@ -6,8 +6,8 @@ from fastapi import Query, WebSocket
 from fastapi_canon import CanonRouter
 
 from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.screencast.application.ports import FrameStream
 from browser_worker.features.screencast.application.service import ScreencastService
+from browser_worker.features.screencast.domain.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.dirty_rectangles import (
     DirtyRectangleJpegStream,
 )

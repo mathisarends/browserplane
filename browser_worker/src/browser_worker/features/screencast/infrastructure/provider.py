@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 
-from browser_worker.features.screencast.application.ports import FrameStreamFactory
 from browser_worker.features.screencast.application.service import ScreencastService
+from browser_worker.features.screencast.domain.ports import FrameStreamFactory
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
     ScreencastOptions,

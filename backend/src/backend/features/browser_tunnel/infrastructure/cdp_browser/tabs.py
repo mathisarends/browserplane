@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 from cdpify import Client
 from cdpify.domains.target.types import TargetInfo
 
-from backend.features.browser_tunnel.application import (
+from backend.features.browser_tunnel.domain import (
     BrowserTab,
     BrowserTabs,
 )

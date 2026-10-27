@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 
-from backend.features.browser_tunnel.application import BrowserEvent
+from backend.features.browser_tunnel.domain import BrowserEvent
 
 type PublishEvent = Callable[[BrowserEvent], None]
 

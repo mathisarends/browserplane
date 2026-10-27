@@ -6,12 +6,12 @@ from backend.features.browsers.application.exceptions import BrowserNotFoundExce
 from backend.features.browsers.domain.models import Browser
 from backend.features.leases.application.exceptions import LeaseNotFoundException
 from backend.features.leases.domain.models import Lease
-from backend.features.sessions.application.ports import BrowserRuntime
 from backend.features.sessions.domain.models import (
     AuthenticationStateDocument,
     BrowserStateDocument,
     Download,
 )
+from backend.features.sessions.domain.ports import BrowserRuntime
 
 
 class FakeSessionBrowsers:

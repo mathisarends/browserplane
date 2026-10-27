@@ -2,8 +2,8 @@ from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, provide
 
-from browser_worker.features.browser.application.ports import BrowserProcess
 from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.domain.ports import BrowserProcess
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
 

@@ -7,8 +7,8 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.features.session_requests.application.ports import Notification, Notifier
 from backend.features.session_requests.application.wakeups import Wakeups
+from backend.features.session_requests.domain.ports import Notification, Notifier
 from backend.infrastructure.database.settings import DatabaseSettings
 
 logger = logging.getLogger(__name__)

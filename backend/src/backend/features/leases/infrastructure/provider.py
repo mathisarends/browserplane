@@ -2,8 +2,8 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.features.browsers.application.service import BrowserService
-from backend.features.leases.application.ports import BrowserAllocator, LeaseStore
 from backend.features.leases.application.service import LeaseService
+from backend.features.leases.domain.ports import BrowserAllocator, LeaseStore
 from backend.features.leases.infrastructure.browser_service_allocator import (
     BrowserServiceAllocator,
 )

@@ -1,7 +1,7 @@
 from uuid import uuid4
 
-from backend.features.browsers.application.ports import WorkerRecovery
 from backend.features.browsers.domain.models import BrowserSlot, WorkerIncarnation
+from backend.features.browsers.domain.ports import WorkerRecovery
 
 
 class FakeWorkerRecovery(WorkerRecovery):

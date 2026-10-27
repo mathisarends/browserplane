@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager, suppress
 
 from cdpify import Client
 
-from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.features.screencast.domain.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.cdp import (
     ActiveTabBridge,
 )

@@ -3,15 +3,15 @@ from contextlib import suppress
 from datetime import UTC, datetime
 from uuid import UUID
 
-from backend.features.session_requests.application.ports import (
-    SessionRequestRepository,
-)
 from backend.features.session_requests.application.wakeups import Wakeups
 from backend.features.session_requests.domain import (
     RequestStatus,
     SessionRequest,
     SessionRequestNotFoundException,
     request_ended,
+)
+from backend.features.session_requests.domain.ports import (
+    SessionRequestRepository,
 )
 
 

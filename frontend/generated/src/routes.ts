@@ -24,6 +24,7 @@ export const routes = {
   }),
   browserClipboardRead: defineRoute<undefined, ClipboardResult>({
     method: "browser.clipboard.read",
+    idempotent: true,
     server: "backendSession",
   }),
   browserClipboardWrite: defineRoute<TextParams, null>({
@@ -72,6 +73,7 @@ export const routes = {
   }),
   browserTabList: defineRoute<undefined, TabsResult>({
     method: "browser.tab.list",
+    idempotent: true,
     server: "backendSession",
   }),
   browserTabCreate: defineRoute<CreateTabParams, TabsResult>({

@@ -5,7 +5,7 @@ import threading
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager, suppress
 
-from browser_worker.features.screencast.application.ports import FrameStream
+from browser_worker.features.screencast.domain.ports import FrameStream
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
 )

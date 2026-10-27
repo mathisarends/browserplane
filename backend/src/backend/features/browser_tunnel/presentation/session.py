@@ -5,7 +5,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from fastapi_rpckit import serve_websocket
 from starlette.websockets import WebSocketState
 
-from backend.features.browser_tunnel.application import Browser
+from backend.features.browser_tunnel.domain import Browser
 from backend.features.browser_tunnel.infrastructure.cdp_browser import CdpBrowser
 from backend.features.browser_tunnel.infrastructure.settings import BrowserSettings
 from backend.features.browser_tunnel.presentation.rpc import (

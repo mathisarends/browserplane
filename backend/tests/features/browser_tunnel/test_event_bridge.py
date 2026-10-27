@@ -7,7 +7,7 @@ from cdpify import Client
 from cdpify.domains.target.events import TargetCrashedEvent as CdpTargetCrashedEvent
 from cdpify.domains.target.events import TargetEvent
 
-from backend.features.browser_tunnel.application import BrowserEvent, TargetCrashed
+from backend.features.browser_tunnel.domain import BrowserEvent, TargetCrashed
 from backend.features.browser_tunnel.infrastructure.events import BrowserEventStream
 from backend.features.browser_tunnel.infrastructure.target_event_bridge import (
     TargetEventBridge,

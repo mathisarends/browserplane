@@ -1,6 +1,6 @@
 from fastapi_rpckit import Inject
 
-from backend.features.browser_tunnel.application import Browser
+from backend.features.browser_tunnel.domain import Browser
 from backend.features.browser_tunnel.presentation.rpc.channel import channel
 from backend.features.browser_tunnel.presentation.rpc.models import (
     NavigateParams,
