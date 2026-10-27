@@ -1,5 +1,6 @@
 import { signal, SignalWatcher } from "@lit-labs/signals";
 import { ContextConsumer, ContextProvider } from "@lit/context";
+import { queryClientContext } from "@tanstack/lit-query";
 import { css, html, LitElement, nothing } from "lit";
 import { property } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
@@ -26,12 +27,17 @@ export class BrowserPanel extends SignalWatcher(LitElement) {
     subscribe: true,
   });
   private readonly sessionProvider = new ContextProvider(this, { context: browserSessionContext });
+  private readonly queryClientConsumer = new ContextConsumer(this, {
+    context: queryClientContext,
+    subscribe: true,
+  });
   private ownedSession?: BrowserSession;
   protected get session(): BrowserSession {
     if (!this.ownedSession) {
       this.ownedSession = new BrowserSession(
         this.identityConsumer.value!,
         this.modeConsumer.value!,
+        this.queryClientConsumer.value!,
       );
       this.sessionProvider.setValue(this.ownedSession);
     }

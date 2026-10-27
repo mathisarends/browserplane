@@ -28,6 +28,7 @@ export class BrowserPersistenceVault {
   async createCheckpoint(sessionId: string): Promise<BrowserCheckpointResponse> {
     const response = await createBrowserCheckpoint(sessionId, {});
     this.checkpointState.set(((items) => [response, ...items])(this.checkpointState.get()));
+    await this.queryClient.invalidateQueries({ queryKey: sessionsApi.sessionsKeys.all });
     return response;
   }
   async mountCheckpoint(sessionId: string, checkpointId: string): Promise<void> {

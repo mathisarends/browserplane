@@ -1,6 +1,7 @@
-import { listOwnerSessions, type SessionResponse } from "@browsertunnel/backend-client";
+import { type SessionResponse } from "@browsertunnel/backend-client";
 import { signal, SignalWatcher } from "@lit-labs/signals";
 import { ContextConsumer } from "@lit/context";
+import { createQueryController } from "@tanstack/lit-query";
 import { css, html, LitElement, nothing } from "lit";
 import { property } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
@@ -8,6 +9,7 @@ import { repeat } from "lit/directives/repeat.js";
 import { clientIdentityContext } from "../../shared/contexts";
 import "../components/browser-create-tile";
 import "../components/browser-panel";
+import { ownerSessionsQuery } from "../queries/owner-sessions";
 import { ClientIdentity } from "../services/client-identity";
 interface GalleryPanel {
   readonly key: string;
@@ -170,8 +172,26 @@ export class BrowserLayout extends SignalWatcher(LitElement) {
   protected get focusIndex() {
     return Math.min(this.requestedIndex.get(), Math.max(0, this.slideCount - 1));
   }
-  firstUpdated(): void {
-    void this.restore();
+  private readonly ownedSessions = createQueryController(this, () => ({
+    ...ownerSessionsQuery(this.identity.ownerId),
+    enabled: this.restoring.get(),
+  }));
+
+  protected updated(): void {
+    const result = this.ownedSessions();
+    if (!this.restoring.get() || result.isPending) return;
+    const data = result.data;
+    queueMicrotask(() => {
+      if (!this.isConnected || !this.restoring.get()) return;
+      if (data)
+        this.panels.set(
+          [...data.sessions]
+            .sort(byAge)
+            .map((session) => ({ key: session.id, sessionId: session.id })),
+        );
+      else this.restoreFailed.set(true);
+      this.restoring.set(false);
+    });
   }
   protected step(direction: 1 | -1): void {
     const count = this.slideCount;
@@ -191,21 +211,7 @@ export class BrowserLayout extends SignalWatcher(LitElement) {
     this.panels.set(((panels) => panels.filter((panel) => panel.key !== key))(this.panels.get()));
     this.creating.set(false);
   }
-  private async restore(): Promise<void> {
-    try {
-      const response = await listOwnerSessions({ owner_id: this.identity.ownerId });
-      this.panels.set(
-        [...response.sessions].sort(byAge).map((session) => ({
-          key: session.id,
-          sessionId: session.id,
-        })),
-      );
-    } catch {
-      this.restoreFailed.set(true);
-    } finally {
-      this.restoring.set(false);
-    }
-  }
+
   protected render() {
     return html`
       <main aria-label="Remote Browser Sessions" class=${classMap({ "browser-stage": true })}>

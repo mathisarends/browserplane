@@ -3,6 +3,7 @@ import {
   getSession,
   openSession,
   resumeSession,
+  sessions as sessionsApi,
   type SessionResponse,
 } from "@browsertunnel/backend-client";
 import { BackendBrowserClient } from "@browsertunnel/browser-rpc-client";
@@ -12,6 +13,7 @@ import type {
   ScrollParams,
 } from "@browsertunnel/browser-rpc-client/models";
 import { computed, signal } from "@lit-labs/signals";
+import type { QueryClient } from "@tanstack/lit-query";
 import { errorMessage } from "../../shared/errors";
 import { BrowserPageState, pageFailure, type BrowserTabState } from "./browser-page-state";
 import { ClientIdentity } from "./client-identity";
@@ -25,7 +27,10 @@ export class BrowserSession {
   constructor(
     private readonly identity: ClientIdentity,
     private readonly screencastMode: ScreencastModeState,
+    private readonly queryClient: QueryClient,
   ) {}
+
+  private generation = 0;
   private readonly requests = new SessionRequestTracker(this.identity.ownerId);
   private readonly sessionState = signal<SessionResponse | undefined>(undefined);
   private readonly connectionState = signal<ConnectionState>("disconnected");
@@ -39,41 +44,49 @@ export class BrowserSession {
   readonly browserId = computed(() => this.sessionState.get()?.browser_id);
   readonly sessionId = computed(() => this.sessionState.get()?.id);
   async open(): Promise<number | undefined> {
-    this.beginConnecting();
+    const generation = this.beginConnecting();
     try {
-      const session = await this.requests.track(async ({ id, signal }) => {
-        const response = await openSession(
+      const session = await this.requests.track(async ({ id, signal }) =>
+        openSession(
           {
             owner_id: this.identity.ownerId,
             request_id: id,
             timeout_seconds: SESSION_REQUEST_TIMEOUT_SECONDS,
           },
           { signal },
-        );
-        return response;
-      });
-      await this.start(session);
+        ),
+      );
+      if (generation !== this.generation) {
+        await closeSession(session.id).catch(() => undefined);
+        return undefined;
+      }
+      if (!(await this.start(session, generation))) return undefined;
+      await this.queryClient.invalidateQueries({ queryKey: sessionsApi.sessionsKeys.all });
       return session.remaining_capacity;
     } catch (error) {
-      await this.abandon(error);
+      if (generation === this.generation) await this.abandon(error);
       return undefined;
     }
   }
   async attach(sessionId: string): Promise<boolean> {
-    this.beginConnecting();
+    const generation = this.beginConnecting();
     try {
-      const response = await getSession(sessionId);
-      await this.start(response.status === "suspended" ? await this.resume(sessionId) : response);
-      return true;
+      const session = await getSession(sessionId);
+      if (generation !== this.generation) return false;
+      return await this.start(
+        session.status === "suspended" ? await this.resume(sessionId) : session,
+        generation,
+      );
     } catch (error) {
-      await this.abandon(error);
+      if (generation === this.generation) await this.abandon(error);
       return false;
     }
   }
   async disconnect(): Promise<void> {
+    this.generation++;
     this.connectionState.set("disconnected");
-    const client = this.client;
-    const session = this.sessionState.get();
+    const client = this.client,
+      session = this.sessionState.get();
     this.client = undefined;
     this.sessionState.set(undefined);
     this.page.reset();
@@ -81,6 +94,7 @@ export class BrowserSession {
     await this.requests.cancel();
     await client?.close().catch(() => undefined);
     if (session) await closeSession(session.id).catch(() => undefined);
+    await this.queryClient.invalidateQueries({ queryKey: sessionsApi.sessionsKeys.all });
   }
   navigate(value: string): Promise<void> {
     const url = resolveNavigationTarget(value);
@@ -130,19 +144,35 @@ export class BrowserSession {
   reportError(error: unknown): void {
     this.errorState.set(errorMessage(error));
   }
-  private beginConnecting(): void {
+  private beginConnecting(): number {
+    this.generation++;
     this.connectionState.set("connecting");
     this.errorState.set(undefined);
+    return this.generation;
   }
-  private async start(session: SessionResponse): Promise<void> {
-    if (!session.tunnel_path || !session.screencast_path) {
+  private async start(session: SessionResponse, generation: number): Promise<boolean> {
+    if (!session.tunnel_path || !session.screencast_path)
       throw new Error("The session does not contain a browser");
-    }
+    if (generation !== this.generation) return false;
     this.sessionState.set(session);
-    // Queue commands before transport acquisition, including key and mouse events.
     let pending: Promise<unknown> = Promise.resolve();
     const client = await BackendBrowserClient.connect({
       url: socketUrl(session.tunnel_path).href,
+      reconnect: true,
+      reconnectMaxAttempts: 3,
+      retryAttempts: 1,
+      onStateChange: (_server, state, error) => {
+        if (generation !== this.generation) return;
+        if (state === "closed") {
+          this.connectionState.set("disconnected");
+          if (error) this.reportError(error);
+        } else if (state === "connecting" || state === "reconnecting")
+          this.connectionState.set("connecting");
+        else if (this.client) {
+          this.connectionState.set("connected");
+          void this.refreshTabs();
+        }
+      },
       middleware: [
         {
           request(_call, next) {
@@ -156,11 +186,20 @@ export class BrowserSession {
         },
       ],
     });
+    if (generation !== this.generation) {
+      await client.close();
+      return false;
+    }
     this.client = client;
     await this.stream.connect(session.screencast_path, this.screencastMode.mode.get());
+    if (generation !== this.generation) {
+      await client.close();
+      return false;
+    }
     this.connectionState.set("connected");
     void this.listen(client);
     this.page.setTabs((await client.browser.tab.list()).tabs);
+    return true;
   }
   private resume(sessionId: string): Promise<SessionResponse> {
     return this.requests.track(async ({ id, signal }) => {
@@ -177,15 +216,16 @@ export class BrowserSession {
     this.reportError(error);
   }
   private async call(action: (client: BackendBrowserClient) => Promise<void>): Promise<void> {
-    if (!this.client) {
+    const client = this.client;
+    if (!client) {
       if (!this.error.get()) this.reportError("RPC connection is unavailable");
       return;
     }
     try {
-      await action(this.client);
-      this.errorState.set(undefined);
+      await action(client);
+      if (client === this.client) this.errorState.set(undefined);
     } catch (error) {
-      this.reportError(error);
+      if (client === this.client) this.reportError(error);
     }
   }
   private callForTabs(
