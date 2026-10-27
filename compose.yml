@@ -19,7 +19,7 @@ x-browser-worker: &browser-worker
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
     environment:
       - POSTGRES_USER=browser
       - POSTGRES_PASSWORD=browser
@@ -42,7 +42,7 @@ services:
   #   Password: browser
   #   Database: browser
   adminer:
-    image: adminer:latest
+    image: adminer@sha256:9cae9051dd7e622395bf8216ca50e4bb69976fed293c277edc891469729a56b3
     ports:
       - "8080:8080"
     environment:
@@ -54,7 +54,7 @@ services:
   # S3 API: http://localhost:9000
   # Object browser / admin console: http://localhost:9001
   minio:
-    image: minio/minio:latest
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -71,7 +71,7 @@ services:
       retries: 20
 
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
