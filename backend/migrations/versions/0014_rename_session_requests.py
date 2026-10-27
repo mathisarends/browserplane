@@ -1,4 +1,5 @@
 """Name browser demand what it produces: a session request."""
+
 from alembic import op
 
 revision = "0014"

@@ -101,10 +101,10 @@ so no session is ever built for them; and everything they read goes through a
 connection back at its end:
 
 ```python
-async with self._sessions() as sessions:      # one transaction
-    await self._check_state(sessions, ...)    # opens, reads, commits, releases
-session_id = await self._control.acquire(request)   # no connection held
-async with self._sessions() as sessions:      # a second, independent one
+async with self._sessions() as sessions:  # one transaction
+    await self._check_state(sessions, ...)  # opens, reads, commits, releases
+session_id = await self._control.acquire(request)  # no connection held
+async with self._sessions() as sessions:  # a second, independent one
     return await sessions.get_active(session_id)
 ```
 

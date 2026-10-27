@@ -1,6 +1,7 @@
 """Persist browser demand and wake consumers after committed capacity changes."""
-from alembic import op
+
 import sqlalchemy as sa
+from alembic import op
 
 revision = "0013"
 down_revision = "0012"
@@ -23,14 +24,25 @@ def upgrade():
         sa.Column("browser_checkpoint_id", sa.Uuid()),
         sa.Column("retry_at", sa.DateTime(timezone=True)),
         sa.Column("resume_session_id", sa.Uuid()),
-        sa.CheckConstraint("status IN ('QUEUED','PROVISIONING','ASSIGNED','CANCELLED','EXPIRED')"),
+        sa.CheckConstraint(
+            "status IN ('QUEUED','PROVISIONING','ASSIGNED','CANCELLED','EXPIRED')"
+        ),
         sa.CheckConstraint("(status = 'ASSIGNED') = (lease_id IS NOT NULL)"),
     )
     op.create_index("ix_browser_requests_owner_id", "browser_requests", ["owner_id"])
-    op.create_index("ix_browser_requests_fifo", "browser_requests", ["created_at", "id"],
-                    postgresql_where=sa.text("status = 'QUEUED'"))
-    op.create_index("uq_browser_requests_provisioning", "browser_requests", ["browser_id"],
-                    unique=True, postgresql_where=sa.text("browser_id IS NOT NULL"))
+    op.create_index(
+        "ix_browser_requests_fifo",
+        "browser_requests",
+        ["created_at", "id"],
+        postgresql_where=sa.text("status = 'QUEUED'"),
+    )
+    op.create_index(
+        "uq_browser_requests_provisioning",
+        "browser_requests",
+        ["browser_id"],
+        unique=True,
+        postgresql_where=sa.text("browser_id IS NOT NULL"),
+    )
     op.execute("""
         CREATE FUNCTION notify_browser_capacity() RETURNS trigger LANGUAGE plpgsql AS $$
         BEGIN
@@ -39,8 +51,10 @@ def upgrade():
         END $$
     """)
     for table in ("browser_requests", "browsers", "leases"):
-        op.execute(f"CREATE TRIGGER {table}_notify AFTER INSERT OR UPDATE OR DELETE "
-                   f"ON {table} FOR EACH ROW EXECUTE FUNCTION notify_browser_capacity()")
+        op.execute(
+            f"CREATE TRIGGER {table}_notify AFTER INSERT OR UPDATE OR DELETE "
+            f"ON {table} FOR EACH ROW EXECUTE FUNCTION notify_browser_capacity()"
+        )
 
 
 def downgrade():

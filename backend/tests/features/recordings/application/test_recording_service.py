@@ -41,8 +41,9 @@ class FakeRecorder(Recorder):
 
 
 @pytest.mark.asyncio
-async def test_recording_service_routes_each_operation_to_the_resolved_browser(
-) -> None:
+async def test_recording_service_routes_each_operation_to_the_resolved_browser() -> (
+    None
+):
     browser = Browser(BrowserSlot(uuid4(), "http://worker"), datetime.now(UTC))
     recording = Recording(
         id=uuid4(),

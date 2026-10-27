@@ -34,7 +34,7 @@ CDP into a CSS cursor in the frontend (it is not part of the frame stream).
 ```text
 ┌─────────────┐   HTTP + WS (JSON-RPC)   ┌───────────────────────────────┐
 │  Frontend   │ ───────────────────────▶ │  Backend · API                │
-│ Angular SPA │ ◀─────────────────────── │  gateway (JSON-RPC ⇄ CDP)     │
+│   Lit SPA   │ ◀─────────────────────── │  gateway (JSON-RPC ⇄ CDP)     │
 │  <canvas>   │   JPEG frames, events    │  sessions · requests · leases │
 └─────────────┘                          └──────┬─────────────────┬──────┘
                                                 │ SQL             │ CDP · WS
@@ -72,13 +72,14 @@ away. A `READY` row does not prove a clean Chromium, and a live Chromium
 entitles nobody to use it: only a proven cleanup plus a fresh runtime returns a
 slot to the pool. Leases end on deadlines, never on a dropped socket.
 
-Live traffic uses two transports: the backend WebSocket for JSON-RPC and
-tab/navigation/cursor state, a browser worker WebSocket for binary JPEG frames.
+Live traffic uses two backend WebSockets: one for JSON-RPC and
+tab/navigation/cursor state, and one that relays binary screencast data from the worker.
 
 ## Deep dives
 
 | Document | Question it answers |
 | --- | --- |
+| [docs/canon-stack.md](docs/canon-stack.md) | Canon/Lit composition, generated clients, pins and checks |
 | [docs/planes.md](docs/planes.md) | Who owns which truth, and which process may do what |
 | [docs/browser-lifecycle.md](docs/browser-lifecycle.md) | Slot vs. runtime vs. lease, and how fencing keeps them honest |
 | [docs/acquiring-a-browser.md](docs/acquiring-a-browser.md) | What happens when the pool is full and a caller waits |
@@ -89,8 +90,8 @@ Working specs: `LEASE_CONCEPT.md`, `REQUEST_CONCEPT.md`.
 ## Setup
 
 ```bash
-uv sync
-(cd frontend && npm install)
+uv sync --locked
+npm ci --ignore-scripts --prefix frontend
 uv run pre-commit install
 ```
 
@@ -104,7 +105,7 @@ docker compose up --build     # Postgres, MinIO, migrations, backend, scheduler,
 That is the whole loop. `npm run dev` runs `predev`, which exports the OpenAPI
 and OpenRPC documents and rewrites all three generated clients — none of them is
 written by hand: `frontend/generated` (browser JSON-RPC, from OpenRPC),
-`frontend/generated-backend` (backend HTTP, via [orval](https://orval.dev)), and
+`frontend/generated-backend` (backend HTTP, via Lit Canon API), and
 the uv workspace package `generated/` (Python worker client, via httpxgen).
 
 The rest is only needed on its own:
@@ -115,9 +116,9 @@ The rest is only needed on its own:
 (cd backend && uv run alembic revision --autogenerate -m "...")
 (cd backend && uv run alembic upgrade head)
 
-uv run pytest        # tests
-uv run ruff check .  # lint
-uv run ruff format . # format
+uv run --locked python scripts/check.py all     # lint, separate package tests, contracts, build
+uv run --locked python scripts/check.py browser # real isolated full-stack browser smoke
+uv run --locked ruff format .                   # format
 (cd frontend && npm run build) # type-check and build
 ```
 
@@ -129,7 +130,9 @@ request = await control.get(request_id, owner_id)
 return SessionRequestResponse.model_validate(request)
 ```
 
-Smoke test: `uv run python backend/tests/browser_tunnel/manual_smoke.py`.
+The smoke runs real Postgres, MinIO, a worker, scheduler, backend and Chromium.
+See [docs/canon-stack.md](docs/canon-stack.md) for the composition, query/cache,
+RPC lifecycle, version pins and verification details.
 
 ## HTTP API
 
@@ -162,7 +165,7 @@ first, so restored tabs navigate logged in. See
 
 ```text
 ws /api/v1/sessions/{session_id}/tunnel      JSON-RPC 2.0, relayed to CDP
-ws /api/v1/browser/{browser_id}/screencast   captured frames from the worker
+ws /api/v1/sessions/{session_id}/screencast  captured frames relayed by the backend
    ?mode=jpeg | dirty-rectangles | fmp4       how those frames are packaged
 ```
 

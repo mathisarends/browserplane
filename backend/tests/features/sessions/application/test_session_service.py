@@ -99,8 +99,7 @@ async def test_active_session_exposes_its_bound_browser_and_renewed_lease() -> N
 
 
 @pytest.mark.asyncio
-async def test_saved_browser_state_profiles_and_downloads_belong_to_active_session(
-) -> None:
+async def test_state_profiles_and_downloads_require_active_session() -> None:
     browser, lease, session = _active_resources()
     download = Download("report", "report.csv", "https://example.com/report", 12)
     runtime = FakeBrowserRuntime(

@@ -68,8 +68,7 @@ async def test_lease_lifecycle_reserves_renews_and_releases_a_browser() -> None:
 
 
 @pytest.mark.asyncio
-async def test_inspection_preserves_history_but_active_access_rejects_expired_lease(
-) -> None:
+async def test_inspection_keeps_history_but_rejects_expired_active_lease() -> None:
     allocator = FakeBrowserAllocator()
     store = InMemoryLeaseStore()
     service = _service(allocator, store)

@@ -56,9 +56,12 @@ def test_reclaim_transitions_are_idempotent_and_retryable() -> None:
     assert reclaiming.cleanup_attempts == 1
     assert reclaiming.begin_reclaim(now, reason="again") is reclaiming
     assert failed.is_reclaimable(now + timedelta(seconds=1))
-    assert failed.begin_reclaim(now + timedelta(seconds=2), reason="retry").released(
-        now
-    ).state is LeaseState.RELEASED
+    assert (
+        failed.begin_reclaim(now + timedelta(seconds=2), reason="retry")
+        .released(now)
+        .state
+        is LeaseState.RELEASED
+    )
 
 
 def test_retries_back_off_within_one_shared_recovery_budget() -> None:

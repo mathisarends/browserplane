@@ -11,7 +11,8 @@ from cryptography.fernet import Fernet
 
 ROOT = Path(__file__).resolve().parents[1]
 POSTGRES = (
-    "postgres@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193"
+    "postgres:17-alpine@"
+    "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b"
 )
 MINIO = (
     "minio/minio@"
@@ -65,6 +66,30 @@ def main():
             POSTGRES,
         )
         containers.append(postgres)
+        deadline = time.monotonic() + 60
+        while True:
+            result = subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    postgres,
+                    "pg_isready",
+                    "-h",
+                    "127.0.0.1",
+                    "-U",
+                    "browser",
+                    "-d",
+                    "browser",
+                ],
+                capture_output=True,
+                creationflags=FLAGS,
+                check=False,
+            )
+            if result.returncode == 0:
+                break
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Postgres did not become ready")
+            time.sleep(0.1)
         storage = command(
             "docker",
             "run",

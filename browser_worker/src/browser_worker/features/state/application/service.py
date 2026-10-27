@@ -42,9 +42,7 @@ class BrowserStateService:
         store = self._store()
         return await store.capture_authentication(extra_origins=origins)
 
-    async def mount_authentication(
-        self, state: AuthenticationState
-    ) -> None:
+    async def mount_authentication(self, state: AuthenticationState) -> None:
         for origin in state.local_storage:
             _validate_origin(origin.origin)
         for origin in state.indexed_db:

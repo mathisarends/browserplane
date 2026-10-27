@@ -36,18 +36,14 @@ def upgrade() -> None:
         "leases",
         sa.Column("reclaim_after", sa.DateTime(timezone=True), nullable=True),
     )
-    op.add_column(
-        "leases", sa.Column("reclaim_started_at", sa.DateTime(timezone=True))
-    )
+    op.add_column("leases", sa.Column("reclaim_started_at", sa.DateTime(timezone=True)))
     op.add_column("leases", sa.Column("released_at", sa.DateTime(timezone=True)))
     op.add_column("leases", sa.Column("release_reason", sa.String()))
     op.add_column(
         "leases",
         sa.Column("cleanup_attempts", sa.Integer(), nullable=False, server_default="0"),
     )
-    op.add_column(
-        "leases", sa.Column("cleanup_retry_at", sa.DateTime(timezone=True))
-    )
+    op.add_column("leases", sa.Column("cleanup_retry_at", sa.DateTime(timezone=True)))
     op.execute("UPDATE leases SET last_renewed_at = created_at")
     op.execute("UPDATE leases SET reclaim_after = expires_at + INTERVAL '45 seconds'")
     op.execute(

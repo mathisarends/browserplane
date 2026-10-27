@@ -182,7 +182,8 @@ async def test_resume_rejects_a_session_that_is_not_parked() -> None:
     active = _active_session()
     service = FakeAcquisitionSessions(active)
     acquisition = SessionAcquisition(
-        FakeControlPlane(active.id), FakeUnitOfWork(service)  # type: ignore[arg-type]
+        FakeControlPlane(active.id),
+        FakeUnitOfWork(service),  # type: ignore[arg-type]
     )
 
     with pytest.raises(SessionNotSuspendedException):

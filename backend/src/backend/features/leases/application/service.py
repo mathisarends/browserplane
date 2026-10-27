@@ -187,8 +187,7 @@ class LeaseService:
         except Exception:
             await self._store.save(lease.quarantined())
             logger.exception(
-                "Lease quarantined lease_id=%s browser_id=%s generation=%d "
-                "attempts=%d",
+                "Lease quarantined lease_id=%s browser_id=%s generation=%d attempts=%d",
                 lease.id,
                 lease.browser_id,
                 lease.generation,
