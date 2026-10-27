@@ -1,27 +1,27 @@
-import { computed, Injectable, signal } from "@angular/core";
-import {
-  closeSession,
-  listBrowserCheckpoints,
-  listPooledBrowsers,
-  listSessions,
-  releasePooledBrowser,
-  restartPooledBrowser,
-  resumeSession,
-  suspendSession,
-} from "@browsertunnel/backend-client";
 import type {
   BrowserCheckpointResponse,
   PooledBrowserResponse,
   SessionResponse,
 } from "@browsertunnel/backend-client";
+import {
+  admin as adminApi,
+  closeSession,
+  releasePooledBrowser,
+  restartPooledBrowser,
+  resumeSession,
+  sessions as sessionsApi,
+  suspendSession,
+} from "@browsertunnel/backend-client";
+import { computed, signal } from "@lit-labs/signals";
+import type { QueryClient } from "@tanstack/lit-query";
 import { shortId } from "./format";
-
 const RESUME_REQUEST_TIMEOUT_SECONDS = 60;
-
-export type AdminNotice = { readonly tone: "success" | "error"; readonly text: string };
-
-@Injectable({ providedIn: "root" })
+export type AdminNotice = {
+  readonly tone: "success" | "error";
+  readonly text: string;
+};
 export class AdminConsole {
+  constructor(private readonly queryClient: QueryClient) {}
   private readonly browserState = signal<readonly PooledBrowserResponse[]>([]);
   private readonly sessionState = signal<readonly SessionResponse[]>([]);
   private readonly checkpointState = signal<readonly BrowserCheckpointResponse[]>([]);
@@ -29,49 +29,44 @@ export class AdminConsole {
   private readonly busyState = signal<ReadonlySet<string>>(new Set());
   private readonly noticeState = signal<AdminNotice | undefined>(undefined);
   private readonly refreshedState = signal<Date | undefined>(undefined);
-
-  readonly browsers = this.browserState.asReadonly();
-  readonly sessions = this.sessionState.asReadonly();
-  readonly checkpoints = this.checkpointState.asReadonly();
-  readonly loading = this.loadingState.asReadonly();
-  readonly notice = this.noticeState.asReadonly();
-  readonly refreshedAt = this.refreshedState.asReadonly();
-
-  readonly loaded = computed(() => this.refreshedAt() !== undefined);
+  readonly browsers = this.browserState;
+  readonly sessions = this.sessionState;
+  readonly checkpoints = this.checkpointState;
+  readonly loading = this.loadingState;
+  readonly notice = this.noticeState;
+  readonly refreshedAt = this.refreshedState;
+  readonly loaded = computed(() => this.refreshedAt.get() !== undefined);
   readonly activeSessions = computed(() =>
-    this.sessions().filter((session) => session.status === "active"),
+    this.sessions.get().filter((session) => session.status === "active"),
   );
   readonly suspendedSessions = computed(() =>
-    this.sessions().filter((session) => session.status === "suspended"),
+    this.sessions.get().filter((session) => session.status === "suspended"),
   );
   readonly availableBrowsers = computed(() =>
-    this.browsers().filter((browser) => browser.state === "ready"),
+    this.browsers.get().filter((browser) => browser.state === "ready"),
   );
   readonly offlineBrowsers = computed(() =>
-    this.browsers().filter((browser) => browser.state === "stopped" || browser.state === "failed"),
+    this.browsers
+      .get()
+      .filter((browser) => browser.state === "stopped" || browser.state === "failed"),
   );
-
   isBusy(id: string): boolean {
-    return this.busyState().has(id);
+    return this.busyState.get().has(id);
   }
-
   dismissNotice(): void {
     this.noticeState.set(undefined);
   }
-
   async refresh(): Promise<void> {
     this.loadingState.set(true);
     try {
       const [browsers, sessions, checkpoints] = await Promise.all([
-        listPooledBrowsers(),
-        listSessions(),
-        listBrowserCheckpoints(),
+        this.queryClient.fetchQuery(adminApi.listPooledBrowsersQuery()),
+        this.queryClient.fetchQuery(adminApi.listSessionsQuery()),
+        this.queryClient.fetchQuery(sessionsApi.listBrowserCheckpointsQuery()),
       ]);
-      if (browsers.status !== 200) throw new Error(`Pool unavailable (${browsers.status})`);
-      if (sessions.status !== 200) throw new Error(`Sessions unavailable (${sessions.status})`);
-      this.browserState.set(browsers.data);
-      this.sessionState.set(sessions.data);
-      if (checkpoints.status === 200) this.checkpointState.set(checkpoints.data);
+      this.browserState.set(browsers);
+      this.sessionState.set(sessions);
+      this.checkpointState.set(checkpoints);
       this.refreshedState.set(new Date());
     } catch (error) {
       this.noticeState.set({ tone: "error", text: message(error) });
@@ -79,45 +74,34 @@ export class AdminConsole {
       this.loadingState.set(false);
     }
   }
-
   releaseBrowser(browserId: string): Promise<void> {
     return this.run(browserId, `Browser ${shortId(browserId)} released`, async () => {
       const response = await releasePooledBrowser(browserId);
-      if (response.status !== 200) throw failure("Browser could not be released", response);
     });
   }
-
   restartBrowser(browserId: string): Promise<void> {
     return this.run(browserId, `Browser ${shortId(browserId)} restarted`, async () => {
       const response = await restartPooledBrowser(browserId);
-      if (response.status !== 200) throw failure("Browser could not be restarted", response);
     });
   }
-
   suspendSession(sessionId: string): Promise<void> {
     return this.run(sessionId, `Session ${shortId(sessionId)} suspended`, async () => {
       const response = await suspendSession(sessionId);
-      if (response.status !== 200) throw failure("Session could not be suspended", response);
     });
   }
-
   resumeSession(sessionId: string): Promise<void> {
     return this.run(sessionId, `Session ${shortId(sessionId)} resumed`, async () => {
       const response = await resumeSession(sessionId, {
         request_id: crypto.randomUUID(),
         timeout_seconds: RESUME_REQUEST_TIMEOUT_SECONDS,
       });
-      if (response.status !== 200) throw failure("Session could not be resumed", response);
     });
   }
-
   closeSession(sessionId: string): Promise<void> {
     return this.run(sessionId, `Session ${shortId(sessionId)} closed`, async () => {
       const response = await closeSession(sessionId);
-      if (response.status !== 204) throw failure("Session could not be closed", response);
     });
   }
-
   private async run(id: string, success: string, action: () => Promise<void>): Promise<void> {
     if (this.isBusy(id)) return;
     this.mark(id, true);
@@ -132,25 +116,17 @@ export class AdminConsole {
       await this.refresh();
     }
   }
-
   private mark(id: string, busy: boolean): void {
-    this.busyState.update((current) => {
-      const next = new Set(current);
-      if (busy) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+    this.busyState.set(
+      ((current) => {
+        const next = new Set(current);
+        if (busy) next.add(id);
+        else next.delete(id);
+        return next;
+      })(this.busyState.get()),
+    );
   }
 }
-
-function failure(fallback: string, response: { status: number; data: unknown }): Error {
-  const data = response.data;
-  if (data && typeof data === "object" && "message" in data && typeof data.message === "string") {
-    return new Error(data.message);
-  }
-  return new Error(`${fallback} (${response.status})`);
-}
-
 function message(error: unknown): string {
   return error instanceof Error ? error.message : "The backend could not be reached";
 }

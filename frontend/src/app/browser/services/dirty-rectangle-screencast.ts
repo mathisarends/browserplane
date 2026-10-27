@@ -1,6 +1,5 @@
 import { decodeDirtyRectangleUpdate, type DirtyRectangleUpdate } from "./dirty-rectangle-protocol";
 import { DirtyRectangleReconciliation } from "./dirty-rectangle-reconciliation";
-
 export interface DirtyRectangleScreencastState {
   readonly generation: number;
   readonly connected: boolean;
@@ -14,19 +13,16 @@ export interface DirtyRectangleScreencastState {
   readonly bytes: number;
   readonly resyncs: number;
 }
-
 export interface DirtyRectangleScreencastHandlers {
   onReset(generation: number): void;
   onUpdate(update: DirtyRectangleUpdate, generation: number): void;
   onState(state: DirtyRectangleScreencastState): void;
   onError(message: string): void;
 }
-
 const RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 250;
-const RECONNECT_MAX_DELAY_MS = 4_000;
+const RECONNECT_MAX_DELAY_MS = 4000;
 const UPDATES_BEFORE_RESYNC = 60;
-
 export class DirtyRectangleScreencast {
   private readonly reconciliation = new DirtyRectangleReconciliation();
   private socket?: WebSocket;
@@ -48,12 +44,10 @@ export class DirtyRectangleScreencast {
     bytes: 0,
     resyncs: 0,
   };
-
   constructor(
     private readonly url: URL,
     private readonly handlers: DirtyRectangleScreencastHandlers,
   ) {}
-
   async connect(): Promise<void> {
     const socket = this.open();
     try {
@@ -73,7 +67,6 @@ export class DirtyRectangleScreencast {
       throw error;
     }
   }
-
   close(): void {
     this.closed = true;
     if (this.reconnectTimer !== undefined) window.clearTimeout(this.reconnectTimer);
@@ -82,14 +75,12 @@ export class DirtyRectangleScreencast {
     this.socket = undefined;
     socket?.close();
   }
-
   private open(): WebSocket {
     this.generation += 1;
     this.updatesSinceReset = 0;
     this.reconciliation.reset();
     this.handlers.onReset(this.generation);
     this.publish({ generation: this.generation, connected: false, ...emptyCoverage() });
-
     const socket = new WebSocket(this.url);
     socket.binaryType = "arraybuffer";
     this.socket = socket;
@@ -106,7 +97,6 @@ export class DirtyRectangleScreencast {
     });
     return socket;
   }
-
   private receive(data: unknown): void {
     if (!(data instanceof ArrayBuffer)) return;
     let update: DirtyRectangleUpdate;
@@ -116,7 +106,6 @@ export class DirtyRectangleScreencast {
       this.handlers.onError(error instanceof Error ? error.message : String(error));
       return;
     }
-
     const coverage = this.reconciliation.apply(update);
     if (coverage.resized && this.updatesSinceReset > 0) {
       this.handlers.onReset(this.generation);
@@ -134,12 +123,10 @@ export class DirtyRectangleScreencast {
       patches: this.state.patches + update.patches.length,
       bytes: this.state.bytes + update.bytes,
     });
-
     if (!coverage.complete && this.updatesSinceReset >= UPDATES_BEFORE_RESYNC) {
       this.resync();
     }
   }
-
   private resync(): void {
     this.publish({ resyncs: this.state.resyncs + 1 });
     const socket = this.socket;
@@ -148,7 +135,6 @@ export class DirtyRectangleScreencast {
     this.attempt = 0;
     this.open();
   }
-
   private reconnect(): void {
     this.socket = undefined;
     this.publish({ connected: false });
@@ -167,13 +153,11 @@ export class DirtyRectangleScreencast {
       if (!this.closed) this.open();
     }, delay);
   }
-
   private publish(changes: Partial<DirtyRectangleScreencastState>): void {
     this.state = { ...this.state, ...changes };
     this.handlers.onState(this.state);
   }
 }
-
 function emptyCoverage() {
   return {
     complete: false,
@@ -183,7 +167,12 @@ function emptyCoverage() {
     coveredTiles: 0,
   };
 }
-
 export type DirtyRectangleEvent =
-  | { readonly kind: "reset"; readonly generation: number }
-  | { readonly kind: "update"; readonly update: DirtyRectangleUpdate };
+  | {
+      readonly kind: "reset";
+      readonly generation: number;
+    }
+  | {
+      readonly kind: "update";
+      readonly update: DirtyRectangleUpdate;
+    };

@@ -1,12 +1,11 @@
-import { signal } from "@angular/core";
+import { signal } from "@lit-labs/signals";
 import {
   DirtyRectangleScreencast,
   type DirtyRectangleEvent,
   type DirtyRectangleScreencastState,
 } from "./dirty-rectangle-screencast";
 import type { ScreencastMode } from "./screencast-mode";
-import { screencastOpened, screencastUrl, SCREENCAST_DISCONNECTED } from "./socket";
-
+import { SCREENCAST_DISCONNECTED, screencastOpened, screencastUrl } from "./socket";
 export class ScreencastStream {
   private readonly frameState = signal<Blob | undefined>(undefined);
   private readonly tickState = signal(0);
@@ -16,18 +15,14 @@ export class ScreencastStream {
   private readonly queue: DirtyRectangleEvent[] = [];
   private frames?: WebSocket;
   private patches?: DirtyRectangleScreencast;
-
-  readonly frame = this.frameState.asReadonly();
-  readonly tick = this.tickState.asReadonly();
-  readonly dirtyRectangles = this.dirtyRectangleState.asReadonly();
-
+  readonly frame = this.frameState;
+  readonly tick = this.tickState;
+  readonly dirtyRectangles = this.dirtyRectangleState;
   constructor(private readonly onError: (message: string) => void) {}
-
   connect(path: string, mode: ScreencastMode): Promise<void> {
     const url = screencastUrl(path, mode);
     return mode === "dirty-rectangles" ? this.connectPatches(url) : this.connectFrames(url);
   }
-
   close(): void {
     const frames = this.frames;
     const patches = this.patches;
@@ -39,11 +34,9 @@ export class ScreencastStream {
     frames?.close();
     patches?.close();
   }
-
   take(): readonly DirtyRectangleEvent[] {
     return this.queue.splice(0);
   }
-
   private async connectFrames(url: URL): Promise<void> {
     const socket = new WebSocket(url);
     this.frames = socket;
@@ -55,7 +48,6 @@ export class ScreencastStream {
       if (socket === this.frames) this.onError(SCREENCAST_DISCONNECTED);
     });
   }
-
   private async connectPatches(url: URL): Promise<void> {
     const stream = new DirtyRectangleScreencast(url, {
       onReset: (generation) => this.enqueue({ kind: "reset", generation }),
@@ -70,10 +62,9 @@ export class ScreencastStream {
     this.patches = stream;
     await stream.connect();
   }
-
   private enqueue(event: DirtyRectangleEvent): void {
     if (event.kind === "reset") this.queue.length = 0;
     this.queue.push(event);
-    this.tickState.update((tick) => tick + 1);
+    this.tickState.set(((tick) => tick + 1)(this.tickState.get()));
   }
 }

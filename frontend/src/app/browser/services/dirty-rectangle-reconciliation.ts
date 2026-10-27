@@ -1,5 +1,4 @@
 import type { DirtyRectangleUpdate } from "./dirty-rectangle-protocol";
-
 export interface DirtyRectangleCoverage {
   readonly canvasWidth: number;
   readonly canvasHeight: number;
@@ -7,11 +6,9 @@ export interface DirtyRectangleCoverage {
   readonly coveredTiles: number;
   readonly complete: boolean;
 }
-
 export interface DirtyRectangleReconciliationResult extends DirtyRectangleCoverage {
   readonly resized: boolean;
 }
-
 const EMPTY_COVERAGE: DirtyRectangleCoverage = {
   canvasWidth: 0,
   canvasHeight: 0,
@@ -19,7 +16,6 @@ const EMPTY_COVERAGE: DirtyRectangleCoverage = {
   coveredTiles: 0,
   complete: false,
 };
-
 export class DirtyRectangleReconciliation {
   private tileWidth = 0;
   private tileHeight = 0;
@@ -29,7 +25,6 @@ export class DirtyRectangleReconciliation {
   private canvasHeight = 0;
   private covered = new Uint8Array(0);
   private coveredCount = 0;
-
   get coverage(): DirtyRectangleCoverage {
     if (this.tiles === 0) return EMPTY_COVERAGE;
     return {
@@ -40,7 +35,6 @@ export class DirtyRectangleReconciliation {
       complete: this.coveredCount === this.tiles,
     };
   }
-
   reset(): void {
     this.tileWidth = 0;
     this.tileHeight = 0;
@@ -51,14 +45,12 @@ export class DirtyRectangleReconciliation {
     this.covered = new Uint8Array(0);
     this.coveredCount = 0;
   }
-
   apply(update: DirtyRectangleUpdate): DirtyRectangleReconciliationResult {
     const resized =
       update.canvasWidth !== this.canvasWidth || update.canvasHeight !== this.canvasHeight;
     if (resized || update.tileWidth !== this.tileWidth || update.tileHeight !== this.tileHeight) {
       this.regrid(update);
     }
-
     for (const patch of update.patches) {
       const firstColumn = Math.floor(patch.x / this.tileWidth);
       const firstRow = Math.floor(patch.y / this.tileHeight);
@@ -73,14 +65,11 @@ export class DirtyRectangleReconciliation {
         }
       }
     }
-
     return { ...this.coverage, resized };
   }
-
   private get tiles(): number {
     return this.columns * this.rows;
   }
-
   private regrid(update: DirtyRectangleUpdate): void {
     this.canvasWidth = update.canvasWidth;
     this.canvasHeight = update.canvasHeight;

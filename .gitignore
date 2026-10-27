@@ -43,3 +43,7 @@ dist/
 
 # Browser-worker runtime files
 workspace/
+
+# Browser smoke artifacts
+frontend/test-results/
+frontend/playwright-report/

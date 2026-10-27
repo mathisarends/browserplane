@@ -4,18 +4,15 @@ const UNITS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
   ["hour", 24],
   ["day", 7],
 ];
-
 const RELATIVE = new Intl.RelativeTimeFormat("en-US", { numeric: "auto", style: "narrow" });
 const CLOCK = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
   second: "2-digit",
 });
-
 export function shortId(id: string): string {
   return id.slice(0, 8);
 }
-
 export function relativeTime(timestamp: string, now: number = Date.now()): string {
   let value = (new Date(timestamp).getTime() - now) / 1000;
   if (!Number.isFinite(value)) return "unknown";
@@ -25,7 +22,6 @@ export function relativeTime(timestamp: string, now: number = Date.now()): strin
   }
   return RELATIVE.format(Math.round(value), "week");
 }
-
 export function clockTime(date: Date): string {
   return CLOCK.format(date);
 }

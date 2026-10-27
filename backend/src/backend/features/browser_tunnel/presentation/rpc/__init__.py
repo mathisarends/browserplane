@@ -1,4 +1,4 @@
-from fastapi_rpckit import RpcService, ServerVariable
+from fastapi_rpckit import RpcLimits, RpcService, ServerVariable
 
 from . import events, methods
 from .channel import channel as BROWSER_CHANNEL
@@ -17,6 +17,7 @@ BROWSER_ENDPOINT = service.socket(
     "/api/v1/sessions/{sessionId}/tunnel",
     name="backendSession",
     channels=(BROWSER_CHANNEL,),
+    limits=RpcLimits(max_concurrency=1),
 )
 BROWSER_CONTRACT = service.contract(
     title="Browser Backend",

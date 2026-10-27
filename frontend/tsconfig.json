@@ -1,23 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "preserve",
-    "skipLibCheck": true,
+    "module": "ESNext",
     "moduleResolution": "bundler",
-    "isolatedModules": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
     "strict": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable",
-      "ESNext.Disposable"
-    ]
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "noEmit": true
   },
-  "angularCompilerOptions": {
-    "strictInjectionParameters": true,
-    "strictInputAccessModifiers": true,
-    "strictTemplates": true
-  }
+  "include": ["src"]
 }

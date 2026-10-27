@@ -1,59 +1,62 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from "@angular/core";
 import type { PooledBrowserResponse } from "@browsertunnel/backend-client";
-import { AdminAction } from "./admin-action";
-import { AdminCard, type AdminFact } from "./admin-card";
+import { signal, SignalWatcher } from "@lit-labs/signals";
+import { ContextConsumer } from "@lit/context";
+import { css, html, LitElement } from "lit";
+import { property } from "lit/decorators.js";
+import { classMap } from "lit/directives/class-map.js";
+import { adminConsoleContext } from "../../shared/contexts";
 import { AdminConsole } from "../services/admin-console";
 import { relativeTime, shortId } from "../services/format";
-
-@Component({
-  selector: "app-admin-browser-card",
-  imports: [AdminAction, AdminCard],
-  template: `
-    <app-admin-card
-      [heading]="label()"
-      [full]="browser().id"
-      [status]="browser().state"
-      [facts]="facts()"
-      [busy]="busy()"
-    >
-      @if (confirming()) {
-        <span class="prompt">Release this browser?</span>
-        <button appAdminAction (click)="confirming.set(false)">Cancel</button>
-        <button appAdminAction tone="danger" [disabled]="busy()" (click)="release()">
-          Release
-        </button>
-      } @else {
-        <button appAdminAction [disabled]="busy()" (click)="console.restartBrowser(browser().id)">
-          Restart
-        </button>
-        <button appAdminAction [disabled]="busy()" (click)="confirming.set(true)">Release</button>
+import { adminActionStyles } from "./admin-action";
+import "./admin-card";
+import type { AdminFact } from "./admin-card";
+export class AdminBrowserCard extends SignalWatcher(LitElement) {
+  static styles = [
+    css`
+      :host,
+      * {
+        box-sizing: border-box;
       }
-    </app-admin-card>
-  `,
-  styles: `
-    :host {
-      display: block;
-    }
-    .prompt {
-      margin-right: auto;
-      color: var(--admin-text-dim);
-      font-size: 0.68rem;
-    }
-  `,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-})
-export class AdminBrowserCard {
-  readonly browser = input.required<PooledBrowserResponse>();
-
-  protected readonly console = inject(AdminConsole);
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+    `,
+    css`
+      :host {
+        display: block;
+      }
+      .prompt {
+        margin-right: auto;
+        color: var(--admin-text-dim);
+        font-size: 0.68rem;
+      }
+    `,
+    adminActionStyles,
+  ];
+  @property({ attribute: false })
+  browser!: PooledBrowserResponse;
+  private readonly consoleConsumer = new ContextConsumer(this, {
+    context: adminConsoleContext,
+    subscribe: true,
+  });
+  protected get console(): AdminConsole {
+    const value = this.consoleConsumer.value;
+    if (!value) throw new Error("Missing AdminConsole provider");
+    return value;
+  }
   protected readonly confirming = signal(false);
-
-  protected readonly label = computed(() => shortId(this.browser().id));
-  protected readonly busy = computed(() => this.console.isBusy(this.browser().id));
-  protected readonly facts = computed<readonly AdminFact[]>(() => {
-    const lease = this.browser().lease;
+  protected get label() {
+    return shortId(this.browser.id);
+  }
+  protected get busy() {
+    return this.console.isBusy(this.browser.id);
+  }
+  protected get facts(): readonly AdminFact[] {
+    const lease = this.browser.lease;
     return [
-      { label: "Provisioned", value: relativeTime(this.browser().created_at) },
+      { label: "Provisioned", value: relativeTime(this.browser.created_at) },
       {
         label: "Held by",
         value: lease ? shortId(lease.session_id) : "—",
@@ -68,10 +71,66 @@ export class AdminBrowserCard {
       },
       { label: "Lease ends", value: lease ? relativeTime(lease.expires_at) : "—" },
     ];
-  });
-
+  }
   protected async release(): Promise<void> {
     this.confirming.set(false);
-    await this.console.releaseBrowser(this.browser().id);
+    await this.console.releaseBrowser(this.browser.id);
+  }
+  protected render() {
+    return html`
+      <app-admin-card
+        .heading=${this.label}
+        .full=${this.browser.id}
+        .status=${this.browser.state}
+        .facts=${this.facts}
+        .busy=${this.busy}
+      >
+        ${
+          this.confirming.get()
+            ? html`
+                <span class=${classMap({ prompt: true })}>Release this browser?</span>
+                <button
+                  appAdminAction=""
+                  @click=${(event: MouseEvent) => {
+                    this.confirming.set(false);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  appAdminAction=""
+                  data-tone="danger"
+                  ?disabled=${this.busy}
+                  @click=${(event: MouseEvent) => {
+                    this.release();
+                  }}
+                >
+                  Release
+                </button>
+              `
+            : html`
+                <button
+                  appAdminAction=""
+                  ?disabled=${this.busy}
+                  @click=${(event: MouseEvent) => {
+                    this.console.restartBrowser(this.browser.id);
+                  }}
+                >
+                  Restart
+                </button>
+                <button
+                  appAdminAction=""
+                  ?disabled=${this.busy}
+                  @click=${(event: MouseEvent) => {
+                    this.confirming.set(true);
+                  }}
+                >
+                  Release
+                </button>
+              `
+        }</app-admin-card
+      >
+    `;
   }
 }
+customElements.define("app-admin-browser-card", AdminBrowserCard);

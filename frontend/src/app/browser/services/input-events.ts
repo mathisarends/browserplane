@@ -1,13 +1,9 @@
 import type { KeyParams, MouseParams } from "@browsertunnel/browser-rpc-client/models";
-
 export type MousePoint = Pick<MouseParams, "x" | "y">;
-
 const MOUSE_BUTTONS = ["left", "middle", "right", "back", "forward"] as const;
-
 export function mouseButtonOf(event: MouseEvent): MouseParams["button"] {
   return MOUSE_BUTTONS[event.button] ?? "none";
 }
-
 export function mouseParams(
   type: MouseParams["type"],
   point: MousePoint,
@@ -23,11 +19,9 @@ export function mouseParams(
     clickCount: type === "mouseMove" ? 0 : event.detail,
   };
 }
-
 export function releaseMouseParams(point: MousePoint, button: MouseParams["button"]): MouseParams {
   return { type: "mouseUp", ...point, button, buttons: 0, clickCount: 0 };
 }
-
 export function keyParams(event: KeyboardEvent, direction: "down" | "up"): KeyParams {
   const text = direction === "down" ? keyText(event) : undefined;
   const virtualKeyCode = windowsVirtualKeyCode(event);
@@ -46,11 +40,9 @@ export function keyParams(event: KeyboardEvent, direction: "down" | "up"): KeyPa
     isSystemKey: event.altKey,
   };
 }
-
 export function isClipboardShortcut(event: KeyboardEvent, key: "c" | "v"): boolean {
   return (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === key;
 }
-
 function modifiers(event: MouseEvent | KeyboardEvent): number {
   return (
     Number(event.altKey) +
@@ -59,7 +51,6 @@ function modifiers(event: MouseEvent | KeyboardEvent): number {
     Number(event.shiftKey) * 8
   );
 }
-
 function keyText(event: KeyboardEvent): string | undefined {
   const hasAccelerator = event.altKey || event.ctrlKey || event.metaKey;
   if (event.key === "Enter" && !hasAccelerator) return "\r";
@@ -68,7 +59,6 @@ function keyText(event: KeyboardEvent): string | undefined {
   }
   return undefined;
 }
-
 const VIRTUAL_KEY: Readonly<Record<string, number>> = {
   Backspace: 8,
   Tab: 9,
@@ -116,7 +106,6 @@ const VIRTUAL_KEY: Readonly<Record<string, number>> = {
   BracketRight: 221,
   Quote: 222,
 };
-
 function windowsVirtualKeyCode(event: KeyboardEvent): number {
   const mapped = VIRTUAL_KEY[event.code];
   if (mapped !== undefined) return mapped;
