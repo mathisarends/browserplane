@@ -42,7 +42,8 @@ dist/
 .angular/
 
 # Browser-worker runtime files
-workspace/
+/workspace/
+/browser_worker/workspace/
 
 # Browser smoke artifacts
 frontend/test-results/
