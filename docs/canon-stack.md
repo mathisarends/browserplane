@@ -63,7 +63,10 @@ dependency change. Lit Canon archives have source revisions and SHA-256 records;
 npm verifies archive integrity. The Orval version inside Lit Canon API stays
 pinned because the generator depends on its AST. Compatible patches for its
 transitive `undici`, `fast-uri` and `source-map-js` dependencies are pinned with
-root npm overrides. Docker bases and external Compose images use immutable digests.
+root npm overrides. Docker bases and external Compose images use immutable digests. MinIO and its
+client are built locally from the same source commits as the previously used
+images; their archive checksums, Go compiler and runtime bases are pinned in
+`docker/minio/Dockerfile`. Compose and the stack smoke share these build targets.
 
 The generated OpenRPC document is committed so a fresh checkout can check its
 contract and client before regeneration. OpenAPI documents are exported during
@@ -99,3 +102,12 @@ provisioning, rendered screencast frames, ordered typing, clipboard copy/paste,
 tabs, a saved checkpoint, Focus mode and the admin overview. It removes its own
 processes, containers and network afterward. It does not use the Compose volumes.
 CI repeats the locked installs, checks, real browser smoke and both image builds.
+
+MinIO's [upstream repository](https://github.com/minio/minio#source-only-distribution)
+is archived and its community distribution is source-only. Both the Docker Hub
+and Quay images and historical binary URLs failed anonymous downloads during
+verification. Local source builds avoid relying on a warm image cache or registry
+credentials. This preserves the existing storage implementation and data volumes;
+it does not provide ongoing upstream maintenance. The source revisions and AGPL
+licenses are included as image metadata and license files. The first build needs
+Go module downloads and takes longer; subsequent smoke runs reuse Docker's cache.

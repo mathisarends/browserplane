@@ -14,11 +14,8 @@ POSTGRES = (
     "postgres:17-alpine@"
     "sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b"
 )
-MINIO = (
-    "minio/minio@"
-    "sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e"
-)
-MC = "minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727"
+MINIO = "browserplane-minio:07c3a429"
+MC = "browserplane-mc:7394ce0d"
 FLAGS = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 
@@ -45,6 +42,18 @@ def main():
     processes = []
     containers = []
     handles = []
+    for target, image in (("minio", MINIO), ("mc", MC)):
+        command(
+            "docker",
+            "build",
+            "--target",
+            target,
+            "-f",
+            str(ROOT / "docker/minio/Dockerfile"),
+            "-t",
+            image,
+            str(ROOT),
+        )
     network = "browserplane-canon-" + str(os.getpid())
     command("docker", "network", "create", network)
     try:

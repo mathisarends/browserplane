@@ -54,7 +54,12 @@ services:
   # S3 API: http://localhost:9000
   # Object browser / admin console: http://localhost:9001
   minio:
-    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    image: browserplane-minio:07c3a429
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/minio/Dockerfile
+      target: minio
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -71,7 +76,12 @@ services:
       retries: 20
 
   minio-init:
-    image: minio/mc@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    image: browserplane-mc:7394ce0d
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: docker/minio/Dockerfile
+      target: mc
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-

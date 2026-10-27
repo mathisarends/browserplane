@@ -9,3 +9,5 @@ node_modules/
 frontend/
 **/tests/
 *.md
+/workspace/
+browser_worker/workspace/
