@@ -1,0 +1,2469 @@
+{
+  "openrpc": "1.4.1",
+  "info": {
+    "title": "Browser Backend",
+    "version": "2.0.0",
+    "description": "Typed JSON-RPC API."
+  },
+  "servers": [
+    {
+      "name": "backendSession",
+      "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+      "x-rpckit-transport": {
+        "type": "websocket",
+        "messageEncoding": "json",
+        "frameType": "text"
+      },
+      "variables": {
+        "sessionId": {
+          "default": "{sessionId}"
+        }
+      }
+    }
+  ],
+  "methods": [
+    {
+      "name": "browser.clipboard.copy",
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ClipboardResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/CopyRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.clipboard.read",
+      "x-rpc-idempotent": true,
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/ClipboardResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ReadRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.clipboard.write",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "text",
+          "required": true,
+          "schema": {
+            "title": "Text",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/WriteRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/TextParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.input.mouse",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "type",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/MouseEventType"
+          }
+        },
+        {
+          "name": "x",
+          "required": true,
+          "schema": {
+            "title": "X",
+            "type": "number"
+          }
+        },
+        {
+          "name": "y",
+          "required": true,
+          "schema": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        {
+          "name": "button",
+          "required": false,
+          "schema": {
+            "default": "none",
+            "enum": [
+              "none",
+              "left",
+              "middle",
+              "right",
+              "back",
+              "forward"
+            ],
+            "title": "Button",
+            "type": "string"
+          }
+        },
+        {
+          "name": "buttons",
+          "required": true,
+          "schema": {
+            "minimum": 0,
+            "title": "Buttons",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "modifiers",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Modifiers",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "clickCount",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Clickcount",
+            "type": "integer"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/MouseRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/MouseParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.input.scroll",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "x",
+          "required": true,
+          "schema": {
+            "title": "X",
+            "type": "number"
+          }
+        },
+        {
+          "name": "y",
+          "required": true,
+          "schema": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        {
+          "name": "deltaX",
+          "required": true,
+          "schema": {
+            "title": "Deltax",
+            "type": "number"
+          }
+        },
+        {
+          "name": "deltaY",
+          "required": true,
+          "schema": {
+            "title": "Deltay",
+            "type": "number"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ScrollRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/ScrollParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.input.key",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "type",
+          "required": true,
+          "schema": {
+            "$ref": "#/components/schemas/KeyEventType"
+          }
+        },
+        {
+          "name": "key",
+          "required": true,
+          "schema": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        {
+          "name": "code",
+          "required": false,
+          "schema": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        {
+          "name": "text",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          }
+        },
+        {
+          "name": "unmodifiedText",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unmodifiedtext"
+          }
+        },
+        {
+          "name": "modifiers",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Modifiers",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "autoRepeat",
+          "required": false,
+          "schema": {
+            "default": false,
+            "title": "Autorepeat",
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "windowsVirtualKeyCode",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Windowsvirtualkeycode",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "nativeVirtualKeyCode",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Nativevirtualkeycode",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "location",
+          "required": false,
+          "schema": {
+            "default": 0,
+            "maximum": 3,
+            "minimum": 0,
+            "title": "Location",
+            "type": "integer"
+          }
+        },
+        {
+          "name": "isKeypad",
+          "required": false,
+          "schema": {
+            "default": false,
+            "title": "Iskeypad",
+            "type": "boolean"
+          }
+        },
+        {
+          "name": "isSystemKey",
+          "required": false,
+          "schema": {
+            "default": false,
+            "title": "Issystemkey",
+            "type": "boolean"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/KeyRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/KeyParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.input.text.insert",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "text",
+          "required": true,
+          "schema": {
+            "title": "Text",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/InsertTextRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/TextParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.input.paste",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "text",
+          "required": true,
+          "schema": {
+            "title": "Text",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/PasteRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/TextParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.nav.navigate",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "url",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/NavigateRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/NavigateParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.nav.back",
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/BackRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.nav.forward",
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ForwardRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.nav.reload",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "ignoreCache",
+          "required": false,
+          "schema": {
+            "default": false,
+            "title": "Ignorecache",
+            "type": "boolean"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ReloadRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/ReloadParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.nav.stop",
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "type": "null"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/StopRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.tab.list",
+      "x-rpc-idempotent": true,
+      "paramStructure": "by-name",
+      "params": [],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TabsResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ListTabsRequest"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.tab.create",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "url",
+          "required": false,
+          "schema": {
+            "default": "about:blank",
+            "title": "Url",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TabsResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/CreateRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/CreateTabParams"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.tab.activate",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "tabId",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Tabid",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TabsResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/ActivateRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/TabParams"
+      },
+      "errors": [
+        {
+          "code": -32004,
+          "message": "Browser tab not found",
+          "x-rpckit-code": "browser_tab_not_found"
+        }
+      ],
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "browser.tab.close",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "tabId",
+          "required": true,
+          "schema": {
+            "minLength": 1,
+            "title": "Tabid",
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "schema": {
+          "$ref": "#/components/schemas/TabsResult"
+        }
+      },
+      "x-rpc-request-schema": {
+        "$ref": "#/components/schemas/CloseRequest"
+      },
+      "x-rpc-params-schema": {
+        "$ref": "#/components/schemas/TabParams"
+      },
+      "errors": [
+        {
+          "code": -32004,
+          "message": "Browser tab not found",
+          "x-rpckit-code": "browser_tab_not_found"
+        }
+      ],
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "components": {
+    "schemas": {
+      "BrowserCursorEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "browser.cursor",
+            "default": "browser.cursor",
+            "title": "Type",
+            "type": "string"
+          },
+          "tabId": {
+            "title": "Tabid",
+            "type": "string"
+          },
+          "cursor": {
+            "$ref": "#/components/schemas/CursorStyle"
+          }
+        },
+        "required": [
+          "tabId",
+          "cursor"
+        ],
+        "title": "BrowserCursorEvent",
+        "type": "object"
+      },
+      "BrowserEvent": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/BrowserTabsEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BrowserNavigationEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BrowserCursorEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BrowserTargetCrashedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/BrowserTargetDetachedEvent"
+          }
+        ]
+      },
+      "BrowserNavigationEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "browser.navigation",
+            "default": "browser.navigation",
+            "title": "Type",
+            "type": "string"
+          },
+          "tabId": {
+            "title": "Tabid",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "loading": {
+            "title": "Loading",
+            "type": "boolean"
+          },
+          "canGoBack": {
+            "title": "Cangoback",
+            "type": "boolean"
+          },
+          "canGoForward": {
+            "title": "Cangoforward",
+            "type": "boolean"
+          },
+          "faviconUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Faviconurl"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          }
+        },
+        "required": [
+          "tabId",
+          "title",
+          "url",
+          "loading",
+          "canGoBack",
+          "canGoForward"
+        ],
+        "title": "BrowserNavigationEvent",
+        "type": "object"
+      },
+      "BrowserTabsEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "browser.tabs",
+            "default": "browser.tabs",
+            "title": "Type",
+            "type": "string"
+          },
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/TabResult"
+            },
+            "title": "Tabs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tabs"
+        ],
+        "title": "BrowserTabsEvent",
+        "type": "object"
+      },
+      "BrowserTargetCrashedEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "browser.targetCrashed",
+            "default": "browser.targetCrashed",
+            "title": "Type",
+            "type": "string"
+          },
+          "tabId": {
+            "title": "Tabid",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "errorCode": {
+            "title": "Errorcode",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "tabId",
+          "status",
+          "errorCode"
+        ],
+        "title": "BrowserTargetCrashedEvent",
+        "type": "object"
+      },
+      "BrowserTargetDetachedEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "browser.targetDetached",
+            "default": "browser.targetDetached",
+            "title": "Type",
+            "type": "string"
+          },
+          "tabId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tabid"
+          }
+        },
+        "required": [
+          "tabId"
+        ],
+        "title": "BrowserTargetDetachedEvent",
+        "type": "object"
+      },
+      "ClipboardResult": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ClipboardResult",
+        "type": "object"
+      },
+      "CreateTabParams": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "default": "about:blank",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "title": "CreateTabParams",
+        "type": "object"
+      },
+      "CursorStyle": {
+        "description": "The CSS cursor keywords a page may ask the viewer to display.",
+        "enum": [
+          "default",
+          "none",
+          "context-menu",
+          "help",
+          "pointer",
+          "progress",
+          "wait",
+          "cell",
+          "crosshair",
+          "text",
+          "vertical-text",
+          "alias",
+          "copy",
+          "move",
+          "no-drop",
+          "not-allowed",
+          "grab",
+          "grabbing",
+          "all-scroll",
+          "col-resize",
+          "row-resize",
+          "n-resize",
+          "e-resize",
+          "s-resize",
+          "w-resize",
+          "ne-resize",
+          "nw-resize",
+          "se-resize",
+          "sw-resize",
+          "ew-resize",
+          "ns-resize",
+          "nesw-resize",
+          "nwse-resize",
+          "zoom-in",
+          "zoom-out"
+        ],
+        "title": "CursorStyle",
+        "type": "string"
+      },
+      "KeyEventType": {
+        "enum": [
+          "keyDown",
+          "keyUp",
+          "rawKeyDown",
+          "char"
+        ],
+        "title": "KeyEventType",
+        "type": "string"
+      },
+      "KeyParams": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/KeyEventType"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "code": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Text"
+          },
+          "unmodifiedText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unmodifiedtext"
+          },
+          "modifiers": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Modifiers",
+            "type": "integer"
+          },
+          "autoRepeat": {
+            "default": false,
+            "title": "Autorepeat",
+            "type": "boolean"
+          },
+          "windowsVirtualKeyCode": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Windowsvirtualkeycode",
+            "type": "integer"
+          },
+          "nativeVirtualKeyCode": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Nativevirtualkeycode",
+            "type": "integer"
+          },
+          "location": {
+            "default": 0,
+            "maximum": 3,
+            "minimum": 0,
+            "title": "Location",
+            "type": "integer"
+          },
+          "isKeypad": {
+            "default": false,
+            "title": "Iskeypad",
+            "type": "boolean"
+          },
+          "isSystemKey": {
+            "default": false,
+            "title": "Issystemkey",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "key"
+        ],
+        "title": "KeyParams",
+        "type": "object"
+      },
+      "MouseEventType": {
+        "enum": [
+          "mouseDown",
+          "mouseMove",
+          "mouseUp"
+        ],
+        "title": "MouseEventType",
+        "type": "string"
+      },
+      "MouseParams": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/MouseEventType"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          },
+          "button": {
+            "default": "none",
+            "enum": [
+              "none",
+              "left",
+              "middle",
+              "right",
+              "back",
+              "forward"
+            ],
+            "title": "Button",
+            "type": "string"
+          },
+          "buttons": {
+            "minimum": 0,
+            "title": "Buttons",
+            "type": "integer"
+          },
+          "modifiers": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Modifiers",
+            "type": "integer"
+          },
+          "clickCount": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Clickcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "x",
+          "y",
+          "buttons"
+        ],
+        "title": "MouseParams",
+        "type": "object"
+      },
+      "NavigateParams": {
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "NavigateParams",
+        "type": "object"
+      },
+      "ReloadParams": {
+        "additionalProperties": false,
+        "properties": {
+          "ignoreCache": {
+            "default": false,
+            "title": "Ignorecache",
+            "type": "boolean"
+          }
+        },
+        "title": "ReloadParams",
+        "type": "object"
+      },
+      "ScrollParams": {
+        "additionalProperties": false,
+        "properties": {
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          },
+          "deltaX": {
+            "title": "Deltax",
+            "type": "number"
+          },
+          "deltaY": {
+            "title": "Deltay",
+            "type": "number"
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "deltaX",
+          "deltaY"
+        ],
+        "title": "ScrollParams",
+        "type": "object"
+      },
+      "TabParams": {
+        "additionalProperties": false,
+        "properties": {
+          "tabId": {
+            "minLength": 1,
+            "title": "Tabid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tabId"
+        ],
+        "title": "TabParams",
+        "type": "object"
+      },
+      "TabResult": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "active"
+        ],
+        "title": "TabResult",
+        "type": "object"
+      },
+      "TabsResult": {
+        "additionalProperties": false,
+        "properties": {
+          "tabs": {
+            "items": {
+              "$ref": "#/components/schemas/TabResult"
+            },
+            "title": "Tabs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tabs"
+        ],
+        "title": "TabsResult",
+        "type": "object"
+      },
+      "TextParams": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TextParams",
+        "type": "object"
+      },
+      "CopyRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CopyRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.clipboard.copy",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "ReadRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReadRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.clipboard.read",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "WriteRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WriteRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.clipboard.write",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/TextParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "MouseRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MouseRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.input.mouse",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/MouseParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "ScrollRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ScrollRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.input.scroll",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ScrollParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "KeyRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "KeyRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.input.key",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/KeyParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "InsertTextRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "InsertTextRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.input.text.insert",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/TextParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "PasteRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PasteRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.input.paste",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/TextParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "NavigateRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NavigateRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.nav.navigate",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/NavigateParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "BackRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BackRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.nav.back",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "ForwardRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ForwardRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.nav.forward",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "ReloadRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReloadRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.nav.reload",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ReloadParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "StopRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StopRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.nav.stop",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "ListTabsRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ListTabsRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.tab.list",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": false,
+            "type": "object"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "CreateRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CreateRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.tab.create",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/CreateTabParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method"
+        ]
+      },
+      "ActivateRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ActivateRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.tab.activate",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/TabParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "CloseRequest": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CloseRequest",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "method": {
+            "const": "browser.tab.close",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/TabParams"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "propertyNames": {
+              "enum": [
+                "traceparent",
+                "tracestate",
+                "baggage"
+              ]
+            },
+            "maxProperties": 3,
+            "x-rpc-max-bytes": 4096
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ]
+      },
+      "BrowserEventNotification": {
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BrowserEventNotification",
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0",
+            "type": "string"
+          },
+          "method": {
+            "const": "browser.event",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/BrowserEvent"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ],
+        "description": "Stream browser state to the frontend."
+      }
+    }
+  },
+  "x-rpc-protocol-version": 2,
+  "x-rpc-heartbeat": {
+    "method": "$/ping",
+    "params": {},
+    "result": null
+  },
+  "x-rpc-request-metadata": {
+    "version": 1,
+    "location": "envelope",
+    "member": "meta",
+    "maxBytes": 4096,
+    "allowedKeys": [
+      "traceparent",
+      "tracestate",
+      "baggage"
+    ]
+  },
+  "x-rpc-request-cancellation": {
+    "method": "$/cancelRequest",
+    "notification": true,
+    "params": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "error": {
+      "code": -32800,
+      "x-rpckit-code": "request_cancelled"
+    }
+  },
+  "x-rpc-notifications": [
+    {
+      "name": "browser.event",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserEvent"
+      },
+      "message": {
+        "$ref": "#/components/schemas/BrowserEventNotification"
+      },
+      "servers": [
+        {
+          "name": "backendSession",
+          "url": "ws://127.0.0.1:8000/api/v1/sessions/{sessionId}/tunnel",
+          "x-rpckit-transport": {
+            "type": "websocket",
+            "messageEncoding": "json",
+            "frameType": "text"
+          },
+          "variables": {
+            "sessionId": {
+              "default": "{sessionId}"
+            }
+          }
+        }
+      ],
+      "summary": "Stream browser state to the frontend."
+    }
+  ],
+  "x-rpc-subscriptions": [],
+  "x-rpc-notification-types": [
+    {
+      "name": "browser.tabs",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserTabsEvent"
+      }
+    },
+    {
+      "name": "browser.navigation",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserNavigationEvent"
+      }
+    },
+    {
+      "name": "browser.cursor",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserCursorEvent"
+      }
+    },
+    {
+      "name": "browser.targetCrashed",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserTargetCrashedEvent"
+      }
+    },
+    {
+      "name": "browser.targetDetached",
+      "payload": {
+        "$ref": "#/components/schemas/BrowserTargetDetachedEvent"
+      }
+    }
+  ]
+}

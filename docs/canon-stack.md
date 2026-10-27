@@ -65,6 +65,10 @@ pinned because the generator depends on its AST. Compatible patches for its
 transitive `undici`, `fast-uri` and `source-map-js` dependencies are pinned with
 root npm overrides. Docker bases and external Compose images use immutable digests.
 
+The generated OpenRPC document is committed so a fresh checkout can check its
+contract and client before regeneration. OpenAPI documents are exported during
+the HTTP client checks.
+
 Regenerate through `npm --prefix frontend run generate`. Never edit
 `frontend/generated/src`, `frontend/generated-backend/src/canon`, or
 `generated/src/generated/browser_worker` by hand. `check:generated` checks the RPC,
@@ -83,7 +87,9 @@ docker build -f browser_worker/Dockerfile -t browserplane-worker:check .
 
 `check.py` also accepts `lint`, `test`, `contracts`, and `build`. Tests run once per
 workspace member in separate processes, avoiding colliding `tests` package names.
-The browser check needs Docker and Chrome or Playwright Chromium. On Linux, run
+The browser check needs Docker and Chrome or Playwright Chromium. The worker
+integration tests also need FFmpeg on `PATH`; CI installs both native tools before
+running the suite. On Linux, run
 `npx playwright install --with-deps chromium` from `frontend`, then set
 `BROWSER_EXECUTABLE` to `require('playwright').chromium.executablePath()` from Node.
 

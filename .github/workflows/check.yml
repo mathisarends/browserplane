@@ -20,13 +20,18 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: uv sync --locked --python 3.14.0
       - run: npm ci --ignore-scripts --prefix frontend
-      - run: uv run --locked python scripts/check.py all
-      - run: git diff --exit-code -- frontend/generated frontend/generated-backend generated/src
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
+      - name: Install the worker's FFmpeg dependency
+        run: sudo apt-get install -y --no-install-recommends ffmpeg
       - name: Select Chromium for the worker
         working-directory: frontend
-        run: echo "BROWSER_EXECUTABLE=$(node -p "require('playwright').chromium.executablePath()")" >> "$GITHUB_ENV"
+        run: |
+          chromium_path=$(node -p "require('playwright').chromium.executablePath()")
+          echo "BROWSER_EXECUTABLE=$chromium_path" >> "$GITHUB_ENV"
+          echo "BROWSER_WORKER_EXECUTABLE=$chromium_path" >> "$GITHUB_ENV"
+      - run: uv run --locked python scripts/check.py all
+      - run: git diff --exit-code -- schemas/openrpc.json frontend/generated frontend/generated-backend generated/src
       - run: uv run --locked python scripts/check.py browser
       - name: Build service images
         run: |

@@ -14,7 +14,8 @@ venv/
 .uv/
 
 # Generated schemas
-schemas/
+/schemas/*
+!/schemas/openrpc.json
 
 # Testing / coverage
 .pytest_cache/
