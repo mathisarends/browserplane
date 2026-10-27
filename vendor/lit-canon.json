@@ -1,0 +1,29 @@
+[
+  {
+    "package": "lit-canon-api",
+    "version": "1.0.0",
+    "revision": "4fe0827b03bacc3f04008b8300b3e6942593c323",
+    "source": "packages/api",
+    "compiler": "typescript@6.0.3",
+    "archive": "lit-canon-api-1.0.0-4fe0827.tgz",
+    "sha256": "2223ebb2b1a1f3a9c480727220de22a1c3fb57f5321e0ea5192d82eba846e683"
+  },
+  {
+    "package": "lit-canon-fetch",
+    "version": "1.0.0",
+    "revision": "4fe0827b03bacc3f04008b8300b3e6942593c323",
+    "source": "packages/fetch",
+    "compiler": "typescript@6.0.3",
+    "archive": "lit-canon-fetch-1.0.0-4fe0827.tgz",
+    "sha256": "8ec4c4ca8c42cdb52a564a2f293f38ef24830b15408d447a70b3bcf1094d9708"
+  },
+  {
+    "package": "lit-canon-composition",
+    "version": "0.1.0",
+    "revision": "4fe0827b03bacc3f04008b8300b3e6942593c323",
+    "source": "packages/composition",
+    "compiler": "typescript@6.0.3",
+    "archive": "lit-canon-composition-0.1.0-4fe0827.tgz",
+    "sha256": "741fb9f4d5cf59f3ca914fb359beb67208e5202a7811cb07e3719407f95f162b"
+  }
+]

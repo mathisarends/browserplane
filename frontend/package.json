@@ -24,18 +24,29 @@
     "check:clients": "npm run check --workspaces --if-present"
   },
   "dependencies": {
-    "@angular/common": "^22.1.5",
-    "@angular/core": "^22.1.5",
-    "@angular/platform-browser": "^22.1.5",
-    "@browsertunnel/backend-client": "*",
-    "@browsertunnel/browser-rpc-client": "*",
-    "rxjs": "^7.8.2"
+    "@angular/common": "22.1.5",
+    "@angular/core": "22.1.5",
+    "@angular/platform-browser": "22.1.5",
+    "@browsertunnel/backend-client": "0.1.0",
+    "@browsertunnel/browser-rpc-client": "0.1.0",
+    "rxjs": "7.8.2",
+    "lit": "3.3.3",
+    "@lit/context": "1.1.6",
+    "@lit-labs/router": "0.1.4",
+    "@lit-labs/signals": "0.3.0",
+    "@tanstack/lit-query": "0.2.25",
+    "urlpattern-polyfill": "10.1.0",
+    "lit-canon-fetch": "file:../vendor/lit-canon-fetch-1.0.0-4fe0827.tgz",
+    "lit-canon-composition": "file:../vendor/lit-canon-composition-0.1.0-4fe0827.tgz"
   },
   "devDependencies": {
-    "@angular/build": "^22.1.7",
-    "@angular/cli": "^22.1.7",
-    "orval": "^8.28.1",
-    "prettier": "^3.9.6",
-    "typescript": "~6.0.3"
+    "@angular/build": "22.1.7",
+    "@angular/cli": "22.1.7",
+    "orval": "8.28.1",
+    "prettier": "3.9.6",
+    "typescript": "6.0.3",
+    "lit-canon-api": "file:../vendor/lit-canon-api-1.0.0-4fe0827.tgz",
+    "vite": "7.3.7",
+    "@playwright/test": "1.64.1"
   }
 }
