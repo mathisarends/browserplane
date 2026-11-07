@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from typing import assert_never
 
-from fastapi_rpckit import Inject
+from fastapi_canon.integrations.websockets import Inject
 
 from backend.features.browser_tunnel.domain import (
     Browser,

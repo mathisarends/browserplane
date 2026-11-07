@@ -7,21 +7,15 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import Query, Response, WebSocket, status
 from fastapi_canon import CanonResponse, CanonRouter
 
-from backend.features.browser_tunnel.presentation.session import BrowserTunnel
-from backend.features.browsers.application.exceptions import BrowserNotFoundException
 from backend.features.browsers.infrastructure.routes import (
     BrowserWorkerRoutes,
     ScreencastMode,
 )
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.sessions.application.exceptions import (
-    SessionNotActiveException,
-)
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ResolvedSession
 from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
+from backend.features.sessions.presentation.connection import resolve_session
 from backend.features.sessions.presentation.errors import (
     AUTHENTICATION_PROFILE_NOT_FOUND,
     BROWSER_CHECKPOINT_NOT_FOUND,
@@ -394,50 +388,6 @@ async def close_session(session_id: UUID, service: FromDishka[SessionService]) -
     await service.close(session_id)
 
 
-@session_router.websocket("/sessions/{session_id}/tunnel")
-@inject
-async def session_tunnel(
-    session_id: UUID,
-    websocket: WebSocket,
-    tunnel: FromDishka[BrowserTunnel],
-    lease_keeper: FromDishka[SessionLeaseKeeper],
-    routes: FromDishka[BrowserWorkerRoutes],
-) -> None:
-    session = await _resolve(websocket, lease_keeper, session_id, renew=True)
-    if session is None:
-        return
-    try:
-        logger.info(
-            "Session tunnel connected session_id=%s owner_id=%s browser_id=%s "
-            "slot=%s generation=%s expires_at=%s",
-            session_id,
-            session.owner_id,
-            session.browser_id,
-            session.browser.slot.id,
-            session.lease_generation,
-            session.expires_at.isoformat() if session.expires_at else None,
-        )
-        await lease_keeper.run(
-            session_id,
-            tunnel.serve(websocket, routes.cdp_url(session.browser.slot)),
-        )
-    except (
-        LeaseNotFoundException,
-        BrowserNotFoundException,
-        SessionNotActiveException,
-    ):
-        logger.info(
-            "Session tunnel lost its lease session_id=%s; closing transport",
-            session_id,
-        )
-        await websocket.close(code=1008, reason="Session lease expired")
-    finally:
-        # State capture is an independent HTTP operation. Keep the lease alive
-        # when this transport drops so state can still be read from the worker.
-        # DELETE /sessions/{id} or the TTL releases the browser.
-        await _log_disconnect(lease_keeper, session_id)
-
-
 @session_router.websocket("/sessions/{session_id}/screencast")
 @inject
 async def session_screencast(
@@ -456,7 +406,7 @@ async def session_screencast(
     start from nothing: a whole frame, a patch covering the whole canvas, or an
     fMP4 init segment ahead of the fragments that depend on it.
     """
-    session = await _resolve(websocket, lease_keeper, session_id)
+    session = await resolve_session(websocket, lease_keeper, session_id)
     if session is None:
         return
     name = f"Screencast ({mode})"
@@ -472,41 +422,3 @@ async def session_screencast(
         )
     finally:
         logger.info("%s disconnected session_id=%s", name, session_id)
-
-
-async def _resolve(
-    websocket: WebSocket,
-    lease_keeper: SessionLeaseKeeper,
-    session_id: UUID,
-    *,
-    renew: bool = False,
-) -> ResolvedSession | None:
-    """Look up the live session, closing the socket in session terms when it is gone."""
-    try:
-        return await lease_keeper.resolve(session_id, renew=renew)
-    except LeaseNotFoundException, BrowserNotFoundException, SessionNotActiveException:
-        await websocket.accept()
-        await websocket.close(code=1008, reason="Session not found")
-        return None
-
-
-async def _log_disconnect(lease_keeper: SessionLeaseKeeper, session_id: UUID) -> None:
-    """Say when the unheartbeated lease falls to the reaper, not just that it will."""
-    try:
-        session = await lease_keeper.resolve(session_id)
-    except (
-        LeaseNotFoundException,
-        BrowserNotFoundException,
-        SessionNotActiveException,
-    ):
-        logger.info(
-            "Session tunnel disconnected; lease already gone session_id=%s", session_id
-        )
-        return
-    logger.info(
-        "Session tunnel disconnected; no more heartbeats, lease left to its TTL "
-        "session_id=%s expires_at=%s reclaim_after=%s",
-        session_id,
-        session.expires_at.isoformat() if session.expires_at else None,
-        session.reclaim_after.isoformat() if session.reclaim_after else None,
-    )

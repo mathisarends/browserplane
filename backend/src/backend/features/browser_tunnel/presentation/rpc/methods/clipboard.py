@@ -1,4 +1,4 @@
-from fastapi_rpckit import Inject
+from fastapi_canon.integrations.websockets import Inject
 
 from backend.features.browser_tunnel.domain import Browser
 from backend.features.browser_tunnel.presentation.rpc.channel import channel

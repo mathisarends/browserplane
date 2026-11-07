@@ -1,16 +1,29 @@
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+from uuid import UUID
 
 import pytest
+from dishka import Provider, Scope
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from fastapi_canon import CanonRouter, Composition, Feature
 
 from backend.features.browser_tunnel.domain import (
     Browser,
     BrowserEvent,
     BrowserTab,
 )
+from backend.features.browser_tunnel.presentation import session as tunnel_session
 from backend.features.browser_tunnel.presentation.rpc import (
     BROWSER_CHANNEL,
-    BROWSER_CONTRACT,
 )
+from backend.features.browser_tunnel.presentation.session import (
+    BROWSER_CONTRACT,
+    BrowserTunnel,
+)
+from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
+from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 
 
 class FakeNavigation:
@@ -118,6 +131,51 @@ class BrowserResolver:
 
 def browser_server(browser: FakeBrowser):
     return BROWSER_CHANNEL.create_server(resolver=BrowserResolver(browser))
+
+
+def test_composed_browser_tunnel_runs_with_injected_services(monkeypatch) -> None:
+    browser = FakeBrowser()
+    monkeypatch.setattr(tunnel_session, "CdpBrowser", lambda settings: browser)
+    session_id = UUID(int=1)
+    slot = SimpleNamespace(id=UUID(int=2), browser_worker_url="http://worker")
+    session = SimpleNamespace(
+        owner_id=UUID(int=3),
+        browser_id=slot.id,
+        browser=SimpleNamespace(slot=slot),
+        lease_generation=1,
+        expires_at=None,
+        reclaim_after=None,
+    )
+
+    async def run(_session_id, operation):
+        await operation
+
+    lease_keeper = AsyncMock(spec=SessionLeaseKeeper)
+    lease_keeper.resolve.return_value = session
+    lease_keeper.run.side_effect = run
+    provider = Provider(scope=Scope.APP)
+    provider.provide(
+        lambda: BrowserTunnel(width=1600, height=900), provides=BrowserTunnel
+    )
+    provider.provide(lambda: lease_keeper, provides=SessionLeaseKeeper)
+    provider.provide(BrowserWorkerRoutes)
+    composition = Composition(
+        features=(
+            Feature(
+                name="tunnel", routers=(tunnel_session.router,), providers=(provider,)
+            ),
+        ),
+        router_factory=lambda: CanonRouter(prefix="/api/v1"),
+    )
+    app = composition.apply(FastAPI())
+    with (
+        TestClient(app) as client,
+        client.websocket_connect(f"/api/v1/sessions/{session_id}/tunnel") as socket,
+    ):
+        socket.send_json({"jsonrpc": "2.0", "id": 1, "method": "browser.tab.list"})
+        response = socket.receive_json()
+        assert "result" in response
+    lease_keeper.run.assert_awaited_once()
 
 
 @pytest.mark.asyncio

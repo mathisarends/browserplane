@@ -29,10 +29,8 @@ export interface BrowserNotFoundProblem {
   title: "Browser not found";
   status: 404;
   code: "browser_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -44,10 +42,8 @@ export interface RecordingAlreadyExistsProblem {
   title: "Browser session already has a recording";
   status: 409;
   code: "recording_already_exists";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -77,10 +73,8 @@ export interface RequestValidationProblem {
   title: "Request validation failed";
   status: 422;
   code: "request_validation_error";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   errors: RequestValidationProblemErrorsItem[];
   [key: string]: unknown;
 }
@@ -93,10 +87,8 @@ export interface RecordingTransferFailedProblem {
   title: "Recording could not be transferred into storage";
   status: 503;
   code: "recording_transfer_failed";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -108,10 +100,8 @@ export interface RecordingNotFoundProblem {
   title: "Recording not found";
   status: 404;
   code: "recording_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -123,9 +113,7 @@ export interface RecordingNotRunningProblem {
   title: "Recording has already been stopped";
   status: 409;
   code: "recording_not_running";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }

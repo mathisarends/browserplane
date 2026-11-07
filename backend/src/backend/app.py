@@ -38,9 +38,11 @@ def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
     install_request_logging(app)
     composition = Composition(
-        _core_feature(),
-        *FEATURES,
-        _overrides_feature(provider_overrides),
+        features=(
+            _core_feature(),
+            *FEATURES,
+            _overrides_feature(provider_overrides),
+        ),
         errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
         router_factory=lambda: CanonRouter(prefix=API_PREFIX),
     )

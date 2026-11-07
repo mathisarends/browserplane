@@ -53,10 +53,8 @@ export interface BrowserNotFoundProblem {
   title: "Browser not found";
   status: 404;
   code: "browser_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -86,10 +84,8 @@ export interface RequestValidationProblem {
   title: "Request validation failed";
   status: 422;
   code: "request_validation_error";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   errors: RequestValidationProblemErrorsItem[];
   [key: string]: unknown;
 }
@@ -136,10 +132,8 @@ export interface AuthenticationProfileNotFoundProblem {
   title: "Authentication profile not found";
   status: 404;
   code: "authentication_profile_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -151,10 +145,8 @@ export interface BrowserCheckpointNotFoundProblem {
   title: "Browser checkpoint not found";
   status: 404;
   code: "browser_checkpoint_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -166,10 +158,8 @@ export interface SessionRequestTimedOutProblem {
   title: "No browser became available before the deadline";
   status: 408;
   code: "session_request_timed_out";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   request_id: string;
   [key: string]: unknown;
 }
@@ -182,10 +172,8 @@ export interface SessionRequestConflictProblem {
   title: "Request ID already belongs to different input";
   status: 409;
   code: "session_request_conflict";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -197,10 +185,8 @@ export interface SessionRequestCancelledProblem {
   title: "The session request was cancelled";
   status: 409;
   code: "session_request_cancelled";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   request_id: string;
   [key: string]: unknown;
 }
@@ -213,10 +199,8 @@ export interface SessionNotFoundProblem {
   title: "Session not found";
   status: 404;
   code: "session_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -232,10 +216,8 @@ export interface SessionNotActiveProblem {
   title: "Session is suspended and holds no browser";
   status: 409;
   code: "session_not_active";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -247,10 +229,8 @@ export interface BrowserStateTransferFailedProblem {
   title: "Could not transfer the browser state";
   status: 503;
   code: "browser_state_transfer_failed";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -295,10 +275,8 @@ export interface DownloadNotFoundProblem {
   title: "Download not found";
   status: 404;
   code: "download_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -357,10 +335,8 @@ export interface SessionNotSuspendedProblem {
   title: "Session is not suspended";
   status: 409;
   code: "session_not_suspended";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 

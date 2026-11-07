@@ -148,8 +148,8 @@ class BrowserAlreadyRunningProblem(BaseModel):
     title: Literal["Worker already runs a browser"]
     status: Literal[409]
     code: Literal["browser_already_running"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class BrowserNotFoundProblem(BaseModel):
@@ -159,8 +159,8 @@ class BrowserNotFoundProblem(BaseModel):
     title: Literal["Browser not found"]
     status: Literal[404]
     code: Literal["browser_not_found"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class BrowserResponse(BaseModel):
@@ -177,8 +177,8 @@ class BrowserStartupFailedProblem(BaseModel):
     title: Literal["Browser failed to start"]
     status: Literal[503]
     code: Literal["browser_startup_failed"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class ScrollPosition(BaseModel):
@@ -210,8 +210,8 @@ class BrowserStateFailedProblem(BaseModel):
     title: Literal["Browser state operation failed"]
     status: Literal[503]
     code: Literal["browser_state_failed"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class BrowserStateInvalidProblem(BaseModel):
@@ -221,8 +221,8 @@ class BrowserStateInvalidProblem(BaseModel):
     title: Literal["Browser state cannot be mounted"]
     status: Literal[422]
     code: Literal["browser_state_invalid"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class BrowserStateSchema(BaseModel):
@@ -245,8 +245,8 @@ class DownloadNotFoundProblem(BaseModel):
     title: Literal["Download not found"]
     status: Literal[404]
     code: Literal["download_not_found"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class DownloadResponse(BaseModel):
@@ -293,8 +293,8 @@ class Problem(BaseModel):
     title: str
     status: int = Field(ge=100, le=599)
     code: str = Field(pattern='^[a-z][a-z0-9_]{2,}$')
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingAlreadyExistsProblem(BaseModel):
@@ -304,8 +304,8 @@ class RecordingAlreadyExistsProblem(BaseModel):
     title: Literal["Browser session already has a recording"]
     status: Literal[409]
     code: Literal["recording_already_exists"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingFailedProblem(BaseModel):
@@ -315,8 +315,8 @@ class RecordingFailedProblem(BaseModel):
     title: Literal["Screen recording failed"]
     status: Literal[503]
     code: Literal["recording_failed"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingNotCompletedProblem(BaseModel):
@@ -326,8 +326,8 @@ class RecordingNotCompletedProblem(BaseModel):
     title: Literal["Recording has no video available"]
     status: Literal[409]
     code: Literal["recording_not_completed"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingNotFoundProblem(BaseModel):
@@ -337,8 +337,8 @@ class RecordingNotFoundProblem(BaseModel):
     title: Literal["Recording not found"]
     status: Literal[404]
     code: Literal["recording_not_found"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingNotRunningProblem(BaseModel):
@@ -348,8 +348,8 @@ class RecordingNotRunningProblem(BaseModel):
     title: Literal["Recording has already been stopped"]
     status: Literal[409]
     code: Literal["recording_not_running"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class RecordingState(StrEnum):
@@ -391,8 +391,8 @@ class RequestValidationProblem(BaseModel):
     title: Literal["Request validation failed"]
     status: Literal[422]
     code: Literal["request_validation_error"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
     errors: list[RequestValidationProblemErrorsItem]
 
 
@@ -409,8 +409,8 @@ class WorkerNotSupervisedProblem(BaseModel):
     title: Literal["Worker has no restart policy"]
     status: Literal[409]
     code: Literal["worker_not_supervised"]
-    detail: str | None = None
-    instance: str | None = None
+    detail: str = None
+    instance: str = None
 
 
 class CaptureAuthenticationStateParams(BaseModel):

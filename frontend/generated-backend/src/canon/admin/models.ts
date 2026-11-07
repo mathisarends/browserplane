@@ -50,10 +50,8 @@ export interface BrowserNotFoundProblem {
   title: "Browser not found";
   status: 404;
   code: "browser_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -83,10 +81,8 @@ export interface RequestValidationProblem {
   title: "Request validation failed";
   status: 422;
   code: "request_validation_error";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   errors: RequestValidationProblemErrorsItem[];
   [key: string]: unknown;
 }
@@ -99,10 +95,8 @@ export interface BrowserProvisioningFailedProblem {
   title: "The browser could not be provisioned on its worker";
   status: 503;
   code: "browser_provisioning_failed";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 

@@ -1,3 +1,3 @@
-from fastapi_rpckit import RpcChannel
+from fastapi_canon.integrations.websockets import RpcChannel
 
 channel = RpcChannel("browser", namespace="")
