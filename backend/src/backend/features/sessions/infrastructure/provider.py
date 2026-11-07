@@ -1,14 +1,11 @@
 from datetime import timedelta
 
 from dishka import AsyncContainer, Provider, Scope, provide
-from httpx2 import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.features.browsers.application.service import BrowserService
-from backend.features.leases.application.service import LeaseService
-from backend.features.leases.settings import LeaseSettings
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.ports import (
+from backend.features.browsers.application import BrowserService
+from backend.features.leases.application import LeaseService, LeaseSettings
+from backend.features.sessions.application import SessionLeaseKeeper, SessionService
+from backend.features.sessions.domain import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
     BrowserRuntime,
@@ -20,14 +17,12 @@ from backend.features.sessions.infrastructure.browser_worker import (
 from backend.features.sessions.infrastructure.encryption import (
     AuthenticationStateCipher,
 )
-from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
 from backend.features.sessions.infrastructure.repository import (
     SqlAuthenticationProfileRepository,
     SqlBrowserCheckpointRepository,
     SqlSessionRepository,
 )
 from backend.features.sessions.infrastructure.settings import SessionSettings
-from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.database.unit_of_work import ScopedUnitOfWork
 from backend.shared.unit_of_work import UnitOfWork
 
@@ -40,12 +35,15 @@ class SessionProvider(Provider):
 
     @provide(scope=Scope.APP)
     def lease_keeper(
-        self, container: AsyncContainer, settings: LeaseSettings
+        self, sessions: UnitOfWork[SessionService], settings: LeaseSettings
     ) -> SessionLeaseKeeper:
-        return SessionLeaseKeeper(container, settings.heartbeat_interval_seconds)
+        return SessionLeaseKeeper(sessions, settings.heartbeat_interval_seconds)
 
     @provide(scope=Scope.APP)
-    def settings(self) -> SessionSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> SessionSettings:
         return SessionSettings()
 
     @provide(scope=Scope.APP)
@@ -56,27 +54,25 @@ class SessionProvider(Provider):
             settings.authentication_state_encryption_key.get_secret_value()
         )
 
-    @provide(scope=Scope.REQUEST, provides=SessionRepository)
-    def sessions(self, session: AsyncSession) -> SessionRepository:
-        return SqlSessionRepository(session)
+    sessions = provide(
+        SqlSessionRepository, scope=Scope.REQUEST, provides=SessionRepository
+    )
 
-    @provide(scope=Scope.APP, provides=BrowserRuntime)
-    def browser_runtime(
-        self,
-        http: AsyncClient,
-        settings: BrowserWorkerSettings,
-    ) -> BrowserRuntime:
-        return BrowserWorkerRuntime(http, settings)
+    browser_runtime = provide(
+        BrowserWorkerRuntime, scope=Scope.APP, provides=BrowserRuntime
+    )
 
-    @provide(scope=Scope.REQUEST, provides=BrowserCheckpointRepository)
-    def checkpoints(self, session: AsyncSession) -> BrowserCheckpointRepository:
-        return SqlBrowserCheckpointRepository(session)
+    checkpoints = provide(
+        SqlBrowserCheckpointRepository,
+        scope=Scope.REQUEST,
+        provides=BrowserCheckpointRepository,
+    )
 
-    @provide(scope=Scope.REQUEST, provides=AuthenticationProfileRepository)
-    def authentication_profiles(
-        self, session: AsyncSession, cipher: AuthenticationStateCipher
-    ) -> AuthenticationProfileRepository:
-        return SqlAuthenticationProfileRepository(session, cipher)
+    authentication_profiles = provide(
+        SqlAuthenticationProfileRepository,
+        scope=Scope.REQUEST,
+        provides=AuthenticationProfileRepository,
+    )
 
     @provide(scope=Scope.REQUEST)
     def session_service(

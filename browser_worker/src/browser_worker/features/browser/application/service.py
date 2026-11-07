@@ -5,7 +5,7 @@ from browser_worker.features.browser.application.exceptions import (
     BrowserAlreadyRunningException,
     BrowserNotFoundException,
 )
-from browser_worker.features.browser.domain.ports import BrowserProcess
+from browser_worker.features.browser.domain import BrowserProcess
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,15 +53,15 @@ class BrowserService:
             self._process_may_be_running = True
             self._high_water_generation = generation
 
-    def inspect(self) -> RunningBrowser:
-        if self._running is None:
-            raise BrowserNotFoundException
-        return self._running
-
     def upstream_cdp_url(self) -> str:
         """Return the endpoint of the browser currently owned by this worker."""
         browser = self.inspect()
         return browser.upstream_cdp_url
+
+    def inspect(self) -> RunningBrowser:
+        if self._running is None:
+            raise BrowserNotFoundException
+        return self._running
 
     async def prepare_release(self, generation: int) -> bool:
         """Fence the runtime and report whether physical cleanup is required."""
@@ -93,6 +93,15 @@ class BrowserService:
                 return False
             raise BrowserAlreadyRunningException
 
+    async def release(self) -> None:
+        """Best-effort application shutdown independent of control-plane fencing."""
+        async with self._lock:
+            self._running = None
+            self._releasing_generation = None
+            self._poisoned_generation = None
+        if self._process_may_be_running:
+            await self.stop_process()
+
     async def stop_process(self) -> None:
         """Stop Chromium without changing the logical release state."""
         await self._process.stop()
@@ -108,12 +117,3 @@ class BrowserService:
                 self._high_water_generation = generation
             else:
                 self._poisoned_generation = generation
-
-    async def release(self) -> None:
-        """Best-effort application shutdown independent of control-plane fencing."""
-        async with self._lock:
-            self._running = None
-            self._releasing_generation = None
-            self._poisoned_generation = None
-        if self._process_may_be_running:
-            await self.stop_process()

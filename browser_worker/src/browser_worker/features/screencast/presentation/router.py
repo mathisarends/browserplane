@@ -1,19 +1,14 @@
-from enum import StrEnum
 from typing import Annotated
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import Query, WebSocket
 from fastapi_canon import CanonRouter
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.screencast.application.service import ScreencastService
-from browser_worker.features.screencast.domain.ports import FrameStream
-from browser_worker.features.screencast.infrastructure.dirty_rectangles import (
-    DirtyRectangleJpegStream,
-)
-from browser_worker.features.screencast.infrastructure.fmp4 import Fmp4FrameStream
-from browser_worker.features.screencast.infrastructure.settings import (
-    DirtyRectangleSettings,
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.screencast.application import (
+    FramePackager,
+    ScreencastMode,
+    ScreencastService,
 )
 from browser_worker.features.screencast.presentation.websocket import (
     resolve_frames,
@@ -23,21 +18,13 @@ from browser_worker.features.screencast.presentation.websocket import (
 screencast_router = CanonRouter(tags=["browsers"], route_class=DishkaRoute)
 
 
-class ScreencastMode(StrEnum):
-    """How the captured frames are packaged for the client."""
-
-    JPEG = "jpeg"
-    DIRTY_RECTANGLES = "dirty-rectangles"
-    FMP4 = "fmp4"
-
-
 @screencast_router.websocket("/browser/screencast")
 @inject
 async def browser_screencast(
     websocket: WebSocket,
     browsers: FromDishka[BrowserService],
     screencasts: FromDishka[ScreencastService],
-    settings: FromDishka[DirtyRectangleSettings],
+    packager: FromDishka[FramePackager],
     mode: Annotated[
         ScreencastMode, Query(description="How frames are packaged for the client")
     ] = ScreencastMode.JPEG,
@@ -57,18 +44,6 @@ async def browser_screencast(
         return
     await stream_to_websocket(
         websocket,
-        _packaged(frames, mode=mode, settings=settings),
+        packager(frames, mode),
         name=f"Browser screencast ({mode})",
     )
-
-
-def _packaged(
-    frames: FrameStream, *, mode: ScreencastMode, settings: DirtyRectangleSettings
-) -> FrameStream:
-    match mode:
-        case ScreencastMode.JPEG:
-            return frames
-        case ScreencastMode.DIRTY_RECTANGLES:
-            return DirtyRectangleJpegStream(frames, settings)
-        case ScreencastMode.FMP4:
-            return Fmp4FrameStream(frames)

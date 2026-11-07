@@ -58,7 +58,7 @@ duplicated, or coalesced notification harmless.
 
 ```text
 QUEUED ──▶ PROVISIONING ──▶ ASSIGNED     (terminal, carries session_id)
-   │                                     
+   │
    ├──────────────────────▶ CANCELLED    (terminal, caller gave up)
    └──────────────────────▶ EXPIRED      (terminal, deadline passed)
 ```

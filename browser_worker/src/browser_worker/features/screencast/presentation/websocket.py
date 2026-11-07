@@ -5,12 +5,12 @@ from contextlib import suppress
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
-from browser_worker.features.browser.application.exceptions import (
+from browser_worker.features.browser.application import (
     BrowserNotFoundException,
+    BrowserService,
 )
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.screencast.application.service import ScreencastService
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.screencast.application import ScreencastService
+from browser_worker.features.screencast.domain import FrameStream
 
 logger = logging.getLogger(__name__)
 

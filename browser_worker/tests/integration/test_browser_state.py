@@ -9,7 +9,7 @@ import pytest
 
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
-from browser_worker.features.state.application.models import (
+from browser_worker.features.state.application import (
     AuthenticationState,
     BrowserState,
     BrowserTabState,

@@ -24,7 +24,9 @@ proved; incomplete operations remain visible in the check output.
 
 Free functions on `RpcChannel` declare the browser methods. A
 `CanonWebSocketRouter` owns the socket endpoint and OpenRPC contract and is
-installed directly through the browser-tunnel feature. Its `Dishka()` resolver
+installed directly through the sessions feature. The browser-tunnel feature owns
+the RPC channel and rendering adapter; sessions owns lease admission and the
+connection lifetime. Its `Dishka()` resolver
 supplies `Inject[T]` services to the custom session handler; that handler keeps
 the lease heartbeat and CDP browser lifetime around the RPC connection. The backend
 selects a browser from the leased session and supplies it through the connection
@@ -100,7 +102,9 @@ docker build -f backend/Dockerfile -t browserplane-backend:check .
 docker build -f browser_worker/Dockerfile -t browserplane-worker:check .
 ```
 
-`check.py` also accepts `lint`, `test`, `contracts`, and `build`. Tests run once per
+`check.py` also accepts `architecture`, `lint`, `test`, `contracts`, and `build`.
+The architecture mode checks both service policies at warning severity.
+Tests run once per
 workspace member in separate processes, avoiding colliding `tests` package names.
 The browser check needs Docker and Chrome or Playwright Chromium. The worker
 integration tests also need FFmpeg on `PATH`; CI installs both native tools before

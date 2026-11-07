@@ -14,6 +14,7 @@ from backend.features.browser_tunnel.domain import (
 from backend.features.browser_tunnel.domain import (
     BrowserEvent as DomainEvent,
 )
+from backend.features.browser_tunnel.presentation.rpc.channel import channel
 from backend.features.browser_tunnel.presentation.rpc.models import (
     BrowserCursorEvent,
     BrowserEvent,
@@ -23,8 +24,6 @@ from backend.features.browser_tunnel.presentation.rpc.models import (
     BrowserTargetDetachedEvent,
     tabs_result,
 )
-
-from .channel import channel
 
 
 @channel.event(

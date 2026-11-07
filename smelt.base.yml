@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathisarends/smelt/v0.5.0/smelt.schema.json
+version: 1
+architecture:
+  layers:
+    domain:
+      path: domain
+      may_depend_on: []
+      third_party:
+        default: deny
+    application:
+      path: application
+      may_depend_on:
+      - domain
+      third_party:
+        default: deny
+        allow:
+        - pydantic
+    infrastructure:
+      path: infrastructure
+      may_depend_on:
+      - domain
+      - application
+      third_party:
+        default: allow
+        deny:
+        - backend
+        - browser_worker
+    presentation:
+      path: presentation
+      may_depend_on:
+      - domain
+      - application
+      third_party:
+        default: allow
+        deny:
+        - backend
+        - browser_worker
+        - generated
+  imports:
+    transitive: true
+    type_checking: include
+    cycles:
+    - modules
+rules:
+  layer-boundary: error
+  cross-feature-import: error
+  third-party-denied: error
+  import-cycle: error
+  shared-imports-feature: error
+  composition-root-leak: error
+  private-module-import: error
+  package-import-fanout: warning
+  facade-export-gap: warning
+  unknown-layer: error
+  forbidden-package-name: error
+  unclassified-module: error
+  incomplete-coverage: error
+  missing-required-module: error
+  import-style: error
+  forbidden-future-annotations: error
+  unnecessary-future-annotations: warning
+  no-private-modules: error
+  public-definitions-first: error
+  bundled-instance-assignment: error
+  prefer-match-type-dispatch: warning
+  internal-public-member: warning
+  internal-static-helper: warning
+  redundant-str-enum-value: warning
+  prefer-package-import: warning
+  internal-public-module-symbol: warning
+  implicit-optional-default: warning
+  deep-object-navigation: hint
+  no-base-class-prefix: error
+  prefer-str-enum-discriminator: warning
+  no-base-class-suffix: error
+  secret-settings-field: warning
+  redundant-dishka-provider: warning
+  caller-before-callee: warning
+  package-only-dunder-all: error
+  test-location: error
+  private-test-access: error
+  forbidden-test-mock: error
+  string-patch-target: error
+  excessive-test-patches: error
+  test-without-outcome-check: warning
+  test-only-checks-possibly-empty-data: warning
+  unbounded-test-wait: warning
+  independent-test-case-loop: warning
+  async-mock-without-await-check: warning
+  test-only-public-function: warning
+  test-only-public-attribute: warning
+  nondeterministic-test-data: warning
+  unused-suppression: warning
+  suppression-without-reason: error
+  resolved-debt: warning
+tests:
+  layout: mirror
+  mirror: '{path}/test_{module}.py'
+  forbid_mocks_in:
+  - '**/tests/**/domain/**'
+  max_patches_per_test: 2
+suppressions:
+  require_reason: true

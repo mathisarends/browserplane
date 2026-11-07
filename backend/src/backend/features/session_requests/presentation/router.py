@@ -2,14 +2,14 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import Request, status
-from fastapi_canon import CanonRouter
+from fastapi_canon import CanonRouter, ErrorRegistry
 
-from backend.features.session_requests.application.acquisition import (
+from backend.features.session_requests.application import (
+    ControlPlane,
     OpenSessionCommand,
     ResumeSessionCommand,
     SessionAcquisition,
 )
-from backend.features.session_requests.application.control_plane import ControlPlane
 from backend.features.session_requests.presentation.errors import (
     SESSION_REQUEST_CANCELLED,
     SESSION_REQUEST_CONFLICT,
@@ -37,22 +37,34 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
 )
 from backend.presentation.disconnect import while_connected
-from backend.presentation.error_registry import API_ERRORS
 
 # Taking a browser is a request that waits; everything a session does
 # afterwards is immediate. The two live apart for that reason, not because
 # their URLs differ.
-ACQUIRE_ERRORS = (
+_ACQUIRE_ERRORS = (
     SESSION_REQUEST_CONFLICT,
     SESSION_REQUEST_TIMED_OUT,
     SESSION_REQUEST_CANCELLED,
 )
+_ROUTE_ERRORS = ErrorRegistry(
+    name="session_requests-routes",
+    errors=(
+        *_ACQUIRE_ERRORS,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
+        SESSION_REQUEST_NOT_FOUND,
+        SESSION_NOT_FOUND,
+        SESSION_NOT_SUSPENDED,
+        SESSION_NOT_ACTIVE,
+    ),
+)
+
 acquisition_router = CanonRouter(
     route_class=DishkaRoute,
     tags=["sessions"],
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
     raises=(
-        *ACQUIRE_ERRORS,
+        *_ACQUIRE_ERRORS,
         AUTHENTICATION_PROFILE_NOT_FOUND,
         BROWSER_CHECKPOINT_NOT_FOUND,
     ),
@@ -60,7 +72,7 @@ acquisition_router = CanonRouter(
 session_request_router = CanonRouter(
     route_class=DishkaRoute,
     tags=["session-requests"],
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
     raises=(SESSION_REQUEST_NOT_FOUND,),
 )
 

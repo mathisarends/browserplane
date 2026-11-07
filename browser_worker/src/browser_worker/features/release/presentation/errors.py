@@ -1,9 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from browser_worker.features.release.application.exceptions import (
-    WorkerNotSupervisedException,
-)
+from browser_worker.features.release.application import WorkerNotSupervisedException
 
 WORKER_NOT_SUPERVISED = Error(
     WorkerNotSupervisedException,
@@ -13,5 +11,5 @@ WORKER_NOT_SUPERVISED = Error(
     detail=str,
 )
 
-API_ERRORS = (WORKER_NOT_SUPERVISED,)
-ERRORS = ErrorRegistry(name="release", errors=API_ERRORS)
+_API_ERRORS = (WORKER_NOT_SUPERVISED,)
+ERRORS = ErrorRegistry(name="release", errors=_API_ERRORS)

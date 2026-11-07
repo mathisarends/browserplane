@@ -1,4 +1,4 @@
-from .browser import (
+from backend.features.browser_tunnel.domain.browser import (
     Browser,
     BrowserClipboard,
     BrowserEvent,

@@ -12,7 +12,7 @@ from backend.features.session_requests.infrastructure.notifications import (
 from backend.observability import configure_logging
 
 
-async def main():
+async def _main():
     container = create_container(FEATURES)
     try:
         listener = await container.get(PostgresListener)
@@ -26,4 +26,4 @@ async def main():
 if __name__ == "__main__":
     configure_logging()
     with suppress(KeyboardInterrupt):
-        asyncio.run(main())
+        asyncio.run(_main())

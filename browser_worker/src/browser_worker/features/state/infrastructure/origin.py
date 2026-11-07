@@ -8,9 +8,7 @@ from cdpify.domains.fetch.events import FetchEvent, RequestPausedEvent
 from cdpify.domains.fetch.types import HeaderEntry, RequestPattern
 from cdpify.domains.page.events import LoadEventFiredEvent, PageEvent
 
-from browser_worker.features.state.application.exceptions import (
-    BrowserStateFailedException,
-)
+from browser_worker.features.state.application import BrowserStateFailedException
 
 _BLANK_URL = "about:blank"
 _EMPTY_DOCUMENT = base64.b64encode(b"<!doctype html><title>storage</title>").decode()

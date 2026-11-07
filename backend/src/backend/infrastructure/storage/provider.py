@@ -8,11 +8,17 @@ from backend.infrastructure.storage.settings import StorageSettings
 
 class StorageProvider(Provider):
     @provide(scope=Scope.APP)
-    def settings(self) -> StorageSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> StorageSettings:
         return StorageSettings()
 
     @provide(scope=Scope.APP)
-    def credentials(self) -> StorageCredentials:
+    def credentials(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> StorageCredentials:
         return StorageCredentials()
 
     @provide(scope=Scope.APP)

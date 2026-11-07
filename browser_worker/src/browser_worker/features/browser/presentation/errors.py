@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from browser_worker.features.browser.application.exceptions import (
+from browser_worker.features.browser.application import (
     BrowserAlreadyRunningException,
     BrowserNotFoundException,
     BrowserStartupException,
@@ -29,9 +29,9 @@ BROWSER_STARTUP_FAILED = Error(
     detail=str,
 )
 
-API_ERRORS = (
+_API_ERRORS = (
     BROWSER_NOT_FOUND,
     BROWSER_ALREADY_RUNNING,
     BROWSER_STARTUP_FAILED,
 )
-ERRORS = ErrorRegistry(name="browser", errors=API_ERRORS)
+ERRORS = ErrorRegistry(name="browser", errors=_API_ERRORS)

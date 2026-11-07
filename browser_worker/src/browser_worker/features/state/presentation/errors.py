@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from browser_worker.features.state.application.exceptions import (
+from browser_worker.features.state.application import (
     BrowserStateFailedException,
     BrowserStateInvalidException,
 )
@@ -21,5 +21,5 @@ BROWSER_STATE_FAILED = Error(
     detail=str,
 )
 
-API_ERRORS = (BROWSER_STATE_INVALID, BROWSER_STATE_FAILED)
-ERRORS = ErrorRegistry(name="state", errors=API_ERRORS)
+_API_ERRORS = (BROWSER_STATE_INVALID, BROWSER_STATE_FAILED)
+ERRORS = ErrorRegistry(name="state", errors=_API_ERRORS)

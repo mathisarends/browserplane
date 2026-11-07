@@ -5,8 +5,7 @@ from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, select
 
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.leases.domain.ports import LeaseStore
+from backend.features.leases.domain import Lease, LeaseState, LeaseStore
 from backend.infrastructure.database.models import LeaseModel
 from backend.infrastructure.database.repository import SqlRepository
 
@@ -54,7 +53,7 @@ class SqlLeaseStore(SqlRepository[LeaseModel, Lease], LeaseStore):
     async def list_current(self) -> tuple[Lease, ...]:
         statement = (
             select(LeaseModel)
-            .where(LeaseModel.state != LeaseState.RELEASED.value)
+            .where(LeaseModel.state != LeaseState.RELEASED)
             .order_by(LeaseModel.created_at.desc())
         )
         models = (await self._session.scalars(statement)).all()
@@ -74,9 +73,9 @@ class SqlLeaseStore(SqlRepository[LeaseModel, Lease], LeaseStore):
             select(LeaseModel)
             .where(
                 or_(
-                    (LeaseModel.state == LeaseState.ACTIVE.value)
+                    (LeaseModel.state == LeaseState.ACTIVE)
                     & (LeaseModel.reclaim_after <= now),
-                    (LeaseModel.state == LeaseState.FAILED.value)
+                    (LeaseModel.state == LeaseState.FAILED)
                     & (LeaseModel.cleanup_retry_at <= now),
                 )
             )

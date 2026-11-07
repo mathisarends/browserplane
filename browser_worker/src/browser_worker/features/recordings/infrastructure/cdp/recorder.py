@@ -4,11 +4,11 @@ from collections.abc import AsyncGenerator
 from contextlib import aclosing, suppress
 from pathlib import Path
 
-from browser_worker.features.recordings.application.exceptions import (
+from browser_worker.features.recordings.application import (
+    RecordedVideo,
     RecordingFailedException,
+    ScreenRecorder,
 )
-from browser_worker.features.recordings.application.models import RecordedVideo
-from browser_worker.features.recordings.application.ports import ScreenRecorder
 from browser_worker.features.recordings.infrastructure.cdp.container import (
     container_format,
     read_signature,

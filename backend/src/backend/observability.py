@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from uvicorn.config import LOGGING_CONFIG
 
-FORMAT = "%(levelname)s:%(name)s:%(message)s"
+_FORMAT = "%(levelname)s:%(name)s:%(message)s"
 
 
 class LoggingSettings(BaseSettings):
@@ -24,7 +24,7 @@ def uvicorn_log_config(settings: LoggingSettings | None = None) -> dict[str, Any
     """Uvicorn's own config, extended with a handler for backend loggers."""
     settings = settings or LoggingSettings()
     config = deepcopy(LOGGING_CONFIG)
-    config["formatters"]["backend"] = {"format": FORMAT}
+    config["formatters"]["backend"] = {"format": _FORMAT}
     config["handlers"]["backend"] = {
         "class": "logging.StreamHandler",
         "formatter": "backend",
@@ -41,4 +41,4 @@ def uvicorn_log_config(settings: LoggingSettings | None = None) -> dict[str, Any
 def configure_logging(settings: LoggingSettings | None = None) -> None:
     """Configure logging for a process that does not run under uvicorn."""
     settings = settings or LoggingSettings()
-    logging.basicConfig(level=settings.log_level, format=FORMAT)
+    logging.basicConfig(level=settings.log_level, format=_FORMAT)

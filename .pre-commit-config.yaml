@@ -1,4 +1,14 @@
 repos:
+  - repo: local
+    hooks:
+      - id: smelt
+        name: Smelt architecture and code quality
+        entry: uv run --locked python scripts/check.py architecture --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        require_serial: true
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.4
     hooks:

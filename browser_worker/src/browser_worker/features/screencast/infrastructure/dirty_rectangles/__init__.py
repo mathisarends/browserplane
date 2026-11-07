@@ -1,6 +1,14 @@
-from .encoder import encode_update
-from .models import EncodedUpdate, EncodingMetrics, RgbFrame
-from .stream import DirtyRectangleJpegStream
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.encoder import (
+    encode_update,
+)
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.models import (
+    EncodedUpdate,
+    EncodingMetrics,
+    RgbFrame,
+)
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.stream import (
+    DirtyRectangleJpegStream,
+)
 
 __all__ = [
     "DirtyRectangleJpegStream",

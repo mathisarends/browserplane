@@ -1,5 +1,5 @@
-from backend.features.sessions.application.exceptions import SessionNotFoundException
+from backend.exceptions import BackendException
 
 
-class LeaseNotFoundException(SessionNotFoundException):
+class LeaseNotFoundException(BackendException):
     message = "Lease not found"

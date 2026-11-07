@@ -1,6 +1,6 @@
 from fastapi_canon import Feature
 
-from browser_worker.features.state.infrastructure import BrowserStateProvider
+from browser_worker.features.state.infrastructure.provider import BrowserStateProvider
 from browser_worker.features.state.presentation.errors import ERRORS
 from browser_worker.features.state.presentation.router import browser_state_router
 

@@ -22,9 +22,7 @@ from backend.features.browser_tunnel.infrastructure.cdp_browser.active_page impo
 )
 from backend.features.browser_tunnel.infrastructure.cdp_browser.page import CdpPage
 from backend.features.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs
-from backend.features.browser_tunnel.infrastructure.events.stream import (
-    BrowserEventStream,
-)
+from backend.features.browser_tunnel.infrastructure.events import BrowserEventStream
 from backend.features.browser_tunnel.infrastructure.settings import BrowserSettings
 from backend.features.browser_tunnel.infrastructure.target_event_bridge import (
     TargetEventBridge,

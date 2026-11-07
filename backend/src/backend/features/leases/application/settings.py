@@ -1,15 +1,8 @@
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class LeaseSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="BACKEND_LEASE_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        frozen=True,
-    )
+class LeaseSettings(BaseModel):
+    model_config = ConfigDict(frozen=True)
 
     heartbeat_interval_seconds: int = Field(default=10, gt=0)
     ttl_seconds: int = Field(default=30, gt=0)

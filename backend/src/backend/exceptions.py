@@ -16,6 +16,6 @@ class BackendException(Exception):
         *,
         details: dict[str, Any] | None = None,
     ) -> None:
-        self.message = message or type(self).message
-        self.details = details or {}
+        self.message = message if message is not None else type(self).message
+        self.details = details if details is not None else {}
         super().__init__(self.message)

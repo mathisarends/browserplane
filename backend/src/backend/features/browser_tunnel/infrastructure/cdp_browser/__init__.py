@@ -1,11 +1,15 @@
-from .browser import CdpBrowser
-from .clipboard import (
+from backend.features.browser_tunnel.infrastructure.cdp_browser.browser import (
+    CdpBrowser,
+)
+from backend.features.browser_tunnel.infrastructure.cdp_browser.clipboard import (
     CdpClipboard,
     ClipboardUnavailableError,
 )
-from .input import CdpInput
-from .navigation import CdpNavigation
-from .tabs import CdpTabs
+from backend.features.browser_tunnel.infrastructure.cdp_browser.input import CdpInput
+from backend.features.browser_tunnel.infrastructure.cdp_browser.navigation import (
+    CdpNavigation,
+)
+from backend.features.browser_tunnel.infrastructure.cdp_browser.tabs import CdpTabs
 
 __all__ = [
     "CdpBrowser",

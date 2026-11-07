@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from backend.features.sessions.domain.models import SessionStatus
+from backend.features.sessions.domain import SessionStatus
 
 
 class OpenSessionRequest(BaseModel):

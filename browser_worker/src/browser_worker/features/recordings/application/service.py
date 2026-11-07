@@ -4,7 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.application import BrowserService
 from browser_worker.features.recordings.application.exceptions import (
     RecordingAlreadyExistsException,
     RecordingNotCompletedException,
@@ -17,7 +17,7 @@ from browser_worker.features.recordings.application.models import (
     RecordingState,
 )
 from browser_worker.features.recordings.application.ports import ScreenRecorder
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.workspace.application import Workspace
 
 RecorderFactory = Callable[[str], ScreenRecorder]
 
@@ -93,12 +93,6 @@ class RecordingService:
             self._recording = completed
             return completed
 
-    def get(self, recording_id: UUID) -> Recording:
-        recording = self._recording
-        if recording is None or recording.id != recording_id:
-            raise RecordingNotFoundException
-        return recording
-
     def file(self, recording_id: UUID) -> RecordingFile:
         recording = self.get(recording_id)
         video = recording.video
@@ -109,6 +103,12 @@ class RecordingService:
             media_type=video.format.media_type,
             filename=f"{recording_id}.{video.format.value}",
         )
+
+    def get(self, recording_id: UUID) -> Recording:
+        recording = self._recording
+        if recording is None or recording.id != recording_id:
+            raise RecordingNotFoundException
+        return recording
 
     async def release(self) -> None:
         """Close the active recorder and forget the in-memory history.

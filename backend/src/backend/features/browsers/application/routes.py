@@ -2,7 +2,7 @@ from enum import StrEnum
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from uuid import UUID
 
-from backend.features.browsers.domain.models import BrowserSlot
+from backend.features.browsers.domain import BrowserSlot
 
 _BROWSER_PATH = "/api/v1/browser"
 

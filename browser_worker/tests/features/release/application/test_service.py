@@ -5,17 +5,24 @@ from typing import cast
 import pytest
 from tests.fakes import FakeBrowserProcess, FakeFrameStream
 
-from browser_worker.features.browser.application.exceptions import (
+from browser_worker.features.browser.application import (
     BrowserNotFoundException,
+    BrowserService,
 )
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.downloads.application.service import DownloadService
-from browser_worker.features.recordings.application.ports import ScreenRecorder
-from browser_worker.features.recordings.application.service import RecordingService
-from browser_worker.features.release.application.service import WorkerReleaseService
-from browser_worker.features.release.application.settings import ReleaseSettings
-from browser_worker.features.screencast.application.service import ScreencastService
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.downloads.application import DownloadService
+from browser_worker.features.downloads.infrastructure.cdp import CdpDownloadStore
+from browser_worker.features.recordings.application import (
+    RecordingService,
+    ScreenRecorder,
+)
+from browser_worker.features.release.application import (
+    ReleaseSettings,
+    WorkerReleaseService,
+)
+from browser_worker.features.screencast.application import ScreencastService
+from browser_worker.features.workspace.infrastructure.filesystem import (
+    FilesystemWorkspace,
+)
 
 
 class BlockingBrowserProcess(FakeBrowserProcess):
@@ -36,11 +43,11 @@ async def test_release_returns_worker_to_its_empty_initial_state(
 ) -> None:
     process = FakeBrowserProcess()
     browsers = BrowserService(process)
-    workspace = Workspace(tmp_path / "workspace")
+    workspace = FilesystemWorkspace(tmp_path / "workspace")
     workspace.ensure()
     for directory in workspace.directories:
         (directory / "owned-file").write_text("worker state", encoding="utf-8")
-    downloads = DownloadService(browsers, workspace)
+    downloads = DownloadService(browsers, CdpDownloadStore(workspace))
     recordings = RecordingService(
         browsers,
         workspace,
@@ -72,10 +79,10 @@ async def test_release_is_shared_and_shielded_from_caller_cancellation(
 ) -> None:
     process = BlockingBrowserProcess()
     browsers = BrowserService(process)
-    workspace = Workspace(tmp_path / "workspace")
+    workspace = FilesystemWorkspace(tmp_path / "workspace")
     release = WorkerReleaseService(
         browsers,
-        DownloadService(browsers, workspace),
+        DownloadService(browsers, CdpDownloadStore(workspace)),
         RecordingService(
             browsers,
             workspace,
@@ -88,12 +95,12 @@ async def test_release_is_shared_and_shielded_from_caller_cancellation(
     await browsers.create(7)
 
     first_caller = asyncio.create_task(release.release(7))
-    await process.stop_started.wait()
+    await asyncio.wait_for(process.stop_started.wait(), timeout=2)
     second_caller = asyncio.create_task(release.release(7))
     first_caller.cancel()
     with pytest.raises(asyncio.CancelledError):
-        await first_caller
+        await asyncio.wait_for(first_caller, timeout=2)
 
     process.allow_stop.set()
-    await second_caller
+    await asyncio.wait_for(second_caller, timeout=2)
     assert process.stop_count == 1

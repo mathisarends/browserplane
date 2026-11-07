@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from backend.features.recordings.application.exceptions import (
+from backend.features.recordings.application import (
     RecordingAlreadyExistsException,
     RecordingNotFoundException,
     RecordingNotRunningException,
@@ -37,10 +37,10 @@ RECORDING_TRANSFER_FAILED = Error(
     detail=str,
 )
 
-API_ERRORS = (
+_API_ERRORS = (
     RECORDING_NOT_FOUND,
     RECORDING_ALREADY_EXISTS,
     RECORDING_NOT_RUNNING,
     RECORDING_TRANSFER_FAILED,
 )
-ERRORS = ErrorRegistry(name="recordings", errors=API_ERRORS)
+ERRORS = ErrorRegistry(name="recordings", errors=_API_ERRORS)

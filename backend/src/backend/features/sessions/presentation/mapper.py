@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from backend.features.sessions.domain.models import (
+from backend.features.sessions.domain import (
     AuthenticationProfile,
     BrowserCheckpoint,
     ResolvedSession,
@@ -13,7 +13,16 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
 )
 
-SESSION_PATH = "/api/v1/sessions"
+_SESSION_PATH = "/api/v1/sessions"
+
+
+def to_open_session_response(
+    session: ResolvedSession, *, remaining_capacity: int
+) -> OpenSessionResponse:
+    return OpenSessionResponse(
+        **to_session_response(session).model_dump(),
+        remaining_capacity=remaining_capacity,
+    )
 
 
 def to_session_response(context: ResolvedSession) -> SessionResponse:
@@ -29,19 +38,10 @@ def to_session_response(context: ResolvedSession) -> SessionResponse:
         lease_generation=context.lease_generation,
         reclaim_after=context.reclaim_after,
         browser_id=context.browser_id,
-        tunnel_path=(f"{SESSION_PATH}/{session.id}/tunnel" if has_browser else None),
+        tunnel_path=(f"{_SESSION_PATH}/{session.id}/tunnel" if has_browser else None),
         screencast_path=(
-            f"{SESSION_PATH}/{session.id}/screencast" if has_browser else None
+            f"{_SESSION_PATH}/{session.id}/screencast" if has_browser else None
         ),
-    )
-
-
-def to_open_session_response(
-    session: ResolvedSession, *, remaining_capacity: int
-) -> OpenSessionResponse:
-    return OpenSessionResponse(
-        **to_session_response(session).model_dump(),
-        remaining_capacity=remaining_capacity,
     )
 
 

@@ -1,11 +1,10 @@
 from collections.abc import Sequence
 from uuid import UUID, uuid5
 
-from backend.features.browsers.domain.models import BrowserWorker
-from backend.features.browsers.domain.ports import BrowserWorkerDirectory
+from backend.features.browsers.domain import BrowserWorker, BrowserWorkerDirectory
 from backend.features.browsers.infrastructure.settings import BrowserPoolSettings
 
-WORKER_NAMESPACE = UUID("8499344b-3ea4-4fc4-b55f-5233d87d3db9")
+_WORKER_NAMESPACE = UUID("8499344b-3ea4-4fc4-b55f-5233d87d3db9")
 
 
 class StaticBrowserWorkerDirectory(BrowserWorkerDirectory):
@@ -21,6 +20,6 @@ class StaticBrowserWorkerDirectory(BrowserWorkerDirectory):
 
     async def snapshot(self) -> Sequence[BrowserWorker]:
         return tuple(
-            BrowserWorker(uuid5(WORKER_NAMESPACE, url), url)
+            BrowserWorker(uuid5(_WORKER_NAMESPACE, url), url)
             for url in self._settings.worker_urls
         )

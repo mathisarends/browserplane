@@ -1,7 +1,7 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi_canon import CanonRouter
 
-from browser_worker.features.health.application.service import HealthService
+from browser_worker.features.health.application import HealthService
 from browser_worker.features.health.presentation.schemas import HealthResponse
 
 health_router = CanonRouter(tags=["health"], route_class=DishkaRoute)

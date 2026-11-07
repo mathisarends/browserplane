@@ -8,7 +8,10 @@ from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 
 class BrowserWorkerProvider(Provider):
     @provide(scope=Scope.APP)
-    def settings(self) -> BrowserWorkerSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> BrowserWorkerSettings:
         return BrowserWorkerSettings()
 
     @provide(scope=Scope.APP)

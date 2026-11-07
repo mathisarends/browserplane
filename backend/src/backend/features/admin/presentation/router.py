@@ -1,9 +1,9 @@
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from fastapi_canon import CanonRouter
+from fastapi_canon import CanonRouter, ErrorRegistry
 
-from backend.features.admin.application.service import AdminService
+from backend.features.admin.application import AdminService
 from backend.features.admin.presentation.mapper import (
     to_browser_response,
     to_pooled_browser_response,
@@ -13,15 +13,24 @@ from backend.features.browsers.presentation.errors import (
     BROWSER_NOT_FOUND,
     BROWSER_PROVISIONING_FAILED,
 )
+from backend.features.sessions.presentation.errors import SESSION_NOT_FOUND
 from backend.features.sessions.presentation.mapper import to_session_response
 from backend.features.sessions.presentation.schemas import SessionResponse
-from backend.presentation.error_registry import API_ERRORS
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="admin-routes",
+    errors=(
+        BROWSER_NOT_FOUND,
+        BROWSER_PROVISIONING_FAILED,
+        SESSION_NOT_FOUND,
+    ),
+)
 
 admin_router = CanonRouter(
     prefix="/admin",
     route_class=DishkaRoute,
     tags=["admin"],
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
 )
 
 
@@ -67,7 +76,7 @@ async def restart_pooled_browser(
     "/sessions",
     response_model=list[SessionResponse],
     operation_id="list_sessions",
-    raises=(BROWSER_NOT_FOUND,),
+    raises=(BROWSER_NOT_FOUND, SESSION_NOT_FOUND),
 )
 async def list_sessions(service: FromDishka[AdminService]) -> list[SessionResponse]:
     sessions = await service.list_sessions()

@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fakes.session_repositories import (
@@ -13,16 +13,16 @@ from fakes.session_resources import (
     FakeSessionLeases,
 )
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.sessions.application.exceptions import (
+from backend.features.browsers.domain import Browser, BrowserSlot
+from backend.features.leases.domain import Lease, LeaseState
+from backend.features.sessions.application import (
     AuthenticationProfileNotFoundException,
     BrowserCheckpointNotFoundException,
     DownloadNotFoundException,
     SessionNotActiveException,
+    SessionService,
 )
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import Download, Session, SessionStatus
+from backend.features.sessions.domain import Download, Session, SessionStatus
 
 
 def _active_resources() -> tuple[Browser, Lease, Session]:
@@ -175,7 +175,7 @@ async def test_suspending_captures_state_then_releases_the_active_lease() -> Non
 async def test_listing_expires_parked_sessions_and_reaping_closes_active_ones() -> None:
     browser, lease, active = _active_resources()
     expired = Session(
-        id=uuid4(),
+        id=UUID(int=17),
         owner_id=active.owner_id,
         status=SessionStatus.SUSPENDED,
         created_at=datetime.now(UTC) - timedelta(hours=2),
@@ -187,7 +187,7 @@ async def test_listing_expires_parked_sessions_and_reaping_closes_active_ones() 
     await sessions.save(expired)
 
     listed = await service.list(owner_id=active.owner_id)
-    leases.reaped = (active.id, uuid4())
+    leases.reaped = (active.id, UUID(int=18))
     released = await service.reap_expired()
 
     assert [item.session.status for item in listed] == [

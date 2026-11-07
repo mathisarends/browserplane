@@ -1,15 +1,8 @@
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class ReleaseSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_prefix="BROWSER_WORKER_RELEASE_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        frozen=True,
-    )
+class ReleaseSettings(BaseModel):
+    model_config = ConfigDict(frozen=True)
 
     recording_timeout: float = Field(default=5, gt=0)
     downloads_timeout: float = Field(default=5, gt=0)
@@ -19,16 +12,10 @@ class ReleaseSettings(BaseSettings):
     total_timeout: float = Field(default=20, gt=0)
 
 
-class RestartSettings(BaseSettings):
+class RestartSettings(BaseModel):
     """How this worker may hand itself back to whatever supervises it."""
 
-    model_config = SettingsConfigDict(
-        env_prefix="BROWSER_WORKER_RESTART_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        frozen=True,
-    )
+    model_config = ConfigDict(frozen=True)
 
     # Ending the process only replaces the worker where something restarts it.
     # Without that promise the slot would be lost instead of recovered, so the

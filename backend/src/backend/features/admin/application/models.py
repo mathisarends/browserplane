@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from backend.features.browsers.domain.models import Browser
-from backend.features.leases.domain.models import Lease
+from backend.features.browsers.domain import Browser
+from backend.features.leases.domain import Lease
 
 
 @dataclass(frozen=True, slots=True)

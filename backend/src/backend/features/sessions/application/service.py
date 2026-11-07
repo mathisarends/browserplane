@@ -3,9 +3,8 @@ import logging
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from backend.features.browsers.application.service import BrowserService
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.application.service import LeaseService
+from backend.features.browsers.application import BrowserService
+from backend.features.leases.application import LeaseNotFoundException, LeaseService
 from backend.features.sessions.application.exceptions import (
     AuthenticationProfileNotFoundException,
     BrowserCheckpointNotFoundException,
@@ -14,20 +13,18 @@ from backend.features.sessions.application.exceptions import (
     SessionNotFoundException,
     SessionNotSuspendedException,
 )
-from backend.features.sessions.domain.models import (
+from backend.features.sessions.domain import (
     AuthenticationProfile,
+    AuthenticationProfileRepository,
     BrowserCheckpoint,
+    BrowserCheckpointRepository,
+    BrowserRuntime,
     BrowserStateDocument,
     Download,
     ResolvedSession,
     Session,
-    SessionStatus,
-)
-from backend.features.sessions.domain.ports import (
-    AuthenticationProfileRepository,
-    BrowserCheckpointRepository,
-    BrowserRuntime,
     SessionRepository,
+    SessionStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,48 +58,15 @@ class SessionService:
         session = await self._session(session_id)
         if session.status is not SessionStatus.ACTIVE:
             return ResolvedSession.inactive(session)
-        lease = await self._leases.inspect(session_id)
-        return ResolvedSession.active(
-            session=session,
-            lease=lease,
-            browser=await self._browsers.get(lease.browser_id),
-        )
-
-    async def get_active(self, session_id: UUID) -> ResolvedSession:
-        session = await self._session(session_id)
-        if session.status is not SessionStatus.ACTIVE:
-            raise SessionNotActiveException()
         try:
-            lease = await self._leases.get(session_id)
+            lease = await self._leases.inspect(session_id)
         except LeaseNotFoundException as error:
-            raise SessionNotActiveException() from error
+            raise SessionNotFoundException() from error
         return ResolvedSession.active(
             session=session,
             lease=lease,
             browser=await self._browsers.get(lease.browser_id),
         )
-
-    async def list(self, owner_id: UUID | None = None) -> tuple[ResolvedSession, ...]:
-        result: list[ResolvedSession] = []
-        for session in await self._sessions.list():
-            if session.status is SessionStatus.SUSPENDED and session.is_expired(
-                datetime.now(UTC)
-            ):
-                session = await self._sessions.save(session.close())
-            if session.status is SessionStatus.ACTIVE:
-                lease = await self._leases.inspect(session.id)
-                result.append(
-                    ResolvedSession.active(
-                        session=session,
-                        lease=lease,
-                        browser=await self._browsers.get(lease.browser_id),
-                    )
-                )
-            else:
-                result.append(ResolvedSession.inactive(session))
-        if owner_id is None:
-            return tuple(result)
-        return tuple(item for item in result if item.owner_id == owner_id)
 
     async def capture_browser(self, session_id: UUID) -> BrowserStateDocument:
         session = await self.get_active(session_id)
@@ -159,19 +123,6 @@ class SessionService:
             )
         )
 
-    async def get_browser_checkpoint(self, checkpoint_id: UUID) -> BrowserCheckpoint:
-        checkpoint = await self._checkpoints.get_by_id(checkpoint_id=checkpoint_id)
-        if checkpoint is None:
-            raise BrowserCheckpointNotFoundException()
-        return checkpoint
-
-    async def list_browser_checkpoints(self) -> tuple[BrowserCheckpoint, ...]:
-        return await self._checkpoints.list()
-
-    async def delete_browser_checkpoint(self, checkpoint_id: UUID) -> None:
-        if not await self._checkpoints.delete(checkpoint_id):
-            raise BrowserCheckpointNotFoundException()
-
     async def create_authentication_profile(
         self, session_id: UUID, *, name: str
     ) -> AuthenticationProfile:
@@ -186,17 +137,6 @@ class SessionService:
                 created_at=datetime.now(UTC),
             )
         )
-
-    async def get_authentication_profile(
-        self, profile_id: UUID
-    ) -> AuthenticationProfile:
-        profile = await self._authentication_profiles.get_by_id(profile_id=profile_id)
-        if profile is None:
-            raise AuthenticationProfileNotFoundException()
-        return profile
-
-    async def list_authentication_profiles(self) -> tuple[AuthenticationProfile, ...]:
-        return await self._authentication_profiles.list()
 
     async def update_authentication_profile(
         self, profile_id: UUID, *, session_id: UUID, name: str
@@ -213,10 +153,6 @@ class SessionService:
                 created_at=current.created_at,
             )
         )
-
-    async def delete_authentication_profile(self, profile_id: UUID) -> None:
-        if not await self._authentication_profiles.delete(profile_id):
-            raise AuthenticationProfileNotFoundException()
 
     async def suspend(self, session_id: UUID) -> ResolvedSession:
         active = await self.get_active(session_id)
@@ -246,7 +182,10 @@ class SessionService:
         suspended = await self._sessions.save(
             active.session.suspend(checkpoint.id, now + self._suspension_ttl)
         )
-        await self._leases.release(session_id, reason="session_suspended")
+        try:
+            await self._leases.release(session_id, reason="session_suspended")
+        except LeaseNotFoundException as error:
+            raise SessionNotFoundException() from error
         logger.info(
             "Session suspended session_id=%s owner_id=%s browser_id=%s "
             "checkpoint_id=%s expires_at=%s",
@@ -258,10 +197,80 @@ class SessionService:
         )
         return ResolvedSession.inactive(suspended)
 
+    async def get_active(self, session_id: UUID) -> ResolvedSession:
+        session = await self._session(session_id)
+        if session.status is not SessionStatus.ACTIVE:
+            raise SessionNotActiveException()
+        try:
+            lease = await self._leases.get(session_id)
+        except LeaseNotFoundException as error:
+            raise SessionNotActiveException() from error
+        return ResolvedSession.active(
+            session=session,
+            lease=lease,
+            browser=await self._browsers.get(lease.browser_id),
+        )
+
+    async def list(self, owner_id: UUID | None = None) -> tuple[ResolvedSession, ...]:
+        result: list[ResolvedSession] = []
+        for session in await self._sessions.list():
+            if session.status is SessionStatus.SUSPENDED and session.is_expired(
+                datetime.now(UTC)
+            ):
+                session = await self._sessions.save(session.close())
+            if session.status is SessionStatus.ACTIVE:
+                try:
+                    lease = await self._leases.inspect(session.id)
+                except LeaseNotFoundException as error:
+                    raise SessionNotFoundException() from error
+                result.append(
+                    ResolvedSession.active(
+                        session=session,
+                        lease=lease,
+                        browser=await self._browsers.get(lease.browser_id),
+                    )
+                )
+            else:
+                result.append(ResolvedSession.inactive(session))
+        if owner_id is None:
+            return tuple(result)
+        return tuple(item for item in result if item.owner_id == owner_id)
+
+    async def get_browser_checkpoint(self, checkpoint_id: UUID) -> BrowserCheckpoint:
+        checkpoint = await self._checkpoints.get_by_id(checkpoint_id=checkpoint_id)
+        if checkpoint is None:
+            raise BrowserCheckpointNotFoundException()
+        return checkpoint
+
+    async def list_browser_checkpoints(self) -> tuple[BrowserCheckpoint, ...]:
+        return await self._checkpoints.list()
+
+    async def delete_browser_checkpoint(self, checkpoint_id: UUID) -> None:
+        if not await self._checkpoints.delete(checkpoint_id):
+            raise BrowserCheckpointNotFoundException()
+
+    async def get_authentication_profile(
+        self, profile_id: UUID
+    ) -> AuthenticationProfile:
+        profile = await self._authentication_profiles.get_by_id(profile_id=profile_id)
+        if profile is None:
+            raise AuthenticationProfileNotFoundException()
+        return profile
+
+    async def list_authentication_profiles(self) -> tuple[AuthenticationProfile, ...]:
+        return await self._authentication_profiles.list()
+
+    async def delete_authentication_profile(self, profile_id: UUID) -> None:
+        if not await self._authentication_profiles.delete(profile_id):
+            raise AuthenticationProfileNotFoundException()
+
     async def close(self, session_id: UUID) -> None:
         session = await self._session(session_id)
         if session.status is SessionStatus.ACTIVE:
-            await self._leases.release(session_id, reason="session_closed")
+            try:
+                await self._leases.release(session_id, reason="session_closed")
+            except LeaseNotFoundException as error:
+                raise SessionNotFoundException() from error
         closed = session.close()
         await self._sessions.save(closed)
         logger.info(
@@ -275,7 +284,10 @@ class SessionService:
         session = await self._session(session_id)
         if session.status is not SessionStatus.ACTIVE:
             raise SessionNotActiveException()
-        lease = await self._leases.renew(session_id)
+        try:
+            lease = await self._leases.renew(session_id)
+        except LeaseNotFoundException as error:
+            raise SessionNotFoundException() from error
         renewed = session.renew(lease.expires_at)
         session = await self._sessions.save(renewed)
         return ResolvedSession.active(
@@ -307,17 +319,17 @@ class SessionService:
                 )
         return released
 
-    async def _session(self, session_id: UUID) -> Session:
-        session = await self._sessions.get_by_id(session_id=session_id)
-        if session is None:
-            raise SessionNotFoundException()
-        return session
-
     async def _suspended_session(self, session_id: UUID) -> Session:
         session = await self._session(session_id)
         if session.status is not SessionStatus.SUSPENDED:
             raise SessionNotSuspendedException()
         if session.is_expired(datetime.now(UTC)):
             await self._sessions.save(session.close())
+            raise SessionNotFoundException()
+        return session
+
+    async def _session(self, session_id: UUID) -> Session:
+        session = await self._sessions.get_by_id(session_id=session_id)
+        if session is None:
             raise SessionNotFoundException()
         return session

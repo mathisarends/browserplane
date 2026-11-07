@@ -5,19 +5,15 @@ from uuid import UUID
 from httpx2 import AsyncClient, HTTPError
 from pydantic import ValidationError
 
-from backend.features.browsers.domain.models import Browser
-from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
-from backend.features.recordings.application.exceptions import (
+from backend.features.browsers.application import BrowserWorkerRoutes
+from backend.features.browsers.domain import Browser
+from backend.features.recordings.application import (
     RecordingAlreadyExistsException,
     RecordingNotFoundException,
     RecordingNotRunningException,
     RecordingTransferException,
 )
-from backend.features.recordings.domain.models import (
-    Recording,
-    RecordingState,
-)
-from backend.features.recordings.domain.ports import Recorder
+from backend.features.recordings.domain import Recorder, Recording, RecordingState
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.storage import ObjectStorage, StoredObject
 from generated.browser_worker import (

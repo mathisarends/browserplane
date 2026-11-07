@@ -3,10 +3,11 @@ from uuid import UUID
 
 from httpx2 import AsyncClient
 
-from backend.features.browsers.domain.models import BrowserSlot, slots_of
-from backend.features.browsers.domain.ports import (
+from backend.features.browsers.domain import (
     BrowserProvisioner,
+    BrowserSlot,
     BrowserWorkerDirectory,
+    slots_of,
 )
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (

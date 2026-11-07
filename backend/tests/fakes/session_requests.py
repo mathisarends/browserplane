@@ -3,26 +3,26 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from backend.features.browsers.domain.models import BrowserState
-from backend.features.browsers.domain.ports import (
+from backend.features.browsers.domain import (
     BrowserProvisioner,
     BrowserRepository,
+    BrowserState,
 )
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.leases.domain.ports import LeaseStore
-from backend.features.leases.settings import LeaseSettings
+from backend.features.leases.application import LeaseSettings
+from backend.features.leases.domain import Lease, LeaseState, LeaseStore
 from backend.features.session_requests.domain import (
     RequestStatus,
     SessionRequest,
     SessionRequestNotFoundException,
+    SessionRequestRepository,
 )
-from backend.features.session_requests.domain.ports import SessionRequestRepository
-from backend.features.sessions.domain.models import Session, SessionStatus
-from backend.features.sessions.domain.ports import (
+from backend.features.sessions.domain import (
     AuthenticationProfileRepository,
     BrowserCheckpointRepository,
     BrowserRuntime,
+    Session,
     SessionRepository,
+    SessionStatus,
 )
 
 

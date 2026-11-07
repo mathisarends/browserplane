@@ -2,8 +2,7 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import Response, status
 from fastapi_canon import CanonRouter
 
-from backend.features.health.application.models import Health, HealthStatus
-from backend.features.health.application.service import HealthService
+from backend.features.health.application import Health, HealthService, HealthStatus
 
 health_router = CanonRouter(tags=["health"], route_class=DishkaRoute)
 

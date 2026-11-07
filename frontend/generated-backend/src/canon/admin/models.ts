@@ -129,3 +129,16 @@ export interface SessionResponse {
   lease_generation?: number | null;
   reclaim_after?: string | null;
 }
+
+/**
+ * RFC 9457 Problem Details with a stable application code.
+ */
+export interface SessionNotFoundProblem {
+  type: "https://browser-provisioner.local/problems/session_not_found";
+  title: "Session not found";
+  status: 404;
+  code: "session_not_found";
+  detail?: string;
+  instance?: string;
+  [key: string]: unknown;
+}

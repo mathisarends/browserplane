@@ -20,8 +20,8 @@ from backend.infrastructure.storage.provider import StorageProvider
 from backend.lifespan import lifespan
 from backend.presentation.middleware import install_request_logging
 
-API_PREFIX = "/api/v1"
-PROBLEM_TYPE_BASE = "https://browser-provisioner.local/problems"
+_API_PREFIX = "/api/v1"
+_PROBLEM_TYPE_BASE = "https://browser-provisioner.local/problems"
 FEATURES = (
     health_feature,
     browser_tunnel_feature,
@@ -34,7 +34,10 @@ FEATURES = (
 )
 
 
-def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
+def create_app(
+    provider_overrides: Sequence[Provider] = (),
+    # smelt: ignore[SMT429] -- Public ASGI/schema factory.
+) -> FastAPI:
     app = FastAPI(title="Browser Backend", version="0.1.0", lifespan=lifespan)
     install_request_logging(app)
     composition = Composition(
@@ -43,8 +46,8 @@ def create_app(provider_overrides: Sequence[Provider] = ()) -> FastAPI:
             *FEATURES,
             _overrides_feature(provider_overrides),
         ),
-        errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
-        router_factory=lambda: CanonRouter(prefix=API_PREFIX),
+        errors=ErrorOptions(type_base=_PROBLEM_TYPE_BASE),
+        router_factory=lambda: CanonRouter(prefix=_API_PREFIX),
     )
     composition.apply(app)
     return app

@@ -2,10 +2,10 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import Response, status
-from fastapi_canon import CanonResponse, CanonRouter
+from fastapi_canon import CanonResponse, CanonRouter, ErrorRegistry
 
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
-from backend.features.recordings.application.service import RecordingService
+from backend.features.recordings.application import RecordingService
 from backend.features.recordings.presentation.errors import (
     RECORDING_ALREADY_EXISTS,
     RECORDING_NOT_FOUND,
@@ -14,12 +14,22 @@ from backend.features.recordings.presentation.errors import (
 )
 from backend.features.recordings.presentation.mapper import to_recording_response
 from backend.features.recordings.presentation.schemas import RecordingResponse
-from backend.presentation.error_registry import API_ERRORS
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="recordings-routes",
+    errors=(
+        BROWSER_NOT_FOUND,
+        RECORDING_TRANSFER_FAILED,
+        RECORDING_ALREADY_EXISTS,
+        RECORDING_NOT_FOUND,
+        RECORDING_NOT_RUNNING,
+    ),
+)
 
 recording_router = CanonRouter(
     tags=["recordings"],
     route_class=DishkaRoute,
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
     raises=(BROWSER_NOT_FOUND, RECORDING_TRANSFER_FAILED),
 )
 

@@ -24,6 +24,7 @@ def jpeg_frame(directory: Path) -> bytes:
         ],
         check=True,
         capture_output=True,
+        timeout=10,
     )
     return path.read_bytes()
 
@@ -47,7 +48,7 @@ async def test_streams_an_initialization_segment_and_media_fragment(
             publisher = asyncio.create_task(publish_frames())
             initialization = await asyncio.wait_for(anext(chunks), timeout=5)
             fragment = await asyncio.wait_for(anext(chunks), timeout=5)
-            await publisher
+            await asyncio.wait_for(publisher, timeout=5)
     finally:
         await livestream.stop()
 
@@ -58,7 +59,10 @@ async def test_streams_an_initialization_segment_and_media_fragment(
 
 
 @pytest.mark.asyncio
-async def test_publish_and_stop_are_safe_before_start() -> None:
+async def test_publish_and_stop_are_safe_before_start() -> (
+    None
+    # smelt: ignore[SMT424] -- No-exception lifecycle smoke.
+):
     livestream = Fmp4Livestream()
 
     await livestream.publish_frame(b"unused")

@@ -1,19 +1,26 @@
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import Response
 from fastapi.responses import FileResponse
-from fastapi_canon import CanonResponse, CanonRouter
+from fastapi_canon import CanonResponse, CanonRouter, ErrorRegistry
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
-from browser_worker.features.downloads.application.service import DownloadService
+from browser_worker.features.downloads.application import DownloadService
 from browser_worker.features.downloads.presentation.errors import DOWNLOAD_NOT_FOUND
 from browser_worker.features.downloads.presentation.schemas import DownloadResponse
 from browser_worker.presentation.api_files import OCTET_STREAM
-from browser_worker.presentation.error_registry import API_ERRORS
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="downloads-routes",
+    errors=(
+        BROWSER_NOT_FOUND,
+        DOWNLOAD_NOT_FOUND,
+    ),
+)
 
 download_router = CanonRouter(
     tags=["downloads"],
     route_class=DishkaRoute,
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
     raises=(BROWSER_NOT_FOUND,),
 )
 

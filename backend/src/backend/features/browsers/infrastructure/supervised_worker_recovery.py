@@ -4,9 +4,12 @@ import logging
 from fastapi import status
 from httpx2 import AsyncClient
 
-from backend.features.browsers.application.exceptions import WorkerRecoveryException
-from backend.features.browsers.domain.models import BrowserSlot, WorkerIncarnation
-from backend.features.browsers.domain.ports import WorkerRecovery
+from backend.features.browsers.application import WorkerRecoveryException
+from backend.features.browsers.domain import (
+    BrowserSlot,
+    WorkerIncarnation,
+    WorkerRecovery,
+)
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     ApiError,

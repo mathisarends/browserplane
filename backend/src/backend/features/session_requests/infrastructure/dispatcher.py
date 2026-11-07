@@ -4,13 +4,14 @@ from contextlib import suppress
 
 import asyncpg
 
-from backend.features.browsers.domain.models import Browser, slots_of
-from backend.features.browsers.domain.ports import (
+from backend.features.browsers.domain import (
+    Browser,
     BrowserProvisioner,
     BrowserWorkerDirectory,
+    slots_of,
 )
-from backend.features.leases.settings import LeaseSettings
-from backend.features.session_requests.application.wakeups import Wakeups
+from backend.features.leases.application import LeaseSettings
+from backend.features.session_requests.application import Wakeups
 from backend.features.session_requests.domain import RequestStatus, SessionRequest
 from backend.features.session_requests.infrastructure.notifications import (
     connection_dsn,
@@ -18,13 +19,13 @@ from backend.features.session_requests.infrastructure.notifications import (
 from backend.features.session_requests.infrastructure.repository import (
     SqlSessionRequestRepository,
 )
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.ports import BrowserRuntime
+from backend.features.sessions.application import SessionService
+from backend.features.sessions.domain import BrowserRuntime
 from backend.infrastructure.database.settings import DatabaseSettings
 from backend.shared.unit_of_work import UnitOfWork
 
 logger = logging.getLogger(__name__)
-LEADER_LOCK = 728194630
+_LEADER_LOCK = 728194630
 
 
 class Dispatcher:
@@ -61,7 +62,7 @@ class Dispatcher:
                     connection_dsn(self._settings), timeout=5
                 )
                 elected = await connection.fetchval(
-                    "SELECT pg_try_advisory_lock($1)", LEADER_LOCK
+                    "SELECT pg_try_advisory_lock($1)", _LEADER_LOCK
                 )
                 if elected:
                     logger.info("Browser scheduler elected")

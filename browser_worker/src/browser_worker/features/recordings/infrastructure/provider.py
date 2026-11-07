@@ -2,11 +2,11 @@ from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, provide
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.recordings.application.ports import ScreenRecorder
-from browser_worker.features.recordings.application.service import (
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.recordings.application import (
     RecorderFactory,
     RecordingService,
+    ScreenRecorder,
 )
 from browser_worker.features.recordings.infrastructure.cdp import (
     CdpScreenRecorder,
@@ -19,8 +19,8 @@ from browser_worker.features.recordings.infrastructure.settings import (
     RecordingBackend,
     RecordingSettings,
 )
-from browser_worker.features.screencast.application.service import ScreencastService
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.screencast.application import ScreencastService
+from browser_worker.features.workspace.application import Workspace
 
 
 class RecordingProvider(Provider):
@@ -29,7 +29,10 @@ class RecordingProvider(Provider):
         self._service = service
 
     @provide(scope=Scope.APP)
-    def settings(self) -> RecordingSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> RecordingSettings:
         return RecordingSettings()
 
     @provide(scope=Scope.APP)

@@ -1,7 +1,6 @@
 import asyncio
 
-from backend.features.health.application.models import HealthStatus
-from backend.features.health.application.service import HealthService
+from backend.features.health.application import HealthService, HealthStatus
 
 
 def test_readiness_tracks_persistence() -> None:

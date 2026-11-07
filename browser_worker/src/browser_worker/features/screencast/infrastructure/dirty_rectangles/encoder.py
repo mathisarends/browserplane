@@ -6,23 +6,25 @@ import numpy as np
 import numpy.typing as npt
 from PIL import Image
 
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.models import (
+    EncodingMetrics,
+    RgbFrame,
+)
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
 )
-
-from .models import EncodingMetrics, RgbFrame
 
 # Each update is one websocket message:
 #   frame header: magic, version, canvas width, canvas height,
 #                 tile width, tile height, patch count
 #   patch*: x, y, width, height, JPEG byte length, JPEG bytes
-FRAME_HEADER = struct.Struct("!4sBHHHHI")
-PATCH_HEADER = struct.Struct("!HHHHI")
-MAGIC = b"DRJP"
-VERSION = 2
+_FRAME_HEADER = struct.Struct("!4sBHHHHI")
+_PATCH_HEADER = struct.Struct("!HHHHI")
+_MAGIC = b"DRJP"
+_VERSION = 2
 
-type TileGrid = npt.NDArray[np.bool_]
-type TileRectangle = tuple[int, int, int, int]
+type _TileGrid = npt.NDArray[np.bool_]
+type _TileRectangle = tuple[int, int, int, int]
 
 
 def encode_update(
@@ -64,9 +66,9 @@ def encode_update(
         )
 
     parts = [
-        FRAME_HEADER.pack(
-            MAGIC,
-            VERSION,
+        _FRAME_HEADER.pack(
+            _MAGIC,
+            _VERSION,
             width,
             height,
             settings.tile_width,
@@ -94,7 +96,7 @@ def _dirty_tiles(
     current: RgbFrame,
     previous: RgbFrame | None,
     settings: DirtyRectangleSettings,
-) -> TileGrid:
+) -> _TileGrid:
     """Mark the tiles whose pixels differ from the previous frame.
 
     The comparison runs over the frame as rows of raw bytes, so the three
@@ -115,7 +117,7 @@ def _dirty_tiles(
     return np.logical_or.reduceat(by_row, column_starts, axis=1)
 
 
-def _merge_rectangles(dirty: TileGrid) -> list[TileRectangle]:
+def _merge_rectangles(dirty: _TileGrid) -> list[_TileRectangle]:
     """Cover the dirty tiles with as few rectangles as possible.
 
     Every JPEG pays for its own headers and quantization tables, so a tile grid
@@ -125,7 +127,7 @@ def _merge_rectangles(dirty: TileGrid) -> list[TileRectangle]:
     share a span - and since a rectangle only ever spans tiles that are all
     dirty, this costs no extra pixels.
     """
-    rectangles: list[TileRectangle] = []
+    rectangles: list[_TileRectangle] = []
     open_spans: dict[tuple[int, int], int] = {}
     for row in range(len(dirty)):
         spans = _row_spans(dirty[row])
@@ -140,7 +142,7 @@ def _merge_rectangles(dirty: TileGrid) -> list[TileRectangle]:
     return rectangles
 
 
-def _row_spans(row: TileGrid) -> list[tuple[int, int]]:
+def _row_spans(row: _TileGrid) -> list[tuple[int, int]]:
     """The half-open column ranges of the dirty runs in one tile row."""
     edges = np.flatnonzero(np.diff(np.concatenate(([False], row, [False]))))
     return [(int(start), int(end)) for start, end in edges.reshape(-1, 2)]
@@ -148,7 +150,7 @@ def _row_spans(row: TileGrid) -> list[tuple[int, int]]:
 
 def _encode_region(
     current: RgbFrame,
-    rectangle: TileRectangle,
+    rectangle: _TileRectangle,
     settings: DirtyRectangleSettings,
 ) -> tuple[bytes, bytes]:
     """Encode one merged rectangle, clipped to the canvas at the right edges."""
@@ -168,4 +170,4 @@ def _encode_region(
         optimize=settings.optimize_jpeg,
     )
     jpeg = output.getvalue()
-    return PATCH_HEADER.pack(x, y, region_width, region_height, len(jpeg)), jpeg
+    return _PATCH_HEADER.pack(x, y, region_width, region_height, len(jpeg)), jpeg

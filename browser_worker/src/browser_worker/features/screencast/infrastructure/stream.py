@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager, suppress
 
 from cdpify import Client
 
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.screencast.domain import FrameStream
 from browser_worker.features.screencast.infrastructure.cdp import (
     ActiveTabBridge,
 )
@@ -56,6 +56,15 @@ class CdpFrameStream(FrameStream):
                 await frames.aclose()
             await self._leave(subscriber)
 
+    async def close(self) -> None:
+        """Stop publishing and disconnect even while consumers are subscribed."""
+        async with self._lock:
+            await self._disconnect()
+            self._latest = None
+            error = ScreencastStoppedException("Browser was released")
+            for subscriber in tuple(self._subscribers):
+                subscriber.fail(error)
+
     async def _join(self) -> _Subscriber:
         async with self._lock:
             if self._client is None:
@@ -76,15 +85,6 @@ class CdpFrameStream(FrameStream):
             self._subscribers.discard(subscriber)
             if not self._subscribers:
                 await self._disconnect()
-
-    async def close(self) -> None:
-        """Stop publishing and disconnect even while consumers are subscribed."""
-        async with self._lock:
-            await self._disconnect()
-            self._latest = None
-            error = ScreencastStoppedException("Browser was released")
-            for subscriber in tuple(self._subscribers):
-                subscriber.fail(error)
 
     async def _disconnect(self) -> None:
         """Stop the publisher and drop the connection; the caller holds the lock."""

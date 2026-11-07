@@ -1,21 +1,17 @@
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 
-from backend.features.leases.domain.models import (
-    CleanupRetryPolicy,
-    Lease,
-    LeaseState,
-)
+from backend.features.leases.domain import CleanupRetryPolicy, Lease, LeaseState
 
 
 def _lease(*, state: LeaseState = LeaseState.ACTIVE) -> Lease:
     now = datetime.now(UTC)
     return Lease(
-        id=uuid4(),
-        browser_id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=39),
+        browser_id=UUID(int=40),
+        owner_id=UUID(int=41),
         generation=2,
         state=state,
         created_at=now,

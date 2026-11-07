@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from backend.features.browsers.application.exceptions import (
+from backend.features.browsers.application import (
     BrowserNotFoundException,
     BrowserProvisioningException,
 )
@@ -23,5 +23,5 @@ BROWSER_PROVISIONING_FAILED = Error(
     detail=str,
 )
 
-API_ERRORS = (BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED)
-ERRORS = ErrorRegistry(name="browsers", errors=API_ERRORS)
+_API_ERRORS = (BROWSER_NOT_FOUND, BROWSER_PROVISIONING_FAILED)
+ERRORS = ErrorRegistry(name="browsers", errors=_API_ERRORS)

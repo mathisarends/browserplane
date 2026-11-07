@@ -1,11 +1,11 @@
 import pytest
 from tests.fakes import FakeBrowserProcess
 
-from browser_worker.features.browser.application.exceptions import (
+from browser_worker.features.browser.application import (
     BrowserAlreadyRunningException,
     BrowserNotFoundException,
+    BrowserService,
 )
-from browser_worker.features.browser.application.service import BrowserService
 
 
 @pytest.mark.asyncio

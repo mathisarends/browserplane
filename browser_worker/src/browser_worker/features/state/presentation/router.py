@@ -2,12 +2,10 @@ from typing import Annotated
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import Query, Response
-from fastapi_canon import CanonResponse, CanonRouter
+from fastapi_canon import CanonResponse, CanonRouter, ErrorRegistry
 
 from browser_worker.features.browser.presentation.errors import BROWSER_NOT_FOUND
-from browser_worker.features.state.application.service import (
-    BrowserStateService,
-)
+from browser_worker.features.state.application import BrowserStateService
 from browser_worker.features.state.presentation.errors import (
     BROWSER_STATE_FAILED,
     BROWSER_STATE_INVALID,
@@ -16,12 +14,20 @@ from browser_worker.features.state.presentation.schemas import (
     AuthenticationStateSchema,
     BrowserStateSchema,
 )
-from browser_worker.presentation.error_registry import API_ERRORS
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="state-routes",
+    errors=(
+        BROWSER_NOT_FOUND,
+        BROWSER_STATE_INVALID,
+        BROWSER_STATE_FAILED,
+    ),
+)
 
 browser_state_router = CanonRouter(
     tags=["browser-state"],
     route_class=DishkaRoute,
-    error_registry=API_ERRORS,
+    error_registry=_ROUTE_ERRORS,
     raises=(BROWSER_NOT_FOUND, BROWSER_STATE_INVALID, BROWSER_STATE_FAILED),
 )
 
@@ -68,7 +74,7 @@ async def capture_authentication_state(
     The response carries live session cookies and tokens, so it must not be
     cached anywhere on the way back to the caller.
     """
-    state = await service.capture_authentication(origins or ())
+    state = await service.capture_authentication(origins if origins is not None else ())
     response.headers["Cache-Control"] = "no-store"
     return state
 

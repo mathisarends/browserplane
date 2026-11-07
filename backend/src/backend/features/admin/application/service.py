@@ -3,12 +3,14 @@ from contextlib import suppress
 from uuid import UUID
 
 from backend.features.admin.application.models import PooledBrowser
-from backend.features.browsers.application.service import BrowserService
-from backend.features.browsers.domain.models import Browser
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.application.service import LeaseService
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ResolvedSession
+from backend.features.browsers.application import BrowserService
+from backend.features.browsers.domain import Browser
+from backend.features.leases.application import LeaseService
+from backend.features.sessions.application import (
+    SessionNotFoundException,
+    SessionService,
+)
+from backend.features.sessions.domain import ResolvedSession
 
 logger = logging.getLogger(__name__)
 
@@ -64,5 +66,5 @@ class AdminService:
             )
             # A lease that expired between listing and releasing is already gone,
             # which is the outcome we wanted anyway.
-            with suppress(LeaseNotFoundException):
+            with suppress(SessionNotFoundException):
                 await self._sessions.close(lease.id)

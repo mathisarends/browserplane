@@ -1,12 +1,11 @@
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.recordings.application.service import RecordingService
-from backend.features.recordings.domain.models import Recording, RecordingState
-from backend.features.recordings.domain.ports import Recorder
+from backend.features.browsers.domain import Browser, BrowserSlot
+from backend.features.recordings.application import RecordingService
+from backend.features.recordings.domain import Recorder, Recording, RecordingState
 
 
 class FakeBrowsers:
@@ -44,9 +43,9 @@ class FakeRecorder(Recorder):
 async def test_recording_service_routes_each_operation_to_the_resolved_browser() -> (
     None
 ):
-    browser = Browser(BrowserSlot(uuid4(), "http://worker"), datetime.now(UTC))
+    browser = Browser(BrowserSlot(UUID(int=25), "http://worker"), datetime.now(UTC))
     recording = Recording(
-        id=uuid4(),
+        id=UUID(int=26),
         browser_id=browser.id,
         state=RecordingState.RECORDING,
         started_at=datetime.now(UTC),

@@ -1,24 +1,24 @@
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from tests.fakes import FakeBrowserProcess
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.recordings.application.exceptions import (
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.recordings.application import (
+    RecordedVideo,
     RecordingAlreadyExistsException,
+    RecordingFormat,
     RecordingNotCompletedException,
     RecordingNotFoundException,
     RecordingNotRunningException,
-)
-from browser_worker.features.recordings.application.models import (
-    RecordedVideo,
-    RecordingFormat,
+    RecordingService,
     RecordingState,
+    ScreenRecorder,
 )
-from browser_worker.features.recordings.application.ports import ScreenRecorder
-from browser_worker.features.recordings.application.service import RecordingService
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.workspace.infrastructure.filesystem import (
+    FilesystemWorkspace,
+)
 
 
 class FakeRecorder(ScreenRecorder):
@@ -53,7 +53,9 @@ class FailingRecorder(FakeRecorder):
 async def test_service_records_the_active_tab_into_one_video(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
     recorder = FakeRecorder()
-    service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
+    service = RecordingService(
+        browsers, FilesystemWorkspace(tmp_path), lambda _: recorder
+    )
 
     await browsers.create(0)
     recording = await service.start()
@@ -80,7 +82,9 @@ async def test_service_records_the_active_tab_into_one_video(tmp_path: Path) -> 
 async def test_only_one_recording_can_run_at_a_time(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
     recorder = FakeRecorder()
-    service = RecordingService(browsers, Workspace(tmp_path), lambda _: recorder)
+    service = RecordingService(
+        browsers, FilesystemWorkspace(tmp_path), lambda _: recorder
+    )
     await browsers.create(0)
     await service.start()
 
@@ -94,14 +98,16 @@ async def test_only_one_recording_can_run_at_a_time(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_unfinished_and_unknown_recordings_have_no_files(tmp_path: Path) -> None:
     browsers = BrowserService(FakeBrowserProcess())
-    service = RecordingService(browsers, Workspace(tmp_path), lambda _: FakeRecorder())
+    service = RecordingService(
+        browsers, FilesystemWorkspace(tmp_path), lambda _: FakeRecorder()
+    )
     await browsers.create(0)
     recording = await service.start()
 
     with pytest.raises(RecordingNotCompletedException):
         service.file(recording.id)
     with pytest.raises(RecordingNotFoundException):
-        service.get(uuid4())
+        service.get(UUID(int=2))
 
     await service.release()
 
@@ -113,7 +119,9 @@ async def test_failed_stop_releases_the_browser_for_another_recording(
     browsers = BrowserService(FakeBrowserProcess())
     failing_recorder = FailingRecorder()
     recorders = iter((failing_recorder, FakeRecorder()))
-    service = RecordingService(browsers, Workspace(tmp_path), lambda _: next(recorders))
+    service = RecordingService(
+        browsers, FilesystemWorkspace(tmp_path), lambda _: next(recorders)
+    )
     await browsers.create(0)
     failed = await service.start()
 

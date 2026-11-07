@@ -3,13 +3,14 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.domain.models import (
+from backend.features.leases.application.settings import LeaseSettings
+from backend.features.leases.domain import (
+    BrowserAllocator,
     CleanupRetryPolicy,
     Lease,
     LeaseState,
+    LeaseStore,
 )
-from backend.features.leases.domain.ports import BrowserAllocator, LeaseStore
-from backend.features.leases.settings import LeaseSettings
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class LeaseService:
         generation = await self._allocator.reserve(browser_id)
         now = datetime.now(UTC)
         lease = Lease(
-            id=lease_id or uuid4(),
+            id=lease_id if lease_id is not None else uuid4(),
             browser_id=browser_id,
             owner_id=owner_id,
             generation=generation,
@@ -70,16 +71,16 @@ class LeaseService:
     async def list(self) -> tuple[Lease, ...]:
         return await self._store.list_current()
 
-    async def inspect(self, lease_id: UUID) -> Lease:
-        lease = await self._store.get(lease_id)
-        if lease is None or lease.state is LeaseState.RELEASED:
-            raise LeaseNotFoundException()
-        return lease
-
     async def get(self, lease_id: UUID) -> Lease:
         """Return only a lease that may currently issue browser operations."""
         lease = await self.inspect(lease_id)
         if lease.state is not LeaseState.ACTIVE or lease.is_expired(datetime.now(UTC)):
+            raise LeaseNotFoundException()
+        return lease
+
+    async def inspect(self, lease_id: UUID) -> Lease:
+        lease = await self._store.get(lease_id)
+        if lease is None or lease.state is LeaseState.RELEASED:
             raise LeaseNotFoundException()
         return lease
 

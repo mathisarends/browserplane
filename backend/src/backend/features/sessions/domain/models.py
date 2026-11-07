@@ -4,8 +4,8 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from backend.features.browsers.domain.models import Browser
-from backend.features.leases.domain.models import Lease
+from backend.features.browsers.domain import Browser
+from backend.features.leases.domain import Lease
 
 type AuthenticationStateDocument = dict[str, Any]
 type BrowserStateDocument = dict[str, Any]

@@ -4,5 +4,5 @@ class BrowserWorkerException(Exception):
     message = "Unexpected error"
 
     def __init__(self, message: str | None = None) -> None:
-        self.message = message or type(self).message
+        self.message = message if message is not None else type(self).message
         super().__init__(self.message)

@@ -2,16 +2,23 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import status
-from fastapi_canon import CanonResponse, CanonRouter
+from fastapi_canon import CanonResponse, CanonRouter, ErrorRegistry
 from pydantic import BaseModel
 
-from browser_worker.features.release.application.restart import WorkerRestartService
-from browser_worker.features.release.application.service import WorkerReleaseService
+from browser_worker.features.browser.presentation.errors import BROWSER_ALREADY_RUNNING
+from browser_worker.features.release.application import (
+    WorkerReleaseService,
+    WorkerRestartService,
+)
 from browser_worker.features.release.presentation.errors import WORKER_NOT_SUPERVISED
-from browser_worker.presentation.error_registry import API_ERRORS
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="release-routes",
+    errors=(WORKER_NOT_SUPERVISED, BROWSER_ALREADY_RUNNING),
+)
 
 release_router = CanonRouter(
-    tags=["worker"], route_class=DishkaRoute, error_registry=API_ERRORS
+    tags=["worker"], route_class=DishkaRoute, error_registry=_ROUTE_ERRORS
 )
 
 
@@ -29,6 +36,7 @@ class RestartWorkerResponse(BaseModel):
     "/release",
     response=CanonResponse.empty(),
     operation_id="release_worker",
+    raises=(BROWSER_ALREADY_RUNNING,),
 )
 async def release_worker(
     request: ReleaseWorkerRequest,
