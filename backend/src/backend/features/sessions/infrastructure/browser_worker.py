@@ -1,7 +1,6 @@
 import logging
-from typing import Any, cast
 
-from httpx2 import AsyncClient, HTTPError
+from httpx2 import AsyncClient
 from pydantic import ValidationError
 
 from backend.features.browsers.domain.models import Browser
@@ -20,7 +19,8 @@ from generated.browser_worker import (
     ApiError,
     AuthenticationState,
     BrowserState,
-    GeneratedBrowserWorkerClient,
+    BrowserWorkerClient,
+    ClientError,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class BrowserWorkerRuntime(BrowserRuntime):
         try:
             client = self._client(browser)
             state = await client.capture_authentication_state()
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("read authentication from", error) from error
         return state.model_dump(mode="json", by_alias=True)
 
@@ -55,14 +55,14 @@ class BrowserWorkerRuntime(BrowserRuntime):
         try:
             client = self._client(browser)
             await client.mount_authentication_state(body)
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("write authentication to", error) from error
 
     async def capture_browser(self, browser: Browser) -> BrowserStateDocument:
         try:
             client = self._client(browser)
             state = await client.capture_browser_state()
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("read browser state from", error) from error
         return state.model_dump(mode="json", by_alias=True)
 
@@ -76,14 +76,14 @@ class BrowserWorkerRuntime(BrowserRuntime):
         try:
             client = self._client(browser)
             await client.mount_browser_state(body)
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("write browser state to", error) from error
 
     async def list_downloads(self, browser: Browser) -> tuple[Download, ...]:
         try:
             client = self._client(browser)
             downloads = await client.list_downloads()
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("read downloads from", error) from error
         return tuple(
             Download(
@@ -99,7 +99,7 @@ class BrowserWorkerRuntime(BrowserRuntime):
         try:
             client = self._client(browser)
             await client.clear_downloads()
-        except (ApiError, HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("clear downloads on", error) from error
 
     async def download_file(self, browser: Browser, download_id: str) -> bytes:
@@ -107,15 +107,15 @@ class BrowserWorkerRuntime(BrowserRuntime):
             client = self._client(browser)
             return await client.download_file(download_id)
         except ApiError as error:
-            if getattr(error.parsed_body, "code", None) == "download_not_found":
+            if error.code == "download_not_found":
                 raise DownloadNotFoundException() from error
             raise _as_transfer_failure("download file from", error) from error
-        except (HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _as_transfer_failure("download file from", error) from error
 
-    def _client(self, browser: Browser) -> GeneratedBrowserWorkerClient:
-        return GeneratedBrowserWorkerClient(
-            cast(Any, self._http),
+    def _client(self, browser: Browser) -> BrowserWorkerClient:
+        return BrowserWorkerClient(
+            self._http,
             browser.slot.browser_worker_url,
             timeout=self._settings.request_timeout_seconds,
         )

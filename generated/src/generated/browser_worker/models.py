@@ -3,14 +3,44 @@
 # ============================================================================
 
 
-from __future__ import annotations
-
+from collections.abc import AsyncIterator, Mapping
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+
+class HttpMethods(StrEnum):
+    GET = "GET"
+    PUT = "PUT"
+    POST = "POST"
+    DELETE = "DELETE"
+    OPTIONS = "OPTIONS"
+    HEAD = "HEAD"
+    PATCH = "PATCH"
+    TRACE = "TRACE"
+
+
+class HttpResponse(Protocol):
+    @property
+    def status_code(self) -> int: ...
+
+    @property
+    def headers(self) -> Mapping[str, str]: ...
+
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def content(self) -> bytes: ...
+
+    def json(self) -> Any: ...
+
+    def aiter_bytes(self, chunk_size: int | None = None) -> AsyncIterator[bytes]: ...
+
+    async def aread(self) -> bytes: ...
 
 
 class CookiePartitionKey(BaseModel):
@@ -44,7 +74,7 @@ class IndexedDbIndex(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
-    key_path: IndexedDbKeyPath = Field(None, alias="keyPath")
+    key_path: IndexedDbKeyPath | None = Field(None, alias="keyPath")
     unique: bool = False
     multi_entry: bool = Field(False, alias="multiEntry")
 
@@ -60,7 +90,7 @@ class IndexedDbObjectStore(BaseModel):
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     name: str
-    key_path: IndexedDbKeyPath = Field(None, alias="keyPath")
+    key_path: IndexedDbKeyPath | None = Field(None, alias="keyPath")
     auto_increment: bool = Field(False, alias="autoIncrement")
     indexes: list[IndexedDbIndex] = []
     records: list[IndexedDbRecord] = []

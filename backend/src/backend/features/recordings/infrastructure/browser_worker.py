@@ -1,6 +1,5 @@
 import logging
 from pathlib import PurePosixPath
-from typing import Any, cast
 from uuid import UUID
 
 from httpx2 import AsyncClient, HTTPError
@@ -23,7 +22,8 @@ from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from backend.infrastructure.storage import ObjectStorage, StoredObject
 from generated.browser_worker import (
     ApiError,
-    GeneratedBrowserWorkerClient,
+    BrowserWorkerClient,
+    ClientError,
 )
 from generated.browser_worker import (
     RecordingResponse as WorkerRecordingResponse,
@@ -51,7 +51,7 @@ class BrowserWorkerRecorder(Recorder):
             recording = await client.start_recording()
         except ApiError as error:
             raise _recording_error(error) from error
-        except (HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _transfer_error("start", error) from error
         return _to_recording(recording, browser_id=browser.id)
 
@@ -64,7 +64,7 @@ class BrowserWorkerRecorder(Recorder):
             recording = await client.stop_recording(recording_id)
         except ApiError as error:
             raise _recording_error(error) from error
-        except (HTTPError, ValidationError, ValueError) as error:
+        except (ClientError, ValidationError, ValueError) as error:
             raise _transfer_error("stop", error) from error
         await self._store_recording(browser, recording_id)
         return _to_recording(recording, browser_id=browser.id)
@@ -89,14 +89,14 @@ class BrowserWorkerRecorder(Recorder):
         browser: Browser,
         *,
         transfer: bool = False,
-    ) -> GeneratedBrowserWorkerClient:
+    ) -> BrowserWorkerClient:
         timeout = (
             self._settings.transfer_timeout_seconds
             if transfer
             else self._settings.request_timeout_seconds
         )
-        return GeneratedBrowserWorkerClient(
-            cast(Any, self._http),
+        return BrowserWorkerClient(
+            self._http,
             browser.slot.browser_worker_url,
             timeout=timeout,
         )
@@ -138,7 +138,7 @@ class BrowserWorkerRecorder(Recorder):
 
 
 def _recording_error(error: ApiError) -> Exception:
-    code = getattr(error.parsed_body, "code", None)
+    code = error.code
     if code == "recording_not_found":
         return RecordingNotFoundException()
     if code == "recording_already_exists":

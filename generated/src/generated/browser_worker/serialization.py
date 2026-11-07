@@ -4,14 +4,163 @@
 
 
 from base64 import b64encode
+import json
+import re
 from collections.abc import Mapping, Sequence
 from enum import Enum
+from http.cookiejar import CookieJar
 from typing import Any, NamedTuple
-from urllib.parse import quote
+from urllib.parse import quote, quote_plus, urlencode, urlsplit, urlunsplit
+from urllib.request import Request
 
-Credential = str | tuple[str, str]
+from pydantic import BaseModel, RootModel, TypeAdapter
 
-_RESERVED_CHARACTERS = ":/?#[]@!$&'()*+,;="
+type Credential = str | tuple[str, str]
+
+class UnsetType:
+    pass
+
+
+UNSET = UnsetType()
+
+
+def set_header(headers: dict[str, str], name: str, value: str, *, default: bool = False) -> None:
+    matches = [key for key in headers if key.lower() == name.lower()]
+    if default and matches:
+        return
+    for key in matches:
+        del headers[key]
+    headers[name] = value
+
+
+def merge_headers(values: Mapping[str, str] | None) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    for name, value in (values or {}).items():
+        set_header(headers, name, value)
+    return headers
+
+
+def set_cookie_header(
+    headers: dict[str, str], cookies: Mapping[str, str], url: str, client: object
+) -> None:
+    """Send operation cookies in one Cookie header, keeping the client's cookies.
+
+    An explicit Cookie header replaces the HTTP client's cookie jar for a request,
+    so the jar cookies matching the URL are merged in first.
+    """
+    if not cookies:
+        return
+    existing = next(
+        (value for name, value in headers.items() if name.lower() == "cookie"), None
+    )
+    if existing is None:
+        existing = _client_cookie_header(client, url)
+    pairs: dict[str, str] = {}
+    for item in (existing or "").split(";"):
+        name, separator, value = item.strip().partition("=")
+        if separator:
+            pairs[name] = value
+    pairs.update(cookies)
+    set_header(
+        headers, "Cookie", "; ".join(f"{name}={value}" for name, value in pairs.items())
+    )
+
+
+def _client_cookie_header(client: object, url: str) -> str | None:
+    jar = getattr(getattr(client, "cookies", None), "jar", None)
+    if not isinstance(jar, CookieJar):
+        return None
+    if not urlsplit(url).scheme:
+        base_url = str(getattr(client, "base_url", "") or "")
+        if not base_url:
+            return None
+        url = f"{base_url.rstrip('/')}/{url.lstrip('/')}"
+    request = Request(url)
+    jar.add_cookie_header(request)
+    return request.get_header("Cookie")
+
+
+def serialize_json_part(value: Any, annotation: Any) -> str:
+    return TypeAdapter(annotation).dump_json(value, by_alias=True).decode()
+
+
+def serialize_json_parameter(value: Any, annotation: Any) -> str:
+    return json.dumps(serialize_json_body(value, annotation), separators=(",", ":"))
+
+
+def serialize_form_body(
+    value: Any, annotation: Any, encodings: Mapping[str, Mapping[str, Any]]
+) -> bytes:
+    data = TypeAdapter(annotation).dump_python(
+        value, mode="json", by_alias=True, exclude_none=True
+    )
+    if not isinstance(data, Mapping):
+        raise ValueError("URL-encoded form body must be an object")
+    pairs: list[tuple[str, str]] = []
+    for name, item in data.items():
+        encoding = encodings.get(name, {})
+        if encoding.get("json"):
+            pairs.append((name, json.dumps(item, separators=(",", ":"))))
+        else:
+            if isinstance(item, Mapping) and any(
+                isinstance(nested, (Mapping, list, tuple)) for nested in item.values()
+            ):
+                raise ValueError(f"nested form field {name!r} requires JSON encoding")
+            pairs.extend(serialize_query(
+                name, item, encoding.get("style", "form"),
+                explode=encoding.get("explode", True),
+            ))
+    return urlencode(pairs).encode()
+
+
+def serialize_json_body(value: Any, annotation: Any, *, partial: bool = False) -> Any:
+    adapter = TypeAdapter(annotation)
+    value = adapter.validate_python(_validation_input(value))
+    return adapter.dump_python(
+        value, mode="json", by_alias=True, exclude=_unset_null_fields(value),
+        exclude_unset=partial,
+    )
+
+
+def _validation_input(value: Any) -> Any:
+    if isinstance(value, RootModel):
+        return _validation_input(value.root)
+    if isinstance(value, BaseModel):
+        result = {
+            field.serialization_alias or field.alias or name: _validation_input(getattr(value, name))
+            for name, field in type(value).model_fields.items()
+            if name in value.model_fields_set
+        }
+        result.update({key: _validation_input(item) for key, item in (value.model_extra or {}).items()})
+        return result
+    if isinstance(value, Mapping):
+        return {key: _validation_input(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_validation_input(item) for item in value]
+    return value
+
+
+def _unset_null_fields(value: Any) -> dict[Any, Any]:
+    if isinstance(value, RootModel):
+        return _unset_null_fields(value.root)
+    fields: Mapping[Any, Any]
+    unset: set[Any]
+    if isinstance(value, BaseModel):
+        fields = {name: getattr(value, name) for name in type(value).model_fields}
+        unset = fields.keys() - value.model_fields_set
+    elif isinstance(value, Mapping):
+        fields, unset = value, set()
+    elif isinstance(value, (list, tuple)):
+        fields, unset = dict(enumerate(value)), set()
+    else:
+        return {}
+    excluded: dict[Any, Any] = {}
+    for name, item in fields.items():
+        if name in unset and item is None:
+            excluded[name] = True
+        elif nested := _unset_null_fields(item):
+            excluded[name] = nested
+    return excluded
 
 
 class SecurityScheme(NamedTuple):
@@ -48,7 +197,34 @@ def serialize_simple(value: Any, *, explode: bool = False) -> str:
 
 
 def serialize_query(
-    name: str, value: Any, style: str = "form", *, explode: bool = True
+    name: str, value: Any, style: str = "form", *, explode: bool = True,
+    allow_reserved: bool = False,
+) -> list[tuple[str, str]]:
+    pairs = _query_pairs(name, value, style, explode=explode)
+    return [(key, _ReservedQueryValue(item) if allow_reserved else item) for key, item in pairs]
+
+
+class _ReservedQueryValue(str):
+    pass
+
+
+def append_query(url: str, pairs: Sequence[tuple[str, str]]) -> str:
+    def encoded(value: str) -> str:
+        if not isinstance(value, _ReservedQueryValue):
+            return quote_plus(value, safe="")
+        return "".join(
+            part if re.fullmatch(r"%[0-9A-Fa-f]{2}", part)
+            else quote(part, safe=":/?@!$'()*,;")
+            for part in re.split(r"(%[0-9A-Fa-f]{2})", value)
+        )
+
+    query = "&".join(f"{quote_plus(name, safe='')}={encoded(value)}" for name, value in pairs)
+    parts = urlsplit(url)
+    return urlunsplit(parts._replace(query="&".join(item for item in (parts.query, query) if item)))
+
+
+def _query_pairs(
+    name: str, value: Any, style: str, *, explode: bool
 ) -> list[tuple[str, str]]:
     value = _plain(value)
     if style == "deepObject" and isinstance(value, Mapping):
@@ -75,14 +251,37 @@ def serialize_path(
     explode: bool = False,
     allow_reserved: bool = False,
 ) -> str:
-    rendered = quote(
-        serialize_simple(value, explode=explode),
-        safe=_RESERVED_CHARACTERS if allow_reserved else "",
-    )
+    if allow_reserved:
+        raise ValueError("allowReserved is supported only for query parameters")
+    value = _plain(value)
+
+    def encoded(item: Any) -> str:
+        if isinstance(item, (Mapping, list, tuple)):
+            raise ValueError("path styles require scalar items and property values")
+        result = quote(scalar(item), safe="")
+        return result.replace(".", "%2E") if style == "label" else result
+
+    if isinstance(value, Mapping):
+        if explode:
+            delimiter = {"simple": ",", "label": ".", "matrix": ";"}[style]
+            rendered = delimiter.join(f"{encoded(key)}={encoded(item)}" for key, item in value.items())
+            if style == "matrix":
+                return f";{rendered}" if rendered else ""
+        else:
+            rendered = ",".join(encoded(item) for pair in value.items() for item in pair)
+    elif isinstance(value, (list, tuple)):
+        if style == "matrix" and explode:
+            return "".join(f";{encoded(name)}={encoded(item)}" for item in value)
+        delimiter = "." if style == "label" and explode else ","
+        rendered = delimiter.join(encoded(item) for item in value)
+    else:
+        rendered = encoded(value)
     if style == "label":
-        return f".{rendered}"
+        rendered = f".{rendered}"
     if style == "matrix":
-        return f";{name}={rendered}"
+        rendered = f";{encoded(name)}={rendered}"
+    if rendered in {".", ".."}:
+        return rendered.replace(".", "%2E")
     return rendered
 
 
@@ -108,7 +307,7 @@ def apply_security(
         scheme = SECURITY_SCHEMES[name]
         value = _credential_value(scheme, name, credentials[name])
         if scheme.location == "header":
-            headers[scheme.parameter_name] = value
+            set_header(headers, scheme.parameter_name, value)
         elif scheme.location == "query":
             query.append((scheme.parameter_name, value))
         else:

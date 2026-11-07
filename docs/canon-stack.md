@@ -68,6 +68,12 @@ client are built locally from the same source commits as the previously used
 images; their archive checksums, Go compiler and runtime bases are pinned in
 `docker/minio/Dockerfile`. Compose and the stack smoke share these build targets.
 
+The Python worker client is generated with `httpxgen==0.4.0` and its explicit
+`--http-client httpx2` binding. Backend adapters borrow the application transport
+without casts, catch generated `ClientError` failures, and use `ApiError.code`
+for domain error mapping. Closing the generated wrapper leaves the shared HTTP
+transport open.
+
 The generated OpenRPC document is committed so a fresh checkout can check its
 contract and client before regeneration. OpenAPI documents are exported during
 the HTTP client checks.

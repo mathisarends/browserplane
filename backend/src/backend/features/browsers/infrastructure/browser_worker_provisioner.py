@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Any, cast
 from uuid import UUID
 
 from httpx2 import AsyncClient
@@ -11,8 +10,8 @@ from backend.features.browsers.domain.ports import (
 )
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
+    BrowserWorkerClient,
     CreateBrowserRequest,
-    GeneratedBrowserWorkerClient,
     ReleaseWorkerRequest,
 )
 
@@ -54,9 +53,9 @@ class BrowserWorkerProvisioner(BrowserProvisioner):
         request = ReleaseWorkerRequest(generation=generation)
         await client.release_worker(request)
 
-    def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
-        return GeneratedBrowserWorkerClient(
-            cast(Any, self._http),
+    def _client(self, slot: BrowserSlot) -> BrowserWorkerClient:
+        return BrowserWorkerClient(
+            self._http,
             slot.browser_worker_url,
             timeout=self._worker_settings.request_timeout_seconds,
         )

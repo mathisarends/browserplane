@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Any, cast
 
 from fastapi import status
 from httpx2 import AsyncClient
@@ -11,7 +10,7 @@ from backend.features.browsers.domain.ports import WorkerRecovery
 from backend.infrastructure.browser_worker.settings import BrowserWorkerSettings
 from generated.browser_worker import (
     ApiError,
-    GeneratedBrowserWorkerClient,
+    BrowserWorkerClient,
     HealthStatus,
 )
 
@@ -95,9 +94,9 @@ class SupervisedWorkerRecovery(WorkerRecovery):
             return None
         return WorkerIncarnation(health.instance_id)
 
-    def _client(self, slot: BrowserSlot) -> GeneratedBrowserWorkerClient:
-        return GeneratedBrowserWorkerClient(
-            cast(Any, self._http),
+    def _client(self, slot: BrowserSlot) -> BrowserWorkerClient:
+        return BrowserWorkerClient(
+            self._http,
             slot.browser_worker_url,
             timeout=self._settings.request_timeout_seconds,
         )

@@ -32,6 +32,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         str(OUTPUT),
         "--package-name",
         PACKAGE,
+        "--client-name",
+        "BrowserWorkerClient",
+        "--http-client",
+        "httpx2",
         *arguments,
     ]
     return httpxgen()

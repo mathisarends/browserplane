@@ -3,15 +3,20 @@
 # ============================================================================
 
 
-from collections.abc import Mapping
-from typing import Self
+from collections.abc import AsyncIterator, Mapping
+from contextlib import AsyncExitStack, asynccontextmanager
+from typing import Any, Self
 from uuid import UUID
 
-import httpx
 from pydantic import TypeAdapter
 
-from generated.browser_worker.exceptions import ApiError
-from generated.browser_worker.http_methods import HttpMethods
+from generated.browser_worker.errors import (
+    ApiError,
+    ClientError,
+    RequestValidationError,
+    ResponseValidationError,
+    TransportError,
+)
 from generated.browser_worker.models import (
     AuthenticationState,
     AuthenticationStateSchema,
@@ -28,6 +33,7 @@ from generated.browser_worker.models import (
     DownloadNotFoundProblem,
     DownloadResponse,
     HealthResponse,
+    HttpMethods,
     RecordingAlreadyExistsProblem,
     RecordingFailedProblem,
     RecordingNotCompletedProblem,
@@ -39,27 +45,34 @@ from generated.browser_worker.models import (
     RestartWorkerResponse,
     WorkerNotSupervisedProblem,
 )
-from generated.browser_worker.serialization import serialize_path, serialize_query
+from generated.browser_worker.serialization import (
+    merge_headers,
+    serialize_json_body,
+    serialize_path,
+    serialize_query,
+    set_header,
+)
+from generated.browser_worker.transport import AsyncHttpClient, BinaryStream
 
 
-class GeneratedBrowserWorkerClient:
+class BrowserWorkerClient:
     def __init__(
         self,
-        client: httpx.AsyncClient,
+        http_client: AsyncHttpClient,
         base_url: str,
         *,
         headers: Mapping[str, str] | None = None,
         credentials: Mapping[str, str | tuple[str, str]] | None = None,
         timeout: float = 30.0,
     ) -> None:
-        self._client = client
+        self._client = http_client
         self._base_url = base_url.rstrip("/")
-        self._headers = dict(headers) if headers else {}
+        self._headers = merge_headers(headers)
         self._credentials = dict(credentials) if credentials else {}
         self._timeout = timeout
 
     async def aclose(self) -> None:
-        await self._client.aclose()
+        """Release wrapper resources without closing the borrowed HTTP client."""
 
     async def __aenter__(self) -> Self:
         return self
@@ -72,25 +85,46 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> BrowserResponse:
-        path = "/api/v1/browser"
+        try:
+            path = "/api/v1/browser"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return BrowserResponse.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return BrowserResponse.model_validate(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def create_browser(
         self,
@@ -98,36 +132,61 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> BrowserResponse:
-        path = "/api/v1/browser"
+        try:
+            path = "/api/v1/browser"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        json_body = TypeAdapter(CreateBrowserRequest).dump_python(
-            body, mode="json", by_alias=True, exclude_none=True
-        )
+            body_arguments: dict[str, Any] = {}
+            body_arguments["json"] = serialize_json_body(
+                body, CreateBrowserRequest
+            )
+            if body_arguments["json"] is None:
+                body_arguments = {"content": b"null"}
+            set_header(headers, "Content-Type", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.POST,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            json=json_body,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 201:
-            return BrowserResponse.model_validate(response.json())
-        if response.status_code == 409:
-            parsed_body = BrowserAlreadyRunningProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = RequestValidationProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = BrowserStartupFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.POST,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                **body_arguments,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 201:
+                return BrowserResponse.model_validate(response.json())
+            if response.status_code == 409:
+                detail = BrowserAlreadyRunningProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = RequestValidationProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = BrowserStartupFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def capture_authentication_state(
         self,
@@ -135,39 +194,60 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> AuthenticationStateSchema:
-        path = "/api/v1/browser/authentication-state"
+        try:
+            path = "/api/v1/browser/authentication-state"
 
-        params = CaptureAuthenticationStateParams(
-            origins=origins,
-        )
-        query: list[tuple[str, str]] = []
-        if params.origins is not None:
-            query.extend(serialize_query("origins", params.origins))
+            params = CaptureAuthenticationStateParams(
+                origins=origins,
+            )
+            query: list[tuple[str, str]] = []
+            if params.origins is not None:
+                query.extend(serialize_query("origins", params.origins))
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            params=query,
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return AuthenticationStateSchema.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                params=tuple(query),
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return AuthenticationStateSchema.model_validate(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = BrowserStateInvalidProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = BrowserStateFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def mount_authentication_state(
         self,
@@ -175,86 +255,149 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/authentication-state"
+        try:
+            path = "/api/v1/browser/authentication-state"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/problem+json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/problem+json", default=True)
 
-        json_body = TypeAdapter(AuthenticationState).dump_python(
-            body, mode="json", by_alias=True, exclude_none=True
-        )
+            body_arguments: dict[str, Any] = {}
+            body_arguments["json"] = serialize_json_body(
+                body, AuthenticationState
+            )
+            if body_arguments["json"] is None:
+                body_arguments = {"content": b"null"}
+            set_header(headers, "Content-Type", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.PUT,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            json=json_body,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 204:
-            return None
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.PUT,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                **body_arguments,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 204:
+                return None
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = BrowserStateInvalidProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = BrowserStateFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def list_downloads(
         self,
         *,
         timeout: float | None = None,
     ) -> list[DownloadResponse]:
-        path = "/api/v1/browser/downloads"
+        try:
+            path = "/api/v1/browser/downloads"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return TypeAdapter(list[DownloadResponse]).validate_python(response.json())
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return TypeAdapter(list[DownloadResponse]).validate_python(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def clear_downloads(
         self,
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/downloads"
+        try:
+            path = "/api/v1/browser/downloads"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/problem+json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/problem+json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.DELETE,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 204:
-            return None
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.DELETE,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 204:
+                return None
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def download_file(
         self,
@@ -262,62 +405,130 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> bytes:
-        path = "/api/v1/browser/downloads/{download_id}/file"
-        path = path.replace("{download_id}", serialize_path("download_id", download_id))
+        async with self.stream_download_file(
+            download_id=download_id,
+            timeout=timeout,
+        ) as stream:
 
-        headers = dict(self._headers)
-        headers.setdefault(
-            "Accept", "application/octet-stream, application/problem+json"
-        )
+            if isinstance(stream, BinaryStream):
+                return b"".join([chunk async for chunk in stream.iter_bytes()])
+            return stream
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+    @asynccontextmanager
+    async def stream_download_file(
+        self,
+        download_id: str,
+        *,
+        timeout: float | None = None,
+    ) -> AsyncIterator[BinaryStream]:
+        try:
+            path = "/api/v1/browser/downloads/{download_id}/file"
+            path = path.replace("{download_id}", serialize_path("download_id", download_id))
 
-        if response.status_code == 200:
-            return response.content
-        if response.status_code == 404:
-            parsed_body = TypeAdapter(BrowserNotFoundProblem | DownloadNotFoundProblem).validate_python(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = RequestValidationProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/octet-stream, application/problem+json", default=True
+            )
 
-        raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
+
+        async with AsyncExitStack() as response_stack:
+            try:
+                response_context = self._client.stream(
+                    method=HttpMethods.GET,
+                    url=f"{self._base_url}{path}",
+                    headers=headers,
+                    timeout=self._timeout if timeout is None else timeout,
+                )
+                response = await response_stack.enter_async_context(response_context)
+            except ClientError:
+                raise
+            except Exception as error:
+                raise TransportError(error) from error
+
+            try:
+                stream_result: Any = None
+                if response.status_code == 200:
+                    response_content_type = response.headers.get("Content-Type", "")
+                    response_content_type = response_content_type.split(";", 1)[0].strip().lower()
+                    if response_content_type == "application/octet-stream":
+                        stream_result = BinaryStream(response, response_content_type)
+                    else:
+                        raise ValueError(f"unsupported response Content-Type: {response_content_type}")
+                else:
+                    await response.aread()
+                    if response.status_code == 404:
+                        detail = TypeAdapter(BrowserNotFoundProblem | DownloadNotFoundProblem).validate_python(response.json())
+                        raise ApiError(response.status_code, response.text, detail, response)
+                    if response.status_code == 422:
+                        detail = RequestValidationProblem.model_validate(response.json())
+                        raise ApiError(response.status_code, response.text, detail, response)
+                    raise ApiError(response.status_code, response.text, response=response)
+
+            except ClientError:
+                raise
+            except Exception as error:
+                validation_error = ResponseValidationError(
+                    response.status_code, response, error
+                )
+                raise validation_error from error
+
+            yield stream_result
 
     async def start_recording(
         self,
         *,
         timeout: float | None = None,
     ) -> RecordingResponse:
-        path = "/api/v1/browser/recordings"
+        try:
+            path = "/api/v1/browser/recordings"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.POST,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 201:
-            return RecordingResponse.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 409:
-            parsed_body = RecordingAlreadyExistsProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = RecordingFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.POST,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 201:
+                return RecordingResponse.model_validate(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 409:
+                detail = RecordingAlreadyExistsProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = RecordingFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def download_recording(
         self,
@@ -325,46 +536,85 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> bytes:
-        path = "/api/v1/browser/recordings/{recording_id}/file"
-        path = path.replace(
-            "{recording_id}", serialize_path("recording_id", recording_id)
-        )
+        async with self.stream_download_recording(
+            recording_id=recording_id,
+            timeout=timeout,
+        ) as stream:
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "video/webm, video/mp4, application/problem+json")
+            if isinstance(stream, BinaryStream):
+                return b"".join([chunk async for chunk in stream.iter_bytes()])
+            return stream
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+    @asynccontextmanager
+    async def stream_download_recording(
+        self,
+        recording_id: UUID,
+        *,
+        timeout: float | None = None,
+    ) -> AsyncIterator[BinaryStream]:
+        try:
+            path = "/api/v1/browser/recordings/{recording_id}/file"
+            path = path.replace(
+                "{recording_id}", serialize_path("recording_id", recording_id)
+            )
 
-        if response.status_code == 200:
-            response_content_type = response.headers.get("Content-Type", "")
-            response_content_type = response_content_type.split(";", 1)[0].lower()
-            if response_content_type == "video/webm":
-                parsed_body = response.content
-            elif response_content_type == "video/mp4":
-                parsed_body = response.content
-            else:
-                raise ApiError(
-                    response.status_code,
-                    f"unsupported response Content-Type: {response_content_type}",
-                    response=response,
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "video/webm, video/mp4, application/problem+json", default=True
+            )
+
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
+
+        async with AsyncExitStack() as response_stack:
+            try:
+                response_context = self._client.stream(
+                    method=HttpMethods.GET,
+                    url=f"{self._base_url}{path}",
+                    headers=headers,
+                    timeout=self._timeout if timeout is None else timeout,
                 )
-            return parsed_body
-        if response.status_code == 404:
-            parsed_body = RecordingNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 409:
-            parsed_body = RecordingNotCompletedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = RequestValidationProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+                response = await response_stack.enter_async_context(response_context)
+            except ClientError:
+                raise
+            except Exception as error:
+                raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+            try:
+                stream_result: Any = None
+                if response.status_code == 200:
+                    response_content_type = response.headers.get("Content-Type", "")
+                    response_content_type = response_content_type.split(";", 1)[0].strip().lower()
+                    if response_content_type == "video/webm":
+                        stream_result = BinaryStream(response, response_content_type)
+                    elif response_content_type == "video/mp4":
+                        stream_result = BinaryStream(response, response_content_type)
+                    else:
+                        raise ValueError(f"unsupported response Content-Type: {response_content_type}")
+                else:
+                    await response.aread()
+                    if response.status_code == 404:
+                        detail = RecordingNotFoundProblem.model_validate(response.json())
+                        raise ApiError(response.status_code, response.text, detail, response)
+                    if response.status_code == 409:
+                        detail = RecordingNotCompletedProblem.model_validate(response.json())
+                        raise ApiError(response.status_code, response.text, detail, response)
+                    if response.status_code == 422:
+                        detail = RequestValidationProblem.model_validate(response.json())
+                        raise ApiError(response.status_code, response.text, detail, response)
+                    raise ApiError(response.status_code, response.text, response=response)
+
+            except ClientError:
+                raise
+            except Exception as error:
+                validation_error = ResponseValidationError(
+                    response.status_code, response, error
+                )
+                raise validation_error from error
+
+            yield stream_result
 
     async def stop_recording(
         self,
@@ -372,68 +622,110 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> RecordingResponse:
-        path = "/api/v1/browser/recordings/{recording_id}/stop"
-        path = path.replace(
-            "{recording_id}", serialize_path("recording_id", recording_id)
-        )
+        try:
+            path = "/api/v1/browser/recordings/{recording_id}/stop"
+            path = path.replace(
+                "{recording_id}", serialize_path("recording_id", recording_id)
+            )
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.POST,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return RecordingResponse.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = RecordingNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 409:
-            parsed_body = RecordingNotRunningProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = RequestValidationProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = RecordingFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.POST,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return RecordingResponse.model_validate(response.json())
+            if response.status_code == 404:
+                detail = RecordingNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 409:
+                detail = RecordingNotRunningProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = RequestValidationProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = RecordingFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def capture_browser_state(
         self,
         *,
         timeout: float | None = None,
     ) -> BrowserStateSchema:
-        path = "/api/v1/browser/state"
+        try:
+            path = "/api/v1/browser/state"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return BrowserStateSchema.model_validate(response.json())
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return BrowserStateSchema.model_validate(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = BrowserStateInvalidProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = BrowserStateFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def mount_browser_state(
         self,
@@ -441,80 +733,141 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/browser/state"
+        try:
+            path = "/api/v1/browser/state"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/problem+json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/problem+json", default=True)
 
-        json_body = TypeAdapter(BrowserState).dump_python(
-            body, mode="json", by_alias=True, exclude_none=True
-        )
+            body_arguments: dict[str, Any] = {}
+            body_arguments["json"] = serialize_json_body(
+                body, BrowserState
+            )
+            if body_arguments["json"] is None:
+                body_arguments = {"content": b"null"}
+            set_header(headers, "Content-Type", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.PUT,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            json=json_body,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 204:
-            return None
-        if response.status_code == 404:
-            parsed_body = BrowserNotFoundProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 422:
-            parsed_body = BrowserStateInvalidProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
-        if response.status_code == 503:
-            parsed_body = BrowserStateFailedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.PUT,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                **body_arguments,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 204:
+                return None
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 422:
+                detail = BrowserStateInvalidProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+            if response.status_code == 503:
+                detail = BrowserStateFailedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def health(
         self,
         *,
         timeout: float | None = None,
     ) -> HealthResponse:
-        path = "/api/v1/health"
+        try:
+            path = "/api/v1/health"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return HealthResponse.model_validate(response.json())
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return HealthResponse.model_validate(response.json())
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def readiness(
         self,
         *,
         timeout: float | None = None,
     ) -> HealthResponse:
-        path = "/api/v1/readiness"
+        try:
+            path = "/api/v1/readiness"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.GET,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 200:
-            return HealthResponse.model_validate(response.json())
+        try:
+            response = await self._client.request(
+                method=HttpMethods.GET,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 200:
+                return HealthResponse.model_validate(response.json())
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def release_worker(
         self,
@@ -522,52 +875,96 @@ class GeneratedBrowserWorkerClient:
         *,
         timeout: float | None = None,
     ) -> None:
-        path = "/api/v1/release"
+        try:
+            path = "/api/v1/release"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/problem+json")
+            headers = dict(self._headers)
+            set_header(headers, "Accept", "application/problem+json", default=True)
 
-        json_body = TypeAdapter(ReleaseWorkerRequest).dump_python(
-            body, mode="json", by_alias=True, exclude_none=True
-        )
+            body_arguments: dict[str, Any] = {}
+            body_arguments["json"] = serialize_json_body(
+                body, ReleaseWorkerRequest
+            )
+            if body_arguments["json"] is None:
+                body_arguments = {"content": b"null"}
+            set_header(headers, "Content-Type", "application/json", default=True)
 
-        response = await self._client.request(
-            method=HttpMethods.POST,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            json=json_body,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 204:
-            return None
-        if response.status_code == 422:
-            parsed_body = RequestValidationProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.POST,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                **body_arguments,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 204:
+                return None
+            if response.status_code == 422:
+                detail = RequestValidationProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
 
     async def restart_worker(
         self,
         *,
         timeout: float | None = None,
     ) -> RestartWorkerResponse:
-        path = "/api/v1/restart"
+        try:
+            path = "/api/v1/restart"
 
-        headers = dict(self._headers)
-        headers.setdefault("Accept", "application/json, application/problem+json")
+            headers = dict(self._headers)
+            set_header(
+                headers, "Accept", "application/json, application/problem+json", default=True
+            )
 
-        response = await self._client.request(
-            method=HttpMethods.POST,
-            url=f"{self._base_url}{path}",
-            headers=headers,
-            timeout=self._timeout if timeout is None else timeout,
-        )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise RequestValidationError(error) from error
 
-        if response.status_code == 202:
-            return RestartWorkerResponse.model_validate(response.json())
-        if response.status_code == 409:
-            parsed_body = WorkerNotSupervisedProblem.model_validate(response.json())
-            raise ApiError(response.status_code, response.text, parsed_body, response)
+        try:
+            response = await self._client.request(
+                method=HttpMethods.POST,
+                url=f"{self._base_url}{path}",
+                headers=headers,
+                timeout=self._timeout if timeout is None else timeout,
+            )
+        except ClientError:
+            raise
+        except Exception as error:
+            raise TransportError(error) from error
 
-        raise ApiError(response.status_code, response.text, response=response)
+        try:
+            if response.status_code == 202:
+                return RestartWorkerResponse.model_validate(response.json())
+            if response.status_code == 409:
+                detail = WorkerNotSupervisedProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
+
+            raise ApiError(response.status_code, response.text, response=response)
+        except ClientError:
+            raise
+        except Exception as error:
+            validation_error = ResponseValidationError(
+                response.status_code, response, error
+            )
+            raise validation_error from error
