@@ -3,9 +3,10 @@
 # ============================================================================
 
 
-from .client import GeneratedBrowserWorkerClient
-from .exceptions import ApiError
-from .http_methods import HttpMethods
+from .client import BrowserWorkerClient
+from .errors import (ApiError, ClientError, RequestValidationError, ResponseValidationError, TransportError)
+from .models import HttpMethods, HttpResponse
+from .transport import (AsyncHttpClient, BinaryContent, BinaryStream, UploadFile)
 from .models import (
     AuthenticationState,
     AuthenticationStateSchema,
@@ -53,8 +54,11 @@ from .models import (
 
 __all__ = [
     "ApiError",
+    "AsyncHttpClient",
     "AuthenticationState",
     "AuthenticationStateSchema",
+    "BinaryContent",
+    "BinaryStream",
     "BrowserAlreadyRunningProblem",
     "BrowserCookie",
     "BrowserNotFoundProblem",
@@ -65,15 +69,17 @@ __all__ = [
     "BrowserStateInvalidProblem",
     "BrowserStateSchema",
     "BrowserTabState",
+    "BrowserWorkerClient",
+    "ClientError",
     "CookiePartitionKey",
     "CreateBrowserRequest",
     "DownloadNotFoundProblem",
     "DownloadResponse",
-    "GeneratedBrowserWorkerClient",
     "HTTPValidationError",
     "HealthResponse",
     "HealthStatus",
     "HttpMethods",
+    "HttpResponse",
     "IndexedDbDatabase",
     "IndexedDbIndex",
     "IndexedDbKeyPath",
@@ -90,11 +96,15 @@ __all__ = [
     "RecordingResponse",
     "RecordingState",
     "ReleaseWorkerRequest",
+    "RequestValidationError",
     "RequestValidationProblem",
     "RequestValidationProblemErrorsItem",
+    "ResponseValidationError",
     "RestartWorkerResponse",
     "ScrollPosition",
     "StorageItem",
+    "TransportError",
+    "UploadFile",
     "ValidationError",
     "WorkerNotSupervisedProblem",
 ]
