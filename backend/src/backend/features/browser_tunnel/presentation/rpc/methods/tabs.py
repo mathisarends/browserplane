@@ -1,4 +1,4 @@
-from fastapi_rpckit import Inject, RpcError
+from fastapi_canon.integrations.websockets import Inject, RpcError
 
 from backend.features.browser_tunnel.domain import (
     Browser,

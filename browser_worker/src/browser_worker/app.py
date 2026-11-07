@@ -32,9 +32,11 @@ def create_app(service: BrowserService | None = None) -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
     providers = (BrowserProvider(service),) if service is not None else ()
     composition = Composition(
-        Feature(name="infrastructure", providers=(WorkspaceProvider,)),
-        *FEATURES,
-        Feature(name="overrides", providers=providers),
+        features=(
+            Feature(name="infrastructure", providers=(WorkspaceProvider,)),
+            *FEATURES,
+            Feature(name="overrides", providers=providers),
+        ),
         errors=ErrorOptions(type_base=PROBLEM_TYPE_BASE),
         router_factory=lambda: CanonRouter(prefix=API_PREFIX),
     )

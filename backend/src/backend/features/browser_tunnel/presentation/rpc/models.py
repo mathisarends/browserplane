@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Literal
 
-from fastapi_rpckit import RpcModel
+from fastapi_canon.integrations.websockets import RpcModel
 from pydantic import Field
 
 from backend.features.browser_tunnel.domain import (

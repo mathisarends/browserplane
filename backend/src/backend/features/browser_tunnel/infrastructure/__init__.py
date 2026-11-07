@@ -5,8 +5,3 @@ __all__ = [
     "CdpBrowser",
     "CursorEventBridge",
 ]
-from backend.features.browser_tunnel.infrastructure.provider import (
-    BrowserTunnelProvider,
-)
-
-__all__ = ["BrowserTunnelProvider"]

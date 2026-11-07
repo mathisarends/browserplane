@@ -1,28 +1,34 @@
 # Canon stack
 
-The backend and worker use `fastapi-canon==0.8.1`; browser RPC uses
-`fastapi-rpckit==0.4.1`. The frontend uses the reviewed Lit Canon revision
+The backend, worker and browser RPC use `fastapi-canon==0.15.0`. The backend
+selects its `websockets` extra; the development `codegen` extra supplies the RPC
+generator. The frontend uses the reviewed Lit Canon revision
 `4fe0827b03bacc3f04008b8300b3e6942593c323`. See [the vendored package record](../vendor/README.md).
 
 ## Composition and ownership
 
-Each backend capability is an explicit Canon feature. The composition roots own
+Each backend capability is an explicit Canon feature. `Composition(features=...)`
+receives the ordered features as a keyword argument. The composition roots own
 Dishka and its lifespan; features own their providers and routers. Browser and
 repository ABCs and their records live in framework-free domain packages;
 infrastructure implements those owned interfaces. Application services coordinate
 domain work, and presentation maps it into HTTP or RPC responses.
 
 HTTP routes keep Canon's typed error contracts and generated OpenAPI responses.
-The static error-contract checker runs in strict mode: proven missing declarations
-fail the check. It also reports incomplete analysis of dynamic adapters and
-external calls. A zero-gap result does not mean every possible exception was
+The public `fastapi-canon check errors` command runs in strict mode: proven
+missing declarations fail the check. It also reports incomplete analysis of
+dynamic adapters and external calls. A zero-gap result does not mean every possible exception was
 proved; incomplete operations remain visible in the check output.
 
 ## Browser RPC
 
-Free functions on `RpcChannel` declare the browser methods; `RpcService` owns the
-socket endpoint and the OpenRPC contract. The backend selects a browser from the
-leased session and supplies it through the connection context. Missing tabs have
+Free functions on `RpcChannel` declare the browser methods. A
+`CanonWebSocketRouter` owns the socket endpoint and OpenRPC contract and is
+installed directly through the browser-tunnel feature. Its `Dishka()` resolver
+supplies `Inject[T]` services to the custom session handler; that handler keeps
+the lease heartbeat and CDP browser lifetime around the RPC connection. The backend
+selects a browser from the leased session and supplies it through the connection
+context. Missing tabs have
 a declared typed RPC error. Read-only tab and clipboard operations are explicitly
 idempotent; writes are never marked retryable.
 

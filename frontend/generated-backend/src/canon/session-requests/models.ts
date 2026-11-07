@@ -34,10 +34,8 @@ export interface SessionRequestNotFoundProblem {
   title: "Session request not found";
   status: 404;
   code: "session_request_not_found";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   [key: string]: unknown;
 }
 
@@ -67,10 +65,8 @@ export interface RequestValidationProblem {
   title: "Request validation failed";
   status: 422;
   code: "request_validation_error";
-  /** @nullable */
-  detail?: string | null;
-  /** @nullable */
-  instance?: string | null;
+  detail?: string;
+  instance?: string;
   errors: RequestValidationProblemErrorsItem[];
   [key: string]: unknown;
 }

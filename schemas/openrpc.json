@@ -2433,7 +2433,7 @@
       "summary": "Stream browser state to the frontend."
     }
   ],
-  "x-rpc-subscriptions": [],
+  "x-rpc-streams": [],
   "x-rpc-notification-types": [
     {
       "name": "browser.tabs",

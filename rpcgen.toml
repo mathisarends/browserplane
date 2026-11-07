@@ -1,7 +1,7 @@
 version = 1
 
 [contract]
-source = "backend.features.browser_tunnel.presentation.rpc:BROWSER_CONTRACT"
+source = "backend.features.browser_tunnel.presentation.session:BROWSER_CONTRACT"
 output = "schemas/openrpc.json"
 
 [[clients]]
