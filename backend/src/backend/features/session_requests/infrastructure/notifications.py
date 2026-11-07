@@ -7,23 +7,18 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from backend.features.session_requests.application.wakeups import Wakeups
-from backend.features.session_requests.domain.ports import Notification, Notifier
+from backend.features.session_requests.application import Wakeups
+from backend.features.session_requests.domain import Notification, Notifier
 from backend.infrastructure.database.settings import DatabaseSettings
 
 logger = logging.getLogger(__name__)
-CHANNEL = "browser_capacity_changed"
+_CHANNEL = "browser_capacity_changed"
 
 
 def connection_dsn(settings: DatabaseSettings) -> str:
     """The configured URL as a plain libpq DSN, without the SQLAlchemy driver."""
     url = make_url(settings.database_url).set(drivername="postgresql")
     return url.render_as_string(hide_password=False)
-
-
-async def notify_transaction(session: AsyncSession) -> None:
-    # PostgreSQL delivers this only if the surrounding transaction commits.
-    await session.execute(text("SELECT pg_notify(:channel, '')"), {"channel": CHANNEL})
 
 
 class PostgresNotifier(Notifier):
@@ -59,7 +54,7 @@ class PostgresListener:
                 connection = await asyncpg.connect(
                     connection_dsn(self._settings), timeout=5
                 )
-                await connection.add_listener(CHANNEL, lambda *_: self._wakeups.wake())
+                await connection.add_listener(_CHANNEL, lambda *_: self._wakeups.wake())
                 self._wakeups.wake()
                 while True:
                     await asyncio.sleep(5)

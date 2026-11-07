@@ -4,8 +4,8 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-CLIENT_CLOSED_REQUEST = 499
-POLL_INTERVAL_SECONDS = 0.5
+_CLIENT_CLOSED_REQUEST = 499
+_POLL_INTERVAL_SECONDS = 0.5
 
 
 async def while_connected[T](http_request: Request, work: Coroutine[Any, Any, T]) -> T:
@@ -22,7 +22,7 @@ async def while_connected[T](http_request: Request, work: Coroutine[Any, Any, T]
         done, _ = await asyncio.wait((task, watch), return_when=asyncio.FIRST_COMPLETED)
         if task in done:
             return task.result()
-        raise HTTPException(CLIENT_CLOSED_REQUEST, "Client disconnected")
+        raise HTTPException(_CLIENT_CLOSED_REQUEST, "Client disconnected")
     finally:
         task.cancel()
         watch.cancel()
@@ -34,4 +34,4 @@ async def while_connected[T](http_request: Request, work: Coroutine[Any, Any, T]
 
 async def _disconnected(http_request: Request) -> None:
     while not await http_request.is_disconnected():
-        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+        await asyncio.sleep(_POLL_INTERVAL_SECONDS)

@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
-from backend.features.browsers.domain.models import BrowserSlot
-from backend.features.browsers.domain.ports import BrowserProvisioner
+from backend.features.browsers.domain import BrowserProvisioner, BrowserSlot
 
 
 class FakeBrowserProvisioner(BrowserProvisioner):

@@ -5,16 +5,17 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import Query, Response, WebSocket, status
-from fastapi_canon import CanonResponse, CanonRouter
+from fastapi_canon import CanonResponse, CanonRouter, ErrorRegistry
 
-from backend.features.browsers.infrastructure.routes import (
+from backend.features.browsers.application import (
     BrowserWorkerRoutes,
     ScreencastMode,
 )
 from backend.features.browsers.presentation.errors import BROWSER_NOT_FOUND
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
-from backend.features.sessions.infrastructure.websocket_proxy import proxy_stream
+from backend.features.sessions.application import (
+    SessionLeaseKeeper,
+    SessionService,
+)
 from backend.features.sessions.presentation.connection import resolve_session
 from backend.features.sessions.presentation.errors import (
     AUTHENTICATION_PROFILE_NOT_FOUND,
@@ -41,11 +42,27 @@ from backend.features.sessions.presentation.schemas import (
     SessionResponse,
     UpdateAuthenticationProfileRequest,
 )
-from backend.presentation.error_registry import API_ERRORS
-from generated.browser_worker import BrowserStateSchema, DownloadResponse
+from backend.features.sessions.presentation.state_schemas import (
+    BrowserStateSchema,
+    DownloadResponse,
+)
+from backend.features.sessions.presentation.websocket_proxy import proxy_stream
+
+_ROUTE_ERRORS = ErrorRegistry(
+    name="sessions-routes",
+    errors=(
+        BROWSER_NOT_FOUND,
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        BROWSER_CHECKPOINT_NOT_FOUND,
+        BROWSER_STATE_TRANSFER_FAILED,
+        DOWNLOAD_NOT_FOUND,
+    ),
+)
 
 session_router = CanonRouter(
-    route_class=DishkaRoute, tags=["sessions"], error_registry=API_ERRORS
+    route_class=DishkaRoute, tags=["sessions"], error_registry=_ROUTE_ERRORS
 )
 logger = logging.getLogger(__name__)
 
@@ -54,7 +71,7 @@ logger = logging.getLogger(__name__)
     "/sessions",
     response_model=OwnerSessionsResponse,
     operation_id="list_owner_sessions",
-    raises=(BROWSER_NOT_FOUND,),
+    raises=(BROWSER_NOT_FOUND, SESSION_NOT_FOUND),
 )
 async def list_owner_sessions(
     owner_id: UUID, service: FromDishka[SessionService]
@@ -217,6 +234,7 @@ async def list_browser_checkpoints(
         BROWSER_NOT_FOUND,
         SESSION_NOT_ACTIVE,
         BROWSER_STATE_TRANSFER_FAILED,
+        AUTHENTICATION_PROFILE_NOT_FOUND,
     ),
 )
 async def create_browser_checkpoint(
@@ -290,7 +308,12 @@ async def get_authentication_profile(
     "/sessions/{session_id}/authentication-profiles/{profile_id}",
     response_model=AuthenticationProfileResponse,
     operation_id="update_authentication_profile",
-    raises=(AUTHENTICATION_PROFILE_NOT_FOUND,),
+    raises=(
+        AUTHENTICATION_PROFILE_NOT_FOUND,
+        SESSION_NOT_FOUND,
+        SESSION_NOT_ACTIVE,
+        BROWSER_NOT_FOUND,
+    ),
 )
 async def update_authentication_profile(
     session_id: UUID,
@@ -328,6 +351,7 @@ async def delete_authentication_profile(
         SESSION_NOT_ACTIVE,
         AUTHENTICATION_PROFILE_NOT_FOUND,
         BROWSER_STATE_TRANSFER_FAILED,
+        BROWSER_CHECKPOINT_NOT_FOUND,
     ),
 )
 async def mount_session_browser_checkpoint(

@@ -3,7 +3,7 @@ import contextlib
 import logging
 from collections.abc import AsyncGenerator, AsyncIterator
 
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.screencast.domain import FrameStream
 from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)
@@ -48,16 +48,6 @@ class Fmp4Livestream:
         finally:
             self._subscribers.discard(queue)
 
-    async def _chunks(
-        self, queue: asyncio.Queue[bytes | object]
-    ) -> AsyncGenerator[bytes]:
-        while True:
-            chunk = await queue.get()
-            if chunk is _STREAM_ENDED:
-                return
-            assert isinstance(chunk, bytes)
-            yield chunk
-
     async def start(self) -> None:
         if self._process is not None:
             return
@@ -86,6 +76,42 @@ class Fmp4Livestream:
         if self._frame_queue.full():
             self._frame_queue.get_nowait()
         self._frame_queue.put_nowait(frame_data)
+
+    async def stop(self) -> None:
+        process = self._process
+        if process is None:
+            return
+
+        await self._stop_writer()
+        if process.stdin is not None:
+            process.stdin.close()
+        if self._reader_task is not None:
+            await self._reader_task
+
+        try:
+            return_code = await asyncio.wait_for(process.wait(), timeout=5.0)
+        except TimeoutError:
+            logger.warning("FFmpeg process did not exit in time; killing it")
+            process.kill()
+            return_code = await process.wait()
+        finally:
+            self._process = None
+            self._reader_task = None
+            _discard_queued_chunks(self._frame_queue)
+            self._end_subscribers()
+
+        if return_code != 0:
+            logger.warning("fMP4 livestream ffmpeg exited with code %s", return_code)
+
+    async def _chunks(
+        self, queue: asyncio.Queue[bytes | object]
+    ) -> AsyncGenerator[bytes]:
+        while True:
+            chunk = await queue.get()
+            if chunk is _STREAM_ENDED:
+                return
+            assert isinstance(chunk, bytes)
+            yield chunk
 
     async def _write_frames(self) -> None:
         while True:
@@ -190,32 +216,6 @@ class Fmp4Livestream:
                 len(error.partial),
             )
             return None
-
-    async def stop(self) -> None:
-        process = self._process
-        if process is None:
-            return
-
-        await self._stop_writer()
-        if process.stdin is not None:
-            process.stdin.close()
-        if self._reader_task is not None:
-            await self._reader_task
-
-        try:
-            return_code = await asyncio.wait_for(process.wait(), timeout=5.0)
-        except TimeoutError:
-            logger.warning("FFmpeg process did not exit in time; killing it")
-            process.kill()
-            return_code = await process.wait()
-        finally:
-            self._process = None
-            self._reader_task = None
-            _discard_queued_chunks(self._frame_queue)
-            self._end_subscribers()
-
-        if return_code != 0:
-            logger.warning("fMP4 livestream ffmpeg exited with code %s", return_code)
 
     async def _stop_writer(self) -> None:
         writer, self._writer_task = self._writer_task, None

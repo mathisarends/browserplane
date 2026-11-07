@@ -1,6 +1,6 @@
 from fastapi_canon import Feature
 
-from backend.features.recordings.infrastructure import RecordingProvider
+from backend.features.recordings.infrastructure.provider import RecordingProvider
 from backend.features.recordings.presentation.errors import ERRORS
 from backend.features.recordings.presentation.router import recording_router
 

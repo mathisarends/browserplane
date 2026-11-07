@@ -4,9 +4,7 @@ from pathlib import Path
 import pytest
 from tests.fakes import FakeFrameStream
 
-from browser_worker.features.recordings.application.exceptions import (
-    RecordingFailedException,
-)
+from browser_worker.features.recordings.application import RecordingFailedException
 from browser_worker.features.recordings.infrastructure.ffmpeg import (
     Ffmpeg,
     FfmpegScreenRecorder,
@@ -37,6 +35,7 @@ def jpeg_frame(directory: Path) -> bytes:
         ],
         check=True,
         capture_output=True,
+        timeout=10,
     )
     return path.read_bytes()
 

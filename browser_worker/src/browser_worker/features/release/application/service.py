@@ -4,15 +4,15 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from browser_worker.features.browser.application.exceptions import (
+from browser_worker.features.browser.application import (
     BrowserAlreadyRunningException,
+    BrowserService,
 )
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.downloads.application.service import DownloadService
-from browser_worker.features.recordings.application.service import RecordingService
+from browser_worker.features.downloads.application import DownloadService
+from browser_worker.features.recordings.application import RecordingService
 from browser_worker.features.release.application.settings import ReleaseSettings
-from browser_worker.features.screencast.application.service import ScreencastService
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.screencast.application import ScreencastService
+from browser_worker.features.workspace.application import Workspace
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ class WorkerReleaseService:
             self._recordings.is_idle
             and self._downloads.is_idle
             and self._screencasts.is_idle
-            and not any(path.exists() for path in self._workspace.directories)
+            and self._workspace.is_empty()
         )
 
     def _delete_in_background(self, directory: Path) -> None:

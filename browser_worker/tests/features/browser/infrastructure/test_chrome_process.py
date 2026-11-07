@@ -1,8 +1,6 @@
 import pytest
 
-from browser_worker.features.browser.application.exceptions import (
-    BrowserStartupException,
-)
+from browser_worker.features.browser.application import BrowserStartupException
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
 

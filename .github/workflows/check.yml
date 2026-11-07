@@ -30,7 +30,8 @@ jobs:
           chromium_path=$(node -p "require('playwright').chromium.executablePath()")
           echo "BROWSER_EXECUTABLE=$chromium_path" >> "$GITHUB_ENV"
           echo "BROWSER_WORKER_EXECUTABLE=$chromium_path" >> "$GITHUB_ENV"
-      - run: uv run --locked python scripts/check.py all
+      - name: Check architecture, lint, tests, contracts and build
+        run: uv run --locked python scripts/check.py all
       - run: git diff --exit-code -- schemas/openrpc.json frontend/generated frontend/generated-backend generated/src
       - run: uv run --locked python scripts/check.py browser
       - name: Build service images

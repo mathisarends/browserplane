@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 
-from browser_worker.features.browser.domain.ports import BrowserProcess
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.browser.domain import BrowserProcess
+from browser_worker.features.screencast.domain import FrameStream
 
 
 class FakeBrowserProcess(BrowserProcess):

@@ -13,7 +13,10 @@ from backend.infrastructure.database.settings import DatabaseSettings
 
 class DatabaseProvider(Provider):
     @provide(scope=Scope.APP)
-    def settings(self) -> DatabaseSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> DatabaseSettings:
         return DatabaseSettings()
 
     @provide(scope=Scope.APP)

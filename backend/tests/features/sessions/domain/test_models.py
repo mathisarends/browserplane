@@ -1,24 +1,20 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.sessions.domain.models import (
-    ResolvedSession,
-    Session,
-    SessionStatus,
-)
+from backend.features.browsers.domain import Browser, BrowserSlot
+from backend.features.leases.domain import Lease, LeaseState
+from backend.features.sessions.domain import ResolvedSession, Session, SessionStatus
 
 
 def _active() -> tuple[Session, Lease, Browser]:
     now = datetime.now(UTC)
-    browser = Browser(BrowserSlot(uuid4(), "http://worker"), now)
+    browser = Browser(BrowserSlot(UUID(int=19), "http://worker"), now)
     session = Session(
-        id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=20),
+        owner_id=UUID(int=21),
         status=SessionStatus.ACTIVE,
         created_at=now,
         expires_at=now + timedelta(minutes=1),
@@ -39,7 +35,7 @@ def _active() -> tuple[Session, Lease, Browser]:
 
 def test_session_lifecycle_preserves_and_clears_only_relevant_state() -> None:
     session, _, _ = _active()
-    checkpoint_id = uuid4()
+    checkpoint_id = UUID(int=22)
     suspended = session.suspend(checkpoint_id, datetime.now(UTC) + timedelta(hours=1))
 
     assert suspended.status is SessionStatus.SUSPENDED
@@ -49,7 +45,7 @@ def test_session_lifecycle_preserves_and_clears_only_relevant_state() -> None:
     assert resumed.browser_checkpoint_id is None
     assert resumed.close().close().status is SessionStatus.CLOSED
     with pytest.raises(ValueError):
-        suspended.suspend(uuid4(), datetime.now(UTC))
+        suspended.suspend(UUID(int=23), datetime.now(UTC))
 
 
 def test_resolved_session_requires_matching_active_resources() -> None:
@@ -59,6 +55,6 @@ def test_resolved_session_requires_matching_active_resources() -> None:
     assert resolved.browser_id == browser.id
     assert resolved.lease is lease
     with pytest.raises(ValueError):
-        ResolvedSession.active(session, replace(lease, id=uuid4()), browser)
+        ResolvedSession.active(session, replace(lease, id=UUID(int=24)), browser)
     with pytest.raises(ValueError):
         ResolvedSession.inactive(session)

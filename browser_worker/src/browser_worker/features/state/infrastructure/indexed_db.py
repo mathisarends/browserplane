@@ -3,10 +3,10 @@ import logging
 from cdpify import Client
 from cdpify.domains.runtime.types import CallArgument
 
-from browser_worker.features.state.application.exceptions import (
+from browser_worker.features.state.application import (
     BrowserStateFailedException,
+    OriginIndexedDb,
 )
-from browser_worker.features.state.application.models import OriginIndexedDb
 from browser_worker.features.state.infrastructure.origin import loaded_origin
 
 logger = logging.getLogger(__name__)

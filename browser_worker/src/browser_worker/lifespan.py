@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.workspace.application import Workspace
 
 
 @asynccontextmanager

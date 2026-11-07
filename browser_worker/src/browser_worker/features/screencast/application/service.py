@@ -1,7 +1,4 @@
-from browser_worker.features.screencast.domain.ports import (
-    FrameStream,
-    FrameStreamFactory,
-)
+from browser_worker.features.screencast.domain import FrameStream, FrameStreamFactory
 
 
 class ScreencastService:

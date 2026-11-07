@@ -1,7 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from browser_worker.features.recordings.application.exceptions import (
+from browser_worker.features.recordings.application import (
     RecordingAlreadyExistsException,
     RecordingFailedException,
     RecordingNotCompletedException,
@@ -45,11 +45,11 @@ RECORDING_FAILED = Error(
     detail=str,
 )
 
-API_ERRORS = (
+_API_ERRORS = (
     RECORDING_NOT_FOUND,
     RECORDING_ALREADY_EXISTS,
     RECORDING_NOT_RUNNING,
     RECORDING_NOT_COMPLETED,
     RECORDING_FAILED,
 )
-ERRORS = ErrorRegistry(name="recordings", errors=API_ERRORS)
+ERRORS = ErrorRegistry(name="recordings", errors=_API_ERRORS)

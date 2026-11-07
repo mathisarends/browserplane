@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from browser_worker.features.recordings.application.models import RecordingState
+from browser_worker.features.recordings.application import RecordingState
 
 
 class RecordingResponse(BaseModel):

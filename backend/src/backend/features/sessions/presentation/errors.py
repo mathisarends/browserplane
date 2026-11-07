@@ -1,8 +1,8 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from backend.features.browsers.application.exceptions import BrowserUnavailableException
-from backend.features.sessions.application.exceptions import (
+from backend.features.browsers.application import BrowserUnavailableException
+from backend.features.sessions.application import (
     AuthenticationProfileNotFoundException,
     BrowserCheckpointNotFoundException,
     BrowserStateTransferException,
@@ -19,7 +19,7 @@ SESSION_NOT_FOUND = Error(
     title="Session not found",
     detail=str,
 )
-NO_BROWSER_AVAILABLE = Error(
+_NO_BROWSER_AVAILABLE = Error(
     BrowserUnavailableException,
     status=status.HTTP_503_SERVICE_UNAVAILABLE,
     code="no_browser_available",
@@ -69,9 +69,9 @@ BROWSER_CHECKPOINT_NOT_FOUND = Error(
     detail=str,
 )
 
-API_ERRORS = (
+_API_ERRORS = (
     SESSION_NOT_FOUND,
-    NO_BROWSER_AVAILABLE,
+    _NO_BROWSER_AVAILABLE,
     SESSION_NOT_ACTIVE,
     SESSION_NOT_SUSPENDED,
     BROWSER_STATE_TRANSFER_FAILED,
@@ -79,4 +79,4 @@ API_ERRORS = (
     AUTHENTICATION_PROFILE_NOT_FOUND,
     BROWSER_CHECKPOINT_NOT_FOUND,
 )
-ERRORS = ErrorRegistry(name="sessions", errors=API_ERRORS)
+ERRORS = ErrorRegistry(name="sessions", errors=_API_ERRORS)

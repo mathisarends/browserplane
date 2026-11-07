@@ -1,6 +1,8 @@
-from . import events, methods
-from .channel import channel as BROWSER_CHANNEL
-from .models import (
+from backend.features.browser_tunnel.presentation.rpc import events, methods
+from backend.features.browser_tunnel.presentation.rpc.channel import (
+    channel as BROWSER_CHANNEL,
+)
+from backend.features.browser_tunnel.presentation.rpc.models import (
     BrowserCursorEvent,
     BrowserEvent,
     BrowserNavigationEvent,

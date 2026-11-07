@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from browser_worker.features.browser.application.service import RunningBrowser
+from browser_worker.features.browser.application import RunningBrowser
 
 
 class CreateBrowserRequest(BaseModel):

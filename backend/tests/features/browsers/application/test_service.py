@@ -1,18 +1,18 @@
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from fakes.browser_provisioner import FakeBrowserProvisioner
 from fakes.browser_repository import InMemoryBrowserRepository
 from fakes.worker_recovery import FakeWorkerRecovery
 
-from backend.features.browsers.application.exceptions import (
+from backend.features.browsers.application import (
     BrowserNotFoundException,
     BrowserProvisioningException,
+    BrowserService,
     BrowserUnavailableException,
 )
-from backend.features.browsers.application.service import BrowserService
-from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserState
+from backend.features.browsers.domain import Browser, BrowserSlot, BrowserState
 
 
 def _browser(slot: BrowserSlot, *, state: BrowserState = BrowserState.READY) -> Browser:
@@ -21,8 +21,8 @@ def _browser(slot: BrowserSlot, *, state: BrowserState = BrowserState.READY) -> 
 
 @pytest.mark.asyncio
 async def test_start_registers_slots_and_preserves_existing_lifecycle() -> None:
-    first = BrowserSlot(uuid4(), "http://worker-one")
-    second = BrowserSlot(uuid4(), "http://worker-two")
+    first = BrowserSlot(UUID(int=42), "http://worker-one")
+    second = BrowserSlot(UUID(int=43), "http://worker-two")
     repository = InMemoryBrowserRepository()
     await repository.save(
         Browser(
@@ -48,7 +48,7 @@ async def test_start_registers_slots_and_preserves_existing_lifecycle() -> None:
 
 @pytest.mark.asyncio
 async def test_pool_operations_keep_availability_and_generations_consistent() -> None:
-    slot = BrowserSlot(uuid4(), "http://worker")
+    slot = BrowserSlot(UUID(int=44), "http://worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
     browser = await repository.save(_browser(slot))
@@ -74,8 +74,8 @@ async def test_pool_operations_keep_availability_and_generations_consistent() ->
 
 @pytest.mark.asyncio
 async def test_recycle_ignores_unassigned_slots_and_cleans_leased_ones() -> None:
-    ready_slot = BrowserSlot(uuid4(), "http://ready-worker")
-    leased_slot = BrowserSlot(uuid4(), "http://leased-worker")
+    ready_slot = BrowserSlot(UUID(int=45), "http://ready-worker")
+    leased_slot = BrowserSlot(UUID(int=46), "http://leased-worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
     ready = await repository.save(_browser(ready_slot))
@@ -84,7 +84,7 @@ async def test_recycle_ignores_unassigned_slots_and_cleans_leased_ones() -> None
 
     await service.recycle(ready.id)
     await service.recycle(leased.id)
-    await service.recycle(uuid4())
+    await service.recycle(UUID(int=47))
 
     assert provisioner.released == [(leased_slot, 0)]
     cleaned = await service.get(leased.id)
@@ -94,7 +94,7 @@ async def test_recycle_ignores_unassigned_slots_and_cleans_leased_ones() -> None
 
 @pytest.mark.asyncio
 async def test_worker_failures_are_translated_and_mark_recycling_failed() -> None:
-    slot = BrowserSlot(uuid4(), "http://worker")
+    slot = BrowserSlot(UUID(int=48), "http://worker")
     provisioner = FakeBrowserProvisioner()
     repository = InMemoryBrowserRepository()
     browser = await repository.save(_browser(slot, state=BrowserState.LEASED))
@@ -106,4 +106,4 @@ async def test_worker_failures_are_translated_and_mark_recycling_failed() -> Non
 
     assert (await service.get(browser.id)).state is BrowserState.FAILED
     with pytest.raises(BrowserNotFoundException):
-        await service.get(uuid4())
+        await service.get(UUID(int=49))

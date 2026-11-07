@@ -110,6 +110,15 @@ class ActiveTabBridge:
                 return self._visible_target.frame(frame)
         return None
 
+    async def _reattach_page_if_present(self, target_id: str) -> None:
+        await self._remove_page(target_id)
+        targets = await self._client.target.get_targets()
+        if any(
+            target.type == "page" and target.target_id == target_id
+            for target in targets.target_infos
+        ):
+            self._start_page(target_id)
+
     def _start_page(self, target_id: str) -> None:
         if target_id in self._page_tasks:
             return
@@ -123,15 +132,6 @@ class ActiveTabBridge:
         if task is not None:
             await cancel_and_wait(task)
         self._visible_target.remove(target_id)
-
-    async def _reattach_page_if_present(self, target_id: str) -> None:
-        await self._remove_page(target_id)
-        targets = await self._client.target.get_targets()
-        if any(
-            target.type == "page" and target.target_id == target_id
-            for target in targets.target_infos
-        ):
-            self._start_page(target_id)
 
     async def _capture_page(self, target_id: str) -> None:
         session: CDPSession | None = None

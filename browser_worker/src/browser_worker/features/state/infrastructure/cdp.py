@@ -13,22 +13,20 @@ from cdpify.domains.network.types import CookieParam, CookiePartitionKey
 from cdpify.domains.page.events import LoadEventFiredEvent, PageEvent
 from cdpify.domains.target.types import TargetInfo
 
-from browser_worker.features.state.application.exceptions import (
-    BrowserStateFailedException,
-)
-from browser_worker.features.state.application.models import (
+from browser_worker.features.state.application import (
     AuthenticationState,
     BrowserCookie,
     BrowserState,
+    BrowserStateFailedException,
+    BrowserStateStore,
     BrowserTabState,
     OriginLocalStorage,
     ScrollPosition,
     StorageItem,
 )
-from browser_worker.features.state.application.models import (
+from browser_worker.features.state.application import (
     CookiePartitionKey as StateCookiePartitionKey,
 )
-from browser_worker.features.state.application.ports import BrowserStateStore
 from browser_worker.features.state.infrastructure.indexed_db import (
     capture_indexed_db,
     restore_indexed_db,
@@ -122,6 +120,44 @@ async def _restore_browser_state(
         await _restore_tabs(client, state, settings)
 
 
+async def _restore_tabs(
+    client: Client,
+    state: BrowserState,
+    settings: BrowserStateSettings,
+) -> None:
+    target_ids = await _align_targets(client, len(state.tabs))
+    results = await asyncio.gather(
+        *(
+            _restore_tab(client, target_id, tab, settings)
+            for target_id, tab in zip(target_ids, state.tabs, strict=True)
+        ),
+        return_exceptions=True,
+    )
+    failed = [index for index, result in enumerate(results) if result is not None]
+    for index in failed:
+        logger.warning("Could not restore tab %s", index)
+    if len(failed) == len(state.tabs):
+        raise BrowserStateFailedException("Could not restore any tab")
+    await _activate(client, target_ids[state.active_tab_index])
+
+
+async def _align_targets(client: Client, wanted: int) -> tuple[str, ...]:
+    """Reuse the open tabs, closing or creating until there are ``wanted``.
+
+    Reusing beats closing everything: a browser without a window may quit, and
+    target churn is visible in the screencast.
+    """
+    targets = await _page_targets(client)
+    for surplus in targets[wanted:]:
+        with suppress(Exception):
+            await client.target.close_target(target_id=surplus.target_id)
+    target_ids = [target.target_id for target in targets[:wanted]]
+    while len(target_ids) < wanted:
+        created = await client.target.create_target(url=_BLANK_URL, background=True)
+        target_ids.append(created.target_id)
+    return tuple(target_ids)
+
+
 async def _page_targets(client: Client) -> tuple[TargetInfo, ...]:
     targets = await client.target.get_targets()
     return tuple(target for target in targets.target_infos if target.type == "page")
@@ -145,6 +181,71 @@ def _origins_of_cookies(cookies: Iterable[BrowserCookie]) -> set[str]:
         )
         origins.add(f"{scheme}://{authority}")
     return origins
+
+
+async def _capture_tabs(
+    client: Client,
+    targets: Sequence[TargetInfo],
+) -> tuple[tuple[BrowserTabState, ...], int]:
+    tabs: list[BrowserTabState] = []
+    active_tab_index = 0
+    for target in targets:
+        if _to_origin(target.url) is None:
+            # about:blank and chrome:// tabs are not worth restoring.
+            continue
+        tab, visible = await _capture_tab(client, target)
+        if tab is None:
+            continue
+        if visible:
+            active_tab_index = len(tabs)
+        tabs.append(tab)
+    return tuple(tabs), active_tab_index
+
+
+async def _restore_tab(
+    client: Client,
+    target_id: str,
+    tab: BrowserTabState,
+    settings: BrowserStateSettings,
+) -> Exception | None:
+    origin = _to_origin(tab.url)
+    if origin is None:
+        return ValueError("Tab url has no origin")
+    try:
+        async with _attached(client, target_id) as session:
+            await session.page.enable()
+            installed = await session.page.add_script_to_evaluate_on_new_document(
+                source=_build_restore_script(tab, origin)
+            )
+            load = asyncio.create_task(
+                _wait_for_load(session, settings.restore_timeout),
+                name=f"browser-state:load:{target_id}",
+            )
+            try:
+                # Give the load listener a chance to subscribe first.
+                await asyncio.sleep(0)
+                navigation = await session.page.navigate(
+                    url=tab.url,
+                    transition_type="address_bar",
+                )
+                if navigation.error_text:
+                    return BrowserStateFailedException(navigation.error_text)
+                await load
+            except TimeoutError:
+                # A slow page must not fail an otherwise mounted state.
+                logger.warning("Tab %s did not finish loading in time", target_id)
+            finally:
+                load.cancel()
+                with suppress(BaseException):
+                    await load
+                # Without this the script would run on every later load.
+                with suppress(Exception):
+                    await session.page.remove_script_to_evaluate_on_new_document(
+                        identifier=installed.identifier
+                    )
+    except Exception as error:
+        return error
+    return None
 
 
 def _to_origin(url: str) -> str | None:
@@ -221,25 +322,6 @@ def _to_storage_items(entries: Iterable[Any]) -> tuple[StorageItem, ...]:
         for entry in entries
         if len(entry) == 2
     )
-
-
-async def _capture_tabs(
-    client: Client,
-    targets: Sequence[TargetInfo],
-) -> tuple[tuple[BrowserTabState, ...], int]:
-    tabs: list[BrowserTabState] = []
-    active_tab_index = 0
-    for target in targets:
-        if _to_origin(target.url) is None:
-            # about:blank and chrome:// tabs are not worth restoring.
-            continue
-        tab, visible = await _capture_tab(client, target)
-        if tab is None:
-            continue
-        if visible:
-            active_tab_index = len(tabs)
-        tabs.append(tab)
-    return tuple(tabs), active_tab_index
 
 
 async def _capture_tab(
@@ -352,90 +434,6 @@ async def _restore_origin(client: Client, origin: OriginLocalStorage) -> None:
                 key=item.name,
                 value=item.value,
             )
-
-
-async def _restore_tabs(
-    client: Client,
-    state: BrowserState,
-    settings: BrowserStateSettings,
-) -> None:
-    target_ids = await _align_targets(client, len(state.tabs))
-    results = await asyncio.gather(
-        *(
-            _restore_tab(client, target_id, tab, settings)
-            for target_id, tab in zip(target_ids, state.tabs, strict=True)
-        ),
-        return_exceptions=True,
-    )
-    failed = [index for index, result in enumerate(results) if result is not None]
-    for index in failed:
-        logger.warning("Could not restore tab %s", index)
-    if len(failed) == len(state.tabs):
-        raise BrowserStateFailedException("Could not restore any tab")
-    await _activate(client, target_ids[state.active_tab_index])
-
-
-async def _align_targets(client: Client, wanted: int) -> tuple[str, ...]:
-    """Reuse the open tabs, closing or creating until there are ``wanted``.
-
-    Reusing beats closing everything: a browser without a window may quit, and
-    target churn is visible in the screencast.
-    """
-    targets = await _page_targets(client)
-    for surplus in targets[wanted:]:
-        with suppress(Exception):
-            await client.target.close_target(target_id=surplus.target_id)
-    target_ids = [target.target_id for target in targets[:wanted]]
-    while len(target_ids) < wanted:
-        created = await client.target.create_target(url=_BLANK_URL, background=True)
-        target_ids.append(created.target_id)
-    return tuple(target_ids)
-
-
-async def _restore_tab(
-    client: Client,
-    target_id: str,
-    tab: BrowserTabState,
-    settings: BrowserStateSettings,
-) -> Exception | None:
-    origin = _to_origin(tab.url)
-    if origin is None:
-        return ValueError("Tab url has no origin")
-    try:
-        async with _attached(client, target_id) as session:
-            await session.page.enable()
-            installed = await session.page.add_script_to_evaluate_on_new_document(
-                source=_build_restore_script(tab, origin)
-            )
-            load = asyncio.create_task(
-                _wait_for_load(session, settings.restore_timeout),
-                name=f"browser-state:load:{target_id}",
-            )
-            try:
-                # Give the load listener a chance to subscribe first.
-                await asyncio.sleep(0)
-                navigation = await session.page.navigate(
-                    url=tab.url,
-                    transition_type="address_bar",
-                )
-                if navigation.error_text:
-                    return BrowserStateFailedException(navigation.error_text)
-                await load
-            except TimeoutError:
-                # A slow page must not fail an otherwise mounted state.
-                logger.warning("Tab %s did not finish loading in time", target_id)
-            finally:
-                load.cancel()
-                with suppress(BaseException):
-                    await load
-                # Without this the script would run on every later load.
-                with suppress(Exception):
-                    await session.page.remove_script_to_evaluate_on_new_document(
-                        identifier=installed.identifier
-                    )
-    except Exception as error:
-        return error
-    return None
 
 
 async def _wait_for_load(session: CDPSession, timeout: float) -> None:

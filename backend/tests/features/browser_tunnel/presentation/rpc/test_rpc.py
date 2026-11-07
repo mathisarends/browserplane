@@ -14,16 +14,16 @@ from backend.features.browser_tunnel.domain import (
     BrowserEvent,
     BrowserTab,
 )
-from backend.features.browser_tunnel.presentation import session as tunnel_session
 from backend.features.browser_tunnel.presentation.rpc import (
     BROWSER_CHANNEL,
 )
 from backend.features.browser_tunnel.presentation.session import (
-    BROWSER_CONTRACT,
     BrowserTunnel,
 )
-from backend.features.browsers.infrastructure.routes import BrowserWorkerRoutes
-from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
+from backend.features.browsers.application import BrowserWorkerRoutes
+from backend.features.sessions.application import SessionLeaseKeeper
+from backend.features.sessions.presentation import tunnel as tunnel_session
+from backend.features.sessions.presentation.tunnel import BROWSER_CONTRACT
 
 
 class FakeNavigation:
@@ -133,9 +133,8 @@ def browser_server(browser: FakeBrowser):
     return BROWSER_CHANNEL.create_server(resolver=BrowserResolver(browser))
 
 
-def test_composed_browser_tunnel_runs_with_injected_services(monkeypatch) -> None:
+def test_composed_browser_tunnel_runs_with_injected_services() -> None:
     browser = FakeBrowser()
-    monkeypatch.setattr(tunnel_session, "CdpBrowser", lambda settings: browser)
     session_id = UUID(int=1)
     slot = SimpleNamespace(id=UUID(int=2), browser_worker_url="http://worker")
     session = SimpleNamespace(
@@ -155,7 +154,7 @@ def test_composed_browser_tunnel_runs_with_injected_services(monkeypatch) -> Non
     lease_keeper.run.side_effect = run
     provider = Provider(scope=Scope.APP)
     provider.provide(
-        lambda: BrowserTunnel(width=1600, height=900), provides=BrowserTunnel
+        lambda: BrowserTunnel(browser_factory=lambda _: browser), provides=BrowserTunnel
     )
     provider.provide(lambda: lease_keeper, provides=SessionLeaseKeeper)
     provider.provide(BrowserWorkerRoutes)

@@ -6,8 +6,6 @@ from sqlalchemy import BigInteger, Column, DateTime, LargeBinary, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from backend.features.browsers.domain.models import BrowserState
-
 
 class DatabaseModel(SQLModel):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
@@ -26,7 +24,7 @@ class BrowserModel(DatabaseModel, table=True):
     browser_worker_url: str
     # Stored as plain text: the set of states still moves, and a native enum
     # type would need a migration for every new member.
-    state: BrowserState = Field(sa_column=Column(String, nullable=False))
+    state: str = Field(sa_column=Column(String, nullable=False))
     generation: int = Field(default=0, sa_type=BigInteger, nullable=False)
 
 

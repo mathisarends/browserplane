@@ -8,10 +8,8 @@ from backend.features.session_requests.domain import (
     RequestStatus,
     SessionRequest,
     SessionRequestNotFoundException,
-    request_ended,
-)
-from backend.features.session_requests.domain.ports import (
     SessionRequestRepository,
+    request_ended,
 )
 
 

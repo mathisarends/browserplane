@@ -1,0 +1,251 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathisarends/smelt/v0.5.0/smelt.schema.json
+extends: ../smelt.base.yml
+project:
+  root_packages:
+  - browser_worker
+  source_roots:
+  - src
+  test_roots:
+  - tests
+  coverage: strict
+architecture:
+  features:
+    root: browser_worker.features
+  shared:
+  - browser_worker.shared
+  - browser_worker.exceptions
+  composition_root:
+  - browser_worker.app
+  - browser_worker.main
+  - browser_worker.lifespan
+  wiring:
+  - browser_worker.features.*.feature
+  - browser_worker.features.*.infrastructure.provider
+  modules:
+    browser_worker.presentation: presentation
+    browser_worker.observability: infrastructure
+  cross_feature:
+    default: deny
+    allow:
+    - from: downloads.application
+      to: browser.domain
+    - from: downloads.application
+      to: browser.application
+    - from: downloads.infrastructure
+      to: browser.domain
+    - from: downloads.infrastructure
+      to: browser.application
+    - from: downloads.presentation
+      to: browser.domain
+    - from: downloads.presentation
+      to: browser.application
+    - from: downloads.presentation
+      to: browser.presentation
+    - from: downloads.infrastructure
+      to: workspace.application
+    - from: recordings.application
+      to: browser.domain
+    - from: recordings.application
+      to: browser.application
+    - from: recordings.infrastructure
+      to: browser.domain
+    - from: recordings.infrastructure
+      to: browser.application
+    - from: recordings.presentation
+      to: browser.domain
+    - from: recordings.presentation
+      to: browser.application
+    - from: recordings.presentation
+      to: browser.presentation
+    - from: recordings.application
+      to: workspace.application
+    - from: recordings.infrastructure
+      to: workspace.application
+    - from: recordings.presentation
+      to: workspace.application
+    - from: recordings.infrastructure
+      to: screencast.domain
+    - from: state.application
+      to: browser.domain
+    - from: state.application
+      to: browser.application
+    - from: state.infrastructure
+      to: browser.domain
+    - from: state.infrastructure
+      to: browser.application
+    - from: state.presentation
+      to: browser.domain
+    - from: state.presentation
+      to: browser.application
+    - from: state.presentation
+      to: browser.presentation
+    - from: health.application
+      to: browser.domain
+    - from: health.presentation
+      to: browser.domain
+    - from: health.application
+      to: workspace.application
+    - from: health.presentation
+      to: workspace.application
+    - from: release.application
+      to: browser.domain
+    - from: release.application
+      to: browser.application
+    - from: release.infrastructure
+      to: browser.domain
+    - from: release.infrastructure
+      to: browser.application
+    - from: release.presentation
+      to: browser.domain
+    - from: release.presentation
+      to: browser.application
+    - from: release.presentation
+      to: browser.presentation
+    - from: release.application
+      to: downloads.application
+    - from: release.infrastructure
+      to: downloads.application
+    - from: release.presentation
+      to: downloads.application
+    - from: release.application
+      to: recordings.application
+    - from: release.infrastructure
+      to: recordings.application
+    - from: release.presentation
+      to: recordings.application
+    - from: release.application
+      to: screencast.domain
+    - from: release.application
+      to: screencast.application
+    - from: release.infrastructure
+      to: screencast.domain
+    - from: release.infrastructure
+      to: screencast.application
+    - from: release.presentation
+      to: screencast.domain
+    - from: release.presentation
+      to: screencast.application
+    - from: release.application
+      to: workspace.application
+    - from: release.infrastructure
+      to: workspace.application
+    - from: release.presentation
+      to: workspace.application
+    - from: release.application
+      to: health.application
+    - from: release.infrastructure
+      to: health.application
+    - from: release.presentation
+      to: health.application
+    - from: screencast.presentation
+      to: browser.domain
+    - from: screencast.presentation
+      to: browser.application
+    - from: browser.presentation
+      to: downloads.application
+tests:
+  unmirrored:
+  - tests/integration/**
+structure:
+  forbidden_names:
+  - utils
+  - helpers
+  - common
+  - base
+  contracts:
+    source-conventions:
+      match: browser_worker
+      imports:
+        style: absolute
+      future_annotations: forbid
+      private_modules: forbid
+      ordering:
+        constants_exempt: true
+      type_dispatch:
+        style: match
+    browser-api:
+      match: browser_worker.features.browser
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+    downloads-api:
+      match: browser_worker.features.downloads
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+    health-api:
+      match: browser_worker.features.health
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.schemas
+    recordings-api:
+      match: browser_worker.features.recordings
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+    release-api:
+      match: browser_worker.features.release
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+    screencast-api:
+      match: browser_worker.features.screencast
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+    state-api:
+      match: browser_worker.features.state
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+    workspace-api:
+      match: browser_worker.features.workspace
+      required: []
+      public:
+      - application.**
+      - infrastructure.provider
+    domain-facades:
+      match: browser_worker.features.*.domain
+      bundle_imports_at: 2
+      export_at: 3
+      public:
+      - .
+    application-facades:
+      match: browser_worker.features.*.application
+      bundle_imports_at: 2
+      export_at: 3
+      public:
+      - .

@@ -5,7 +5,7 @@ import uvicorn
 from browser_worker.observability import LoggingSettings, uvicorn_log_config
 
 
-def main() -> None:
+def _main() -> None:
     settings = LoggingSettings()
     uvicorn.run(
         "browser_worker.app:app",
@@ -18,4 +18,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    _main()

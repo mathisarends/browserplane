@@ -20,7 +20,8 @@ import type {
   SessionRequestTimedOutProblem,
 } from "./models";
 
-export type ListOwnerSessionsProblem = BrowserNotFoundProblem | RequestValidationProblem;
+export type ListOwnerSessionsProblem =
+  BrowserNotFoundProblem | SessionNotFoundProblem | RequestValidationProblem;
 
 export type OpenSessionProblem =
   | AuthenticationProfileNotFoundProblem
@@ -80,6 +81,7 @@ export type ListBrowserCheckpointsProblem = never;
 export type CreateBrowserCheckpointProblem =
   | SessionNotFoundProblem
   | BrowserNotFoundProblem
+  | AuthenticationProfileNotFoundProblem
   | SessionNotActiveProblem
   | RequestValidationProblem
   | BrowserStateTransferFailedProblem;
@@ -100,12 +102,17 @@ export type DeleteAuthenticationProfileProblem =
   AuthenticationProfileNotFoundProblem | RequestValidationProblem;
 
 export type UpdateAuthenticationProfileProblem =
-  AuthenticationProfileNotFoundProblem | RequestValidationProblem;
+  | AuthenticationProfileNotFoundProblem
+  | SessionNotFoundProblem
+  | BrowserNotFoundProblem
+  | SessionNotActiveProblem
+  | RequestValidationProblem;
 
 export type MountSessionBrowserCheckpointProblem =
   | SessionNotFoundProblem
   | BrowserNotFoundProblem
   | AuthenticationProfileNotFoundProblem
+  | BrowserCheckpointNotFoundProblem
   | SessionNotActiveProblem
   | RequestValidationProblem
   | BrowserStateTransferFailedProblem;

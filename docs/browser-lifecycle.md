@@ -59,8 +59,8 @@ last successful renew
            ┌────────┐
            │        ▼
         ACTIVE ──────────▶ RECLAIMING ──────────▶ RELEASED
-           │                    ▲                     
-   close · suspend · crash      │  retry with backoff 
+           │                    ▲
+   close · suspend · crash      │  retry with backoff
            └────────────────────┴──── FAILED
 ```
 

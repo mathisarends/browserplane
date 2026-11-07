@@ -2,16 +2,16 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from backend.features.browsers.application.exceptions import BrowserNotFoundException
-from backend.features.browsers.domain.models import Browser
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.domain.models import Lease
-from backend.features.sessions.domain.models import (
+from backend.features.browsers.application import BrowserNotFoundException
+from backend.features.browsers.domain import Browser
+from backend.features.leases.application import LeaseNotFoundException
+from backend.features.leases.domain import Lease
+from backend.features.sessions.domain import (
     AuthenticationStateDocument,
+    BrowserRuntime,
     BrowserStateDocument,
     Download,
 )
-from backend.features.sessions.domain.ports import BrowserRuntime
 
 
 class FakeSessionBrowsers:

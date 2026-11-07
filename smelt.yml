@@ -1,0 +1,275 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathisarends/smelt/v0.5.0/smelt.schema.json
+extends: smelt.base.yml
+project:
+  root_packages:
+  - backend
+  source_roots:
+  - backend/src
+  test_roots:
+  - backend/tests
+  coverage: strict
+  exclude:
+  - path: browser_worker/**
+    reason: Worker architecture is checked separately using browser_worker/smelt.yml.
+  - path: generated/**
+    reason: Generated HTTP SDK; its source is verified by regeneration and drift checks.
+architecture:
+  features:
+    root: backend.features
+  shared:
+  - backend.shared
+  - backend.exceptions
+  composition_root:
+  - backend.app
+  - backend.container
+  - backend.main
+  - backend.lifespan
+  - backend.scheduler
+  wiring:
+  - backend.features.*.feature
+  - backend.features.*.infrastructure.provider
+  - backend.infrastructure.*.provider
+  modules:
+    backend.presentation: presentation
+    backend.observability: infrastructure
+    backend.infrastructure: infrastructure
+  cross_feature:
+    default: deny
+    allow:
+    - from: leases.infrastructure
+      to: browsers.domain
+    - from: leases.infrastructure
+      to: browsers.application
+    - from: sessions.domain
+      to: leases.domain
+    - from: sessions.application
+      to: leases.domain
+    - from: sessions.application
+      to: leases.application
+    - from: sessions.infrastructure
+      to: leases.domain
+    - from: sessions.infrastructure
+      to: leases.application
+    - from: sessions.presentation
+      to: leases.domain
+    - from: sessions.presentation
+      to: leases.application
+    - from: sessions.domain
+      to: browsers.domain
+    - from: sessions.application
+      to: browsers.domain
+    - from: sessions.application
+      to: browsers.application
+    - from: sessions.infrastructure
+      to: browsers.domain
+    - from: sessions.infrastructure
+      to: browsers.application
+    - from: sessions.presentation
+      to: browsers.domain
+    - from: sessions.presentation
+      to: browsers.application
+    - from: sessions.presentation
+      to: browsers.presentation
+    - from: sessions.presentation
+      to: browser_tunnel.domain
+    - from: sessions.presentation
+      to: browser_tunnel.presentation
+    - from: recordings.domain
+      to: browsers.domain
+    - from: recordings.application
+      to: browsers.domain
+    - from: recordings.application
+      to: browsers.application
+    - from: recordings.infrastructure
+      to: browsers.domain
+    - from: recordings.infrastructure
+      to: browsers.application
+    - from: recordings.presentation
+      to: browsers.domain
+    - from: recordings.presentation
+      to: browsers.application
+    - from: recordings.presentation
+      to: browsers.presentation
+    - from: session_requests.application
+      to: sessions.domain
+    - from: session_requests.application
+      to: sessions.application
+    - from: session_requests.infrastructure
+      to: sessions.domain
+    - from: session_requests.infrastructure
+      to: sessions.application
+    - from: session_requests.presentation
+      to: sessions.domain
+    - from: session_requests.presentation
+      to: sessions.application
+    - from: session_requests.presentation
+      to: sessions.presentation
+    - from: session_requests.application
+      to: leases.domain
+    - from: session_requests.application
+      to: leases.application
+    - from: session_requests.infrastructure
+      to: leases.domain
+    - from: session_requests.infrastructure
+      to: leases.application
+    - from: session_requests.presentation
+      to: leases.domain
+    - from: session_requests.presentation
+      to: leases.application
+    - from: session_requests.application
+      to: browsers.domain
+    - from: session_requests.application
+      to: browsers.application
+    - from: session_requests.infrastructure
+      to: browsers.domain
+    - from: session_requests.infrastructure
+      to: browsers.application
+    - from: session_requests.presentation
+      to: browsers.domain
+    - from: session_requests.presentation
+      to: browsers.application
+    - from: admin.application
+      to: sessions.domain
+    - from: admin.application
+      to: sessions.application
+    - from: admin.presentation
+      to: sessions.domain
+    - from: admin.presentation
+      to: sessions.application
+    - from: admin.presentation
+      to: sessions.presentation
+    - from: admin.application
+      to: leases.domain
+    - from: admin.application
+      to: leases.application
+    - from: admin.presentation
+      to: leases.domain
+    - from: admin.presentation
+      to: leases.application
+    - from: admin.application
+      to: browsers.domain
+    - from: admin.application
+      to: browsers.application
+    - from: admin.presentation
+      to: browsers.domain
+    - from: admin.presentation
+      to: browsers.application
+    - from: admin.presentation
+      to: browsers.presentation
+tests:
+  unmirrored:
+  - backend/tests/test_backend_app.py
+structure:
+  forbidden_names:
+  - utils
+  - helpers
+  - common
+  - base
+  contracts:
+    source-conventions:
+      match: backend
+      imports:
+        style: absolute
+      future_annotations: forbid
+      private_modules: forbid
+      ordering:
+        constants_exempt: true
+      type_dispatch:
+        style: match
+    admin-api:
+      match: backend.features.admin
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.schemas
+      - presentation.mapper
+    browser_tunnel-api:
+      match: backend.features.browser_tunnel
+      required:
+      - feature
+      public:
+      - domain.**
+      - feature
+      - infrastructure.provider
+      - presentation.session
+      - presentation.rpc
+    browsers-api:
+      match: backend.features.browsers
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+    health-api:
+      match: backend.features.health
+      required:
+      - feature
+      public:
+      - application.**
+      - feature
+      - infrastructure.provider
+    leases-api:
+      match: backend.features.leases
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+    recordings-api:
+      match: backend.features.recordings
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+      - presentation.mapper
+    session_requests-api:
+      match: backend.features.session_requests
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+      - infrastructure.notifications
+      - infrastructure.dispatcher
+    sessions-api:
+      match: backend.features.sessions
+      required:
+      - feature
+      public:
+      - domain.**
+      - application.**
+      - feature
+      - infrastructure.provider
+      - presentation.errors
+      - presentation.schemas
+      - presentation.mapper
+      - presentation.tunnel
+    domain-facades:
+      match: backend.features.*.domain
+      bundle_imports_at: 2
+      export_at: 3
+      public:
+      - .
+    application-facades:
+      match: backend.features.*.application
+      bundle_imports_at: 2
+      export_at: 3
+      public:
+      - .

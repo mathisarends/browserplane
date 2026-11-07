@@ -5,9 +5,7 @@ from contextlib import suppress
 
 from cdpify import CDPSession, Client
 
-from browser_worker.features.recordings.application.exceptions import (
-    RecordingFailedException,
-)
+from browser_worker.features.recordings.application import RecordingFailedException
 from browser_worker.features.recordings.infrastructure.cdp.ports import TabRecorder
 from browser_worker.features.recordings.infrastructure.settings import RecordingSettings
 

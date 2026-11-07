@@ -36,6 +36,7 @@ Neither may guess the other's answer.
 | Document | Question it answers |
 | --- | --- |
 | [Canon stack](canon-stack.md) | Composition, generated clients, query ownership, pins and checks |
+| [Python architecture policy](python-architecture.md) | Smelt rules, feature APIs, dependency directions and exceptions |
 | [Planes and responsibilities](planes.md) | Who owns which truth, and which process may do what |
 | [Browser lifecycle](browser-lifecycle.md) | Slot vs. runtime vs. lease, and how fencing keeps them honest |
 | [Acquiring a browser](acquiring-a-browser.md) | What happens when the pool is full and a caller waits |

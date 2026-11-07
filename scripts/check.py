@@ -15,6 +15,22 @@ def run(*command: str) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
+def architecture(*options: str) -> None:
+    for config in ("smelt.yml", "browser_worker/smelt.yml"):
+        run(
+            "uv",
+            "run",
+            "--locked",
+            "smelt",
+            "check",
+            "--config",
+            config,
+            "--fail-on",
+            "warning",
+            *options,
+        )
+
+
 def error_contracts() -> None:
     result = subprocess.run(
         [
@@ -53,9 +69,37 @@ def main() -> None:
         "mode",
         nargs="?",
         default="all",
-        choices=("all", "lint", "test", "contracts", "build", "browser"),
+        choices=(
+            "all",
+            "architecture",
+            "lint",
+            "test",
+            "contracts",
+            "build",
+            "browser",
+        ),
     )
-    mode = parser.parse_args().mode
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--staged", action="store_true")
+    scope.add_argument("--changed", action="store_true")
+    parser.add_argument("--base")
+    arguments = parser.parse_args()
+    mode = arguments.mode
+    if (
+        arguments.staged or arguments.changed or arguments.base
+    ) and mode != "architecture":
+        parser.error("scope options apply only to architecture checks")
+    if arguments.base and not arguments.changed:
+        parser.error("--base requires --changed")
+    if mode in ("all", "architecture"):
+        options: list[str] = []
+        if arguments.staged:
+            options.append("--staged")
+        if arguments.changed:
+            options.append("--changed")
+        if arguments.base:
+            options.extend(("--base", arguments.base))
+        architecture(*options)
     if mode in ("all", "lint"):
         run("uv", "run", "--locked", "ruff", "check", ".")
         run("uv", "run", "--locked", "ruff", "format", "--check", ".")

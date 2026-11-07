@@ -1,22 +1,20 @@
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fakes.session_requests import FakeUnitOfWork
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.session_requests.application.acquisition import (
+from backend.features.browsers.domain import Browser, BrowserSlot
+from backend.features.leases.domain import Lease, LeaseState
+from backend.features.session_requests.application import (
     OpenSessionCommand,
     ResumeSessionCommand,
     SessionAcquisition,
 )
 from backend.features.session_requests.domain import RequestStatus, SessionRequest
-from backend.features.sessions.application.exceptions import (
-    SessionNotSuspendedException,
-)
-from backend.features.sessions.domain.models import (
+from backend.features.sessions.application import SessionNotSuspendedException
+from backend.features.sessions.domain import (
     AuthenticationProfile,
     BrowserCheckpoint,
     ResolvedSession,
@@ -105,14 +103,14 @@ async def test_open_checks_referenced_state_before_queueing() -> None:
     resolved = _active_session()
     service = FakeAcquisitionSessions(resolved)
     profile = AuthenticationProfile(
-        id=uuid4(),
+        id=UUID(int=5),
         owner_id=resolved.owner_id,
         name="Work",
         authentication_state={"cookies": []},
         created_at=datetime.now(UTC),
     )
     checkpoint = BrowserCheckpoint(
-        id=uuid4(),
+        id=UUID(int=6),
         owner_id=resolved.owner_id,
         browser_state={"tabs": []},
         authentication_profile_id=profile.id,
@@ -126,7 +124,7 @@ async def test_open_checks_referenced_state_before_queueing() -> None:
     acquired = await acquisition.open(
         OpenSessionCommand(
             owner_id=resolved.owner_id,
-            test_run_id=uuid4(),
+            test_run_id=UUID(int=7),
             browser_checkpoint_id=checkpoint.id,
         )
     )
@@ -141,7 +139,7 @@ async def test_open_checks_referenced_state_before_queueing() -> None:
 @pytest.mark.asyncio
 async def test_resume_uses_suspended_state_or_the_original_pending_request() -> None:
     active = _active_session()
-    checkpoint_id = uuid4()
+    checkpoint_id = UUID(int=8)
     suspended = replace(
         active.session,
         status=SessionStatus.SUSPENDED,
@@ -163,7 +161,7 @@ async def test_resume_uses_suspended_state_or_the_original_pending_request() -> 
     assert control.requests[0].resume_session_id == active.id
     assert control.requests[0].browser_checkpoint_id == checkpoint_id
 
-    request_id = uuid4()
+    request_id = UUID(int=9)
     pending = replace(
         control.requests[0],
         id=request_id,

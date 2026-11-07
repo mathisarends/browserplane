@@ -29,6 +29,7 @@ dev = [
     "pytest-mock==3.15.1",
     "fastapi-canon[codegen]==0.15.0",
     "ruff==0.16.4",
+    "smelt-cli==0.5.0",
 ]
 
 [tool.ruff]

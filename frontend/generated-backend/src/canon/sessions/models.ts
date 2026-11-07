@@ -58,6 +58,19 @@ export interface BrowserNotFoundProblem {
   [key: string]: unknown;
 }
 
+/**
+ * RFC 9457 Problem Details with a stable application code.
+ */
+export interface SessionNotFoundProblem {
+  type: "https://browser-provisioner.local/problems/session_not_found";
+  title: "Session not found";
+  status: 404;
+  code: "session_not_found";
+  detail?: string;
+  instance?: string;
+  [key: string]: unknown;
+}
+
 export type RequestValidationProblemErrorsItemIn =
   (typeof RequestValidationProblemErrorsItemIn)[keyof typeof RequestValidationProblemErrorsItemIn];
 
@@ -188,19 +201,6 @@ export interface SessionRequestCancelledProblem {
   detail?: string;
   instance?: string;
   request_id: string;
-  [key: string]: unknown;
-}
-
-/**
- * RFC 9457 Problem Details with a stable application code.
- */
-export interface SessionNotFoundProblem {
-  type: "https://browser-provisioner.local/problems/session_not_found";
-  title: "Session not found";
-  status: 404;
-  code: "session_not_found";
-  detail?: string;
-  instance?: string;
   [key: string]: unknown;
 }
 

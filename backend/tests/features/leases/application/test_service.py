@@ -1,14 +1,16 @@
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID
 
 import pytest
 from fakes.browser_allocator import FakeBrowserAllocator
 from fakes.lease_store import InMemoryLeaseStore
 
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.leases.application.service import LeaseService
-from backend.features.leases.domain.models import Lease, LeaseState
-from backend.features.leases.settings import LeaseSettings
+from backend.features.leases.application import (
+    LeaseNotFoundException,
+    LeaseService,
+    LeaseSettings,
+)
+from backend.features.leases.domain import Lease, LeaseState
 
 
 def _service(
@@ -33,9 +35,9 @@ def _service(
 def _due_lease() -> Lease:
     now = datetime.now(UTC)
     return Lease(
-        id=uuid4(),
-        browser_id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=27),
+        browser_id=UUID(int=28),
+        owner_id=UUID(int=29),
         generation=2,
         state=LeaseState.ACTIVE,
         created_at=now - timedelta(minutes=2),
@@ -50,8 +52,8 @@ async def test_lease_lifecycle_reserves_renews_and_releases_a_browser() -> None:
     allocator = FakeBrowserAllocator(generation=7)
     store = InMemoryLeaseStore()
     service = _service(allocator, store)
-    browser_id = uuid4()
-    owner_id = uuid4()
+    browser_id = UUID(int=30)
+    owner_id = UUID(int=31)
 
     lease = await service.create(browser_id, owner_id)
     renewed = await service.renew(lease.id)
@@ -74,9 +76,9 @@ async def test_inspection_keeps_history_but_rejects_expired_active_lease() -> No
     service = _service(allocator, store)
     now = datetime.now(UTC)
     expired = Lease(
-        id=uuid4(),
-        browser_id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=32),
+        browser_id=UUID(int=33),
+        owner_id=UUID(int=34),
         generation=0,
         state=LeaseState.ACTIVE,
         created_at=now - timedelta(minutes=2),
@@ -90,7 +92,7 @@ async def test_inspection_keeps_history_but_rejects_expired_active_lease() -> No
     with pytest.raises(LeaseNotFoundException):
         await service.get(expired.id)
     with pytest.raises(LeaseNotFoundException):
-        await service.renew(uuid4())
+        await service.renew(UUID(int=35))
 
 
 @pytest.mark.asyncio
@@ -100,9 +102,9 @@ async def test_reaper_retries_failed_cleanup_then_releases_it() -> None:
     service = _service(allocator, store)
     now = datetime.now(UTC)
     lease = Lease(
-        id=uuid4(),
-        browser_id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=36),
+        browser_id=UUID(int=37),
+        owner_id=UUID(int=38),
         generation=2,
         state=LeaseState.ACTIVE,
         created_at=now - timedelta(minutes=2),

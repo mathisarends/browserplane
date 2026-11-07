@@ -10,14 +10,12 @@ from backend.features.browsers.application.exceptions import (
     BrowserProvisioningException,
     BrowserUnavailableException,
 )
-from backend.features.browsers.domain.models import (
+from backend.features.browsers.domain import (
     Browser,
-    BrowserSlot,
-    BrowserState,
-)
-from backend.features.browsers.domain.ports import (
     BrowserProvisioner,
     BrowserRepository,
+    BrowserSlot,
+    BrowserState,
     WorkerRecovery,
 )
 
@@ -52,21 +50,6 @@ class BrowserService:
             )
             await self._repository.save(browser)
 
-    async def get(self, browser_id: UUID) -> Browser:
-        browser = await self._repository.get_by_id(browser_id=browser_id)
-        if browser is None:
-            raise BrowserNotFoundException()
-        return browser
-
-    async def list(self) -> tuple[Browser, ...]:
-        return await self._repository.list()
-
-    async def find_available(self) -> Browser | None:
-        return await self._repository.find_available()
-
-    async def remaining_capacity(self) -> int:
-        return sum(browser.is_available for browser in await self._repository.list())
-
     async def release(self, browser_id: UUID) -> Browser:
         browser = await self.get(browser_id)
         async with self._browser_worker(browser.slot):
@@ -88,11 +71,6 @@ class BrowserService:
         logger.info("Browser restarted browser_id=%s", browser.id)
         return await self._repository.save(browser)
 
-    async def reset(self, browser_id: UUID) -> Browser:
-        browser = await self.get(browser_id)
-        browser.state = BrowserState.READY
-        return await self._repository.save(browser)
-
     async def reserve(self, browser_id: UUID) -> int:
         browser = await self.get(browser_id)
         if not browser.is_available:
@@ -100,6 +78,39 @@ class BrowserService:
         browser.state = BrowserState.LEASED
         await self._repository.save(browser)
         return browser.generation
+
+    async def replace(self, browser_id: UUID) -> Browser:
+        """Swap the worker under a slot whose runtime will not clean itself up.
+
+        Only a worker that came back as a new instance may end a lease, so the
+        fresh process - not an optimistic guess - is what frees the slot again.
+        """
+        browser = await self.get(browser_id)
+        async with self._browser_worker(browser.slot):
+            await self._recovery.replace(browser.slot)
+        browser.state = BrowserState.STOPPED
+        browser.generation += 1
+        logger.warning(
+            "Browser recovered by replacing its worker browser_id=%s generation=%d",
+            browser.id,
+            browser.generation,
+        )
+        return await self._repository.save(browser)
+
+    async def get(self, browser_id: UUID) -> Browser:
+        browser = await self._repository.get_by_id(browser_id=browser_id)
+        if browser is None:
+            raise BrowserNotFoundException()
+        return browser
+
+    async def list(self) -> tuple[Browser, ...]:
+        return await self._repository.list()
+
+    async def find_available(self) -> Browser | None:
+        return await self._repository.find_available()
+
+    async def remaining_capacity(self) -> int:
+        return sum(browser.is_available for browser in await self._repository.list())
 
     async def recycle(self, browser_id: UUID) -> None:
         """Clean a leased runtime; the next request starts its replacement."""
@@ -121,24 +132,6 @@ class BrowserService:
             raise
         browser.state = BrowserState.STOPPED
         await self._repository.save(browser)
-
-    async def replace(self, browser_id: UUID) -> Browser:
-        """Swap the worker under a slot whose runtime will not clean itself up.
-
-        Only a worker that came back as a new instance may end a lease, so the
-        fresh process - not an optimistic guess - is what frees the slot again.
-        """
-        browser = await self.get(browser_id)
-        async with self._browser_worker(browser.slot):
-            await self._recovery.replace(browser.slot)
-        browser.state = BrowserState.STOPPED
-        browser.generation += 1
-        logger.warning(
-            "Browser recovered by replacing its worker browser_id=%s generation=%d",
-            browser.id,
-            browser.generation,
-        )
-        return await self._repository.save(browser)
 
     @asynccontextmanager
     async def _browser_worker(self, slot: BrowserSlot) -> AsyncGenerator[None]:

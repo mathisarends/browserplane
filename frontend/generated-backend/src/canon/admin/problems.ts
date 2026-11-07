@@ -9,6 +9,7 @@ import type {
   BrowserNotFoundProblem,
   BrowserProvisioningFailedProblem,
   RequestValidationProblem,
+  SessionNotFoundProblem,
 } from "./models";
 
 export type ListPooledBrowsersProblem = never;
@@ -19,7 +20,7 @@ export type ReleasePooledBrowserProblem =
 export type RestartPooledBrowserProblem =
   BrowserNotFoundProblem | RequestValidationProblem | BrowserProvisioningFailedProblem;
 
-export type ListSessionsProblem = BrowserNotFoundProblem;
+export type ListSessionsProblem = BrowserNotFoundProblem | SessionNotFoundProblem;
 
 export type AdminProblem =
   | ListPooledBrowsersProblem

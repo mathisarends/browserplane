@@ -3,17 +3,13 @@ from collections.abc import Sequence
 import pytest
 from tests.fakes import FakeBrowserProcess
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.state.application.exceptions import (
-    BrowserStateInvalidException,
-)
-from browser_worker.features.state.application.models import (
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.state.application import (
     AuthenticationState,
     BrowserState,
-)
-from browser_worker.features.state.application.ports import BrowserStateStore
-from browser_worker.features.state.application.service import (
+    BrowserStateInvalidException,
     BrowserStateService,
+    BrowserStateStore,
 )
 from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,

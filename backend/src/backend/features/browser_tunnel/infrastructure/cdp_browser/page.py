@@ -16,7 +16,7 @@ from backend.features.browser_tunnel.infrastructure.cdp_browser.page_metadata im
 from backend.features.browser_tunnel.infrastructure.cursor_event_bridge import (
     CursorEventBridge,
 )
-from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
+from backend.features.browser_tunnel.infrastructure.events import PublishEvent
 from backend.features.browser_tunnel.infrastructure.page_event_bridge import (
     PageEventBridge,
 )

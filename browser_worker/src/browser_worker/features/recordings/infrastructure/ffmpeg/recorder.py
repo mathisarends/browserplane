@@ -4,19 +4,17 @@ from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack, suppress
 from pathlib import Path
 
-from browser_worker.features.recordings.application.exceptions import (
-    RecordingFailedException,
-)
-from browser_worker.features.recordings.application.models import (
+from browser_worker.features.recordings.application import (
     RecordedVideo,
+    RecordingFailedException,
     RecordingFormat,
+    ScreenRecorder,
 )
-from browser_worker.features.recordings.application.ports import ScreenRecorder
 from browser_worker.features.recordings.infrastructure.ffmpeg.encoder import (
     VideoRecorder,
 )
 from browser_worker.features.recordings.infrastructure.settings import RecordingSettings
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.screencast.domain import FrameStream
 from browser_worker.shared.tasks import cancel_and_wait
 
 logger = logging.getLogger(__name__)

@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 from typing import cast
-from uuid import uuid4
+from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.features.sessions.domain.models import AuthenticationProfile
+from backend.features.sessions.domain import AuthenticationProfile
 from backend.features.sessions.infrastructure.encryption import (
     AuthenticationStateCipher,
 )
@@ -26,8 +26,8 @@ def test_repositories_encrypt_authentication_state_at_the_database_boundary() ->
 
     repository = SqlAuthenticationProfileRepository(session, cipher)
     profile = AuthenticationProfile(
-        id=uuid4(),
-        owner_id=uuid4(),
+        id=UUID(int=3),
+        owner_id=UUID(int=4),
         name="Work",
         authentication_state=state,
         created_at=now,

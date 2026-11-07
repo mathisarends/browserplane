@@ -7,21 +7,21 @@ from pathlib import Path
 
 import pytest
 
-from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.application import BrowserService
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
-from browser_worker.features.downloads.application.service import DownloadService
-from browser_worker.features.state.application.models import (
-    BrowserState,
-    BrowserTabState,
-)
+from browser_worker.features.downloads.application import DownloadService
+from browser_worker.features.downloads.infrastructure.cdp import CdpDownloadStore
+from browser_worker.features.state.application import BrowserState, BrowserTabState
 from browser_worker.features.state.infrastructure.cdp import (
     CdpBrowserStateStore,
 )
 from browser_worker.features.state.infrastructure.settings import (
     BrowserStateSettings,
 )
-from browser_worker.features.workspace.application.workspace import Workspace
+from browser_worker.features.workspace.infrastructure.filesystem import (
+    FilesystemWorkspace,
+)
 
 
 class DownloadHandler(http.server.BaseHTTPRequestHandler):
@@ -78,7 +78,9 @@ async def test_download_service_collects_and_clears_a_chromium_download(
 
     browsers = BrowserService(ChromeProcess(settings))
     await browsers.create(0)
-    downloads = DownloadService(browsers, Workspace(tmp_path / "workspace"))
+    downloads = DownloadService(
+        browsers, CdpDownloadStore(FilesystemWorkspace(tmp_path / "workspace"))
+    )
     await downloads.start()
 
     try:

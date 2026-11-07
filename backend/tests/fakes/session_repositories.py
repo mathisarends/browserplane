@@ -1,13 +1,11 @@
 from uuid import UUID
 
-from backend.features.sessions.domain.models import (
+from backend.features.sessions.domain import (
     AuthenticationProfile,
-    BrowserCheckpoint,
-    Session,
-)
-from backend.features.sessions.domain.ports import (
     AuthenticationProfileRepository,
+    BrowserCheckpoint,
     BrowserCheckpointRepository,
+    Session,
     SessionRepository,
 )
 

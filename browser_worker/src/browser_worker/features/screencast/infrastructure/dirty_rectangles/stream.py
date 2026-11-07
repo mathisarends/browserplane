@@ -5,14 +5,18 @@ import threading
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager, suppress
 
-from browser_worker.features.screencast.domain.ports import FrameStream
+from browser_worker.features.screencast.domain import FrameStream
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.encoder import (
+    encode_update,
+)
+from browser_worker.features.screencast.infrastructure.dirty_rectangles.models import (
+    EncodedUpdate,
+    RgbFrame,
+)
 from browser_worker.features.screencast.infrastructure.settings import (
     DirtyRectangleSettings,
 )
 from browser_worker.shared.tasks import cancel_and_wait
-
-from .encoder import encode_update
-from .models import EncodedUpdate, RgbFrame
 
 logger = logging.getLogger(__name__)
 

@@ -2,8 +2,8 @@ from collections.abc import AsyncIterator
 
 from dishka import Provider, Scope, provide
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.browser.domain.ports import BrowserProcess
+from browser_worker.features.browser.application import BrowserEndpoint, BrowserService
+from browser_worker.features.browser.domain import BrowserProcess
 from browser_worker.features.browser.infrastructure.chrome_process import ChromeProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
 
@@ -14,12 +14,17 @@ class BrowserProvider(Provider):
         self._service = service
 
     @provide(scope=Scope.APP)
-    def settings(self) -> BrowserSettings:
-        return BrowserSettings()
+    def endpoint(self, settings: BrowserSettings) -> BrowserEndpoint:
+        return BrowserEndpoint(settings.public_base_url)
 
     @provide(scope=Scope.APP)
-    def browser_process(self, settings: BrowserSettings) -> BrowserProcess:
-        return ChromeProcess(settings)
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> BrowserSettings:
+        return BrowserSettings()
+
+    browser_process = provide(ChromeProcess, scope=Scope.APP, provides=BrowserProcess)
 
     @provide(scope=Scope.APP)
     async def browser_service(

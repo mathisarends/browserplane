@@ -1,7 +1,10 @@
-from uuid import uuid4
+from uuid import UUID
 
-from backend.features.browsers.domain.models import BrowserSlot, WorkerIncarnation
-from backend.features.browsers.domain.ports import WorkerRecovery
+from backend.features.browsers.domain import (
+    BrowserSlot,
+    WorkerIncarnation,
+    WorkerRecovery,
+)
 
 
 class FakeWorkerRecovery(WorkerRecovery):
@@ -15,4 +18,4 @@ class FakeWorkerRecovery(WorkerRecovery):
         self.replaced.append(slot)
         if self.replace_error is not None:
             raise self.replace_error
-        return WorkerIncarnation(uuid4())
+        return WorkerIncarnation(UUID(int=2))

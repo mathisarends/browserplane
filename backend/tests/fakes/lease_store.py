@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from backend.features.leases.domain.models import Lease
-from backend.features.leases.domain.ports import LeaseStore
+from backend.features.leases.domain import Lease, LeaseStore
 
 
 class InMemoryLeaseStore(LeaseStore):

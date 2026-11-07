@@ -19,7 +19,7 @@ from backend.features.browser_tunnel.domain import (
     BrowserTab,
     NavigationChanged,
 )
-from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
+from backend.features.browser_tunnel.infrastructure.events import PublishEvent
 
 logger = logging.getLogger(__name__)
 

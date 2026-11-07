@@ -3,11 +3,13 @@ from uuid import UUID
 
 from fastapi import WebSocket
 
-from backend.features.browsers.application.exceptions import BrowserNotFoundException
-from backend.features.leases.application.exceptions import LeaseNotFoundException
-from backend.features.sessions.application.exceptions import SessionNotActiveException
-from backend.features.sessions.domain.models import ResolvedSession
-from backend.features.sessions.infrastructure.lease_keeper import SessionLeaseKeeper
+from backend.features.browsers.application import BrowserNotFoundException
+from backend.features.sessions.application import (
+    SessionLeaseKeeper,
+    SessionNotActiveException,
+    SessionNotFoundException,
+)
+from backend.features.sessions.domain import ResolvedSession
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,11 @@ async def resolve_session(
     try:
         session = await lease_keeper.resolve(session_id, renew=renew)
         return session
-    except LeaseNotFoundException, BrowserNotFoundException, SessionNotActiveException:
+    except (
+        SessionNotFoundException,
+        BrowserNotFoundException,
+        SessionNotActiveException,
+    ):
         await websocket.accept()
         await websocket.close(code=1008, reason="Session not found")
         return None
@@ -34,7 +40,7 @@ async def log_disconnect(lease_keeper: SessionLeaseKeeper, session_id: UUID) -> 
     try:
         session = await lease_keeper.resolve(session_id)
     except (
-        LeaseNotFoundException,
+        SessionNotFoundException,
         BrowserNotFoundException,
         SessionNotActiveException,
     ):

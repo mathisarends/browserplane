@@ -1,9 +1,9 @@
 from dishka import Provider, Scope, provide
 
-from browser_worker.features.browser.application.service import BrowserService
-from browser_worker.features.state.application.ports import BrowserStateStore
-from browser_worker.features.state.application.service import (
+from browser_worker.features.browser.application import BrowserService
+from browser_worker.features.state.application import (
     BrowserStateService,
+    BrowserStateStore,
     StateStoreFactory,
 )
 from browser_worker.features.state.infrastructure.cdp import (
@@ -20,7 +20,10 @@ class BrowserStateProvider(Provider):
         self._service = service
 
     @provide(scope=Scope.APP)
-    def settings(self) -> BrowserStateSettings:
+    def settings(
+        self,
+        # smelt: ignore[SMT328] -- Environment options, not DI.
+    ) -> BrowserStateSettings:
         return BrowserStateSettings()
 
     @provide(scope=Scope.APP)

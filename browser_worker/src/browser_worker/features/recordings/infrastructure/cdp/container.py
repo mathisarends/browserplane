@@ -1,9 +1,9 @@
 from collections.abc import AsyncGenerator
 
-from browser_worker.features.recordings.application.exceptions import (
+from browser_worker.features.recordings.application import (
     RecordingFailedException,
+    RecordingFormat,
 )
-from browser_worker.features.recordings.application.models import RecordingFormat
 
 _WEBM_SIGNATURE = b"\x1a\x45\xdf\xa3"
 _MP4_SIGNATURE = b"ftyp"

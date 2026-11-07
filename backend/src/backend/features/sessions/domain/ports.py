@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from backend.features.browsers.domain.models import Browser
+from backend.features.browsers.domain import Browser
 from backend.features.sessions.domain.models import (
     AuthenticationProfile,
     AuthenticationStateDocument,

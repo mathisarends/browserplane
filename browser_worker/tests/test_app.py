@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 from tests.fakes import FakeBrowserProcess
 
 from browser_worker.app import create_app
-from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.application import BrowserService
 
 
 def test_worker_exposes_health_and_readiness() -> None:

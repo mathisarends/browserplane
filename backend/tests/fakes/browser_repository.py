@@ -1,7 +1,6 @@
 from uuid import UUID
 
-from backend.features.browsers.domain.models import Browser
-from backend.features.browsers.domain.ports import BrowserRepository
+from backend.features.browsers.domain import Browser, BrowserRepository
 
 
 class InMemoryBrowserRepository(BrowserRepository):

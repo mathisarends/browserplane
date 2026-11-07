@@ -12,7 +12,7 @@ from cdpify.domains.target.events import (
 )
 
 from backend.features.browser_tunnel.domain import TargetCrashed
-from backend.features.browser_tunnel.infrastructure.events.stream import PublishEvent
+from backend.features.browser_tunnel.infrastructure.events import PublishEvent
 
 
 class TargetEventBridge:

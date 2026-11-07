@@ -169,6 +169,9 @@ class BrowserWorkerClient:
         try:
             if response.status_code == 201:
                 return BrowserResponse.model_validate(response.json())
+            if response.status_code == 404:
+                detail = BrowserNotFoundProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
             if response.status_code == 409:
                 detail = BrowserAlreadyRunningProblem.model_validate(response.json())
                 raise ApiError(response.status_code, response.text, detail, response)
@@ -910,6 +913,9 @@ class BrowserWorkerClient:
         try:
             if response.status_code == 204:
                 return None
+            if response.status_code == 409:
+                detail = BrowserAlreadyRunningProblem.model_validate(response.json())
+                raise ApiError(response.status_code, response.text, detail, response)
             if response.status_code == 422:
                 detail = RequestValidationProblem.model_validate(response.json())
                 raise ApiError(response.status_code, response.text, detail, response)

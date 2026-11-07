@@ -4,11 +4,11 @@ from uuid import UUID, uuid4
 
 from backend.features.session_requests.application.control_plane import ControlPlane
 from backend.features.session_requests.domain import RequestStatus, SessionRequest
-from backend.features.sessions.application.exceptions import (
+from backend.features.sessions.application import (
     SessionNotSuspendedException,
+    SessionService,
 )
-from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ResolvedSession, SessionStatus
+from backend.features.sessions.domain import ResolvedSession, SessionStatus
 from backend.shared.unit_of_work import UnitOfWork
 
 
@@ -60,13 +60,13 @@ class SessionAcquisition:
     async def open(self, command: OpenSessionCommand) -> AcquiredSession:
         if await self._is_new(command.request_id):
             async with self._sessions() as sessions:
-                await self._check_state(
+                await _check_state(
                     sessions,
                     command.authentication_profile_id,
                     command.browser_checkpoint_id,
                 )
         session_id = await self._control.acquire(
-            self._queued(
+            _queued(
                 request_id=command.request_id,
                 owner_id=command.owner_id,
                 timeout_seconds=command.timeout_seconds,
@@ -100,9 +100,9 @@ class SessionAcquisition:
                     raise SessionNotSuspendedException()
                 owner_id = suspended.owner_id
                 browser_checkpoint_id = suspended.session.browser_checkpoint_id
-                await self._check_state(sessions, None, browser_checkpoint_id)
+                await _check_state(sessions, None, browser_checkpoint_id)
         session_id = await self._control.acquire(
-            self._queued(
+            _queued(
                 request_id=command.request_id,
                 owner_id=owner_id,
                 timeout_seconds=command.timeout_seconds,
@@ -119,44 +119,46 @@ class SessionAcquisition:
             return True
         return await self._control.find(request_id) is None
 
-    @staticmethod
-    async def _check_state(
-        sessions: SessionService,
-        authentication_profile_id: UUID | None,
-        browser_checkpoint_id: UUID | None,
-    ) -> None:
-        """Reject unusable state now instead of after a wait, or in a dispatcher."""
-        checkpoint = (
-            await sessions.get_browser_checkpoint(browser_checkpoint_id)
-            if browser_checkpoint_id is not None
-            else None
-        )
-        profile_id = authentication_profile_id or (
-            checkpoint.authentication_profile_id if checkpoint is not None else None
-        )
-        if profile_id is not None:
-            await sessions.get_authentication_profile(profile_id)
 
-    @staticmethod
-    def _queued(
-        *,
-        request_id: UUID | None,
-        owner_id: UUID,
-        timeout_seconds: float,
-        test_run_id: UUID | None = None,
-        authentication_profile_id: UUID | None = None,
-        browser_checkpoint_id: UUID | None = None,
-        resume_session_id: UUID | None = None,
-    ) -> SessionRequest:
-        now = datetime.now(UTC)
-        return SessionRequest(
-            id=request_id or uuid4(),
-            owner_id=owner_id,
-            status=RequestStatus.QUEUED,
-            created_at=now,
-            expires_at=now + timedelta(seconds=timeout_seconds),
-            test_run_id=test_run_id,
-            authentication_profile_id=authentication_profile_id,
-            browser_checkpoint_id=browser_checkpoint_id,
-            resume_session_id=resume_session_id,
-        )
+async def _check_state(
+    sessions: SessionService,
+    authentication_profile_id: UUID | None,
+    browser_checkpoint_id: UUID | None,
+) -> None:
+    """Reject unusable state now instead of after a wait, or in a dispatcher."""
+    checkpoint = (
+        await sessions.get_browser_checkpoint(browser_checkpoint_id)
+        if browser_checkpoint_id is not None
+        else None
+    )
+    profile_id = (
+        authentication_profile_id
+        if authentication_profile_id is not None
+        else (checkpoint.authentication_profile_id if checkpoint is not None else None)
+    )
+    if profile_id is not None:
+        await sessions.get_authentication_profile(profile_id)
+
+
+def _queued(
+    *,
+    request_id: UUID | None,
+    owner_id: UUID,
+    timeout_seconds: float,
+    test_run_id: UUID | None = None,
+    authentication_profile_id: UUID | None = None,
+    browser_checkpoint_id: UUID | None = None,
+    resume_session_id: UUID | None = None,
+) -> SessionRequest:
+    now = datetime.now(UTC)
+    return SessionRequest(
+        id=request_id if request_id is not None else uuid4(),
+        owner_id=owner_id,
+        status=RequestStatus.QUEUED,
+        created_at=now,
+        expires_at=now + timedelta(seconds=timeout_seconds),
+        test_run_id=test_run_id,
+        authentication_profile_id=authentication_profile_id,
+        browser_checkpoint_id=browser_checkpoint_id,
+        resume_session_id=resume_session_id,
+    )

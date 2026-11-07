@@ -1,6 +1,6 @@
 from fastapi_canon import Feature
 
-from browser_worker.features.release.infrastructure import ReleaseProvider
+from browser_worker.features.release.infrastructure.provider import ReleaseProvider
 from browser_worker.features.release.presentation.errors import ERRORS
 from browser_worker.features.release.presentation.router import release_router
 

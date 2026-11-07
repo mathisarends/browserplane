@@ -1,7 +1,7 @@
 from collections.abc import Callable, Sequence
 from urllib.parse import urlsplit
 
-from browser_worker.features.browser.application.service import BrowserService
+from browser_worker.features.browser.application import BrowserService
 from browser_worker.features.state.application.exceptions import (
     BrowserStateInvalidException,
 )
@@ -13,7 +13,7 @@ from browser_worker.features.state.application.ports import BrowserStateStore
 
 StateStoreFactory = Callable[[str], BrowserStateStore]
 
-WEB_SCHEMES = frozenset({"http", "https"})
+_WEB_SCHEMES = frozenset({"http", "https"})
 
 
 class BrowserStateService:
@@ -78,7 +78,7 @@ class BrowserStateService:
 
 
 def _validate_tab_url(url: str) -> None:
-    if urlsplit(url).scheme not in WEB_SCHEMES:
+    if urlsplit(url).scheme not in _WEB_SCHEMES:
         raise BrowserStateInvalidException(
             f"Tab url must be http or https, got {url!r}"
         )
@@ -86,7 +86,7 @@ def _validate_tab_url(url: str) -> None:
 
 def _validate_origin(origin: str) -> None:
     parts = urlsplit(origin)
-    if parts.scheme not in WEB_SCHEMES or not parts.netloc or parts.path:
+    if parts.scheme not in _WEB_SCHEMES or not parts.netloc or parts.path:
         raise BrowserStateInvalidException(
             f"Origin must be scheme://host, got {origin!r}"
         )

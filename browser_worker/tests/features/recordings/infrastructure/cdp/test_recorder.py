@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from browser_worker.features.recordings.application.exceptions import (
+from browser_worker.features.recordings.application import (
     RecordingFailedException,
+    RecordingFormat,
 )
-from browser_worker.features.recordings.application.models import RecordingFormat
 from browser_worker.features.recordings.infrastructure.cdp import (
     CdpScreenRecorder,
     TabRecorder,

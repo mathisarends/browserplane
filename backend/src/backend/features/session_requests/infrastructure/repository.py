@@ -7,15 +7,15 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlmodel import select
 
-from backend.features.browsers.domain.models import Browser, BrowserSlot, BrowserState
-from backend.features.leases.settings import LeaseSettings
+from backend.features.browsers.domain import Browser, BrowserSlot, BrowserState
+from backend.features.leases.application import LeaseSettings
 from backend.features.session_requests.domain import (
     RequestStatus,
     SessionRequest,
     SessionRequestConflictException,
     SessionRequestNotFoundException,
+    SessionRequestRepository,
 )
-from backend.features.session_requests.domain.ports import SessionRequestRepository
 from backend.infrastructure.database.models import (
     BrowserModel,
     LeaseModel,

@@ -56,10 +56,10 @@ SESSION_REQUEST_CANCELLED = Error(
     extensions=_request_extension,
 )
 
-API_ERRORS = (
+_API_ERRORS = (
     SESSION_REQUEST_NOT_FOUND,
     SESSION_REQUEST_CONFLICT,
     SESSION_REQUEST_TIMED_OUT,
     SESSION_REQUEST_CANCELLED,
 )
-ERRORS = ErrorRegistry(name="session_requests", errors=API_ERRORS)
+ERRORS = ErrorRegistry(name="session_requests", errors=_API_ERRORS)

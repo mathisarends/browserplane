@@ -5,10 +5,9 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from dishka import AsyncContainer, Scope
-
 from backend.features.sessions.application.service import SessionService
-from backend.features.sessions.domain.models import ResolvedSession
+from backend.features.sessions.domain import ResolvedSession
+from backend.shared.unit_of_work import UnitOfWork
 
 logger = logging.getLogger(__name__)
 
@@ -18,21 +17,22 @@ class SessionLeaseKeeper:
 
     def __init__(
         self,
-        container: AsyncContainer,
+        sessions: UnitOfWork[SessionService],
         heartbeat_interval_seconds: int,
     ) -> None:
-        self._container = container
+        self._sessions = sessions
         self._heartbeat_interval_seconds = heartbeat_interval_seconds
 
     async def resolve(
         self, session_id: UUID, *, renew: bool = False
     ) -> ResolvedSession:
         """Resolve one session in a short unit of work outside the live stream."""
-        async with self._container(scope=Scope.REQUEST) as scoped:
-            service = await scoped.get(SessionService)
+        async with self._sessions() as service:
             if renew:
-                return await service.renew(session_id)
-            return await service.get_active(session_id)
+                session = await service.renew(session_id)
+                return session
+            session = await service.get_active(session_id)
+            return session
 
     async def run(
         self,

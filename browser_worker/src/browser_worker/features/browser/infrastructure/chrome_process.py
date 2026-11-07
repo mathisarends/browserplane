@@ -8,10 +8,8 @@ import time
 from contextlib import suppress
 from pathlib import Path
 
-from browser_worker.features.browser.application.exceptions import (
-    BrowserStartupException,
-)
-from browser_worker.features.browser.domain.ports import BrowserProcess
+from browser_worker.features.browser.application import BrowserStartupException
+from browser_worker.features.browser.domain import BrowserProcess
 from browser_worker.features.browser.infrastructure.settings import BrowserSettings
 
 

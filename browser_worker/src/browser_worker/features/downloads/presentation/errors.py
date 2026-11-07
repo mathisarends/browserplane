@@ -1,9 +1,7 @@
 from fastapi import status
 from fastapi_canon import Error, ErrorRegistry
 
-from browser_worker.features.downloads.application.exceptions import (
-    DownloadNotFoundException,
-)
+from browser_worker.features.downloads.application import DownloadNotFoundException
 
 DOWNLOAD_NOT_FOUND = Error(
     DownloadNotFoundException,
@@ -13,5 +11,5 @@ DOWNLOAD_NOT_FOUND = Error(
     detail=str,
 )
 
-API_ERRORS = (DOWNLOAD_NOT_FOUND,)
-ERRORS = ErrorRegistry(name="downloads", errors=API_ERRORS)
+_API_ERRORS = (DOWNLOAD_NOT_FOUND,)
+ERRORS = ErrorRegistry(name="downloads", errors=_API_ERRORS)

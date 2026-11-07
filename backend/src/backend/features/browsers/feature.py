@@ -1,6 +1,6 @@
 from fastapi_canon import Feature
 
-from backend.features.browsers.infrastructure import BrowserProvider
+from backend.features.browsers.infrastructure.provider import BrowserProvider
 from backend.features.browsers.presentation.errors import ERRORS
 
 feature = Feature(
